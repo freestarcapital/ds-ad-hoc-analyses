@@ -11,7 +11,7 @@ with winner as
   and (auction_id is not null) and (bidder_id is not null) and (raw_cpm is not null)
   and top_bid
   group by 1, 2, 3, 4
-  having count(*) = 1
+  having count(*) = 1 and max(raw_cpm) > 0
 ), demand_partner as
 (
   select auction_id, max(ifnull(raw_cpm, 0)) as raw_cpm_demand_partner, max(top_bid) as top_bid_demand_partner

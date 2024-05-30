@@ -20,17 +20,13 @@ bqstorageclient = bigquery_storage.BigQueryReadClient()
 def get_bq_data(query, replacement_dict={}):
     for k, v in replacement_dict.items():
         query = query.replace(f"<{k}>", v)
-
-    output = (
-        client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
-    )
-    return output
+    return client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
 
 def main():
     bins = 200
 
     rep_dict = {"START_TIMESTAMP_STR": "2024-5-10 10:00:00 UTC",
-                "END_TIMESTAMP_STR": "2024-5-10 10:05:00 UTC",
+                "END_TIMESTAMP_STR": "2024-5-11 10:00:00 UTC",
                 "DEMAND_PARTNER": "",
                 "SELECT_COLS": "prop_of_winning_bid_demand_partner"}
 
@@ -62,9 +58,9 @@ def main():
     col_order = df2.iloc[0, :].sort_values(ascending=False).index.to_list()
     df2 = df2[col_order]
     df2.plot(ax=ax)
-    ax.set_xlabel('ratio of demand partner bid to winning bid (0 = no bid, 1 = won)')
-    ax.set_ylabel('percentage of demand partner bid requests returning bid ratio (or higher)')
-    fig.suptitle(f'Demand partner bid ratios for auction requests made {rep_dict["START_TIMESTAMP_STR"]} to {rep_dict["END_TIMESTAMP_STR"]}')
+    ax.set_xlabel('Ratio of demand partner bid to winning bid (0 = dp included but no bid returned, 1 = won)')
+    ax.set_ylabel('Percentage of demand partner bid requests returning bid ratio (or higher)')
+    fig.suptitle(f'Demand partner bid ratios for Server Side auction requests made {rep_dict["START_TIMESTAMP_STR"]} to {rep_dict["END_TIMESTAMP_STR"]}')
     fig.savefig('plots/demand_partners.png')
 
 if __name__ == "__main__":
