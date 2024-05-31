@@ -4,6 +4,8 @@ from google.cloud import bigquery
 import configparser
 from google.cloud import bigquery_storage
 import os, sys
+import datetime
+import pickle
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 1000)
@@ -11,9 +13,8 @@ pd.set_option('display.width', 1000)
 config_path = '../config.ini'
 config = configparser.ConfigParser()
 config.read(config_path)
-# Replace with your own values
-project_id = "freestar-prod"
 
+project_id = "freestar-prod"
 client = bigquery.Client(project=project_id)
 bqstorageclient = bigquery_storage.BigQueryReadClient()
 
@@ -22,7 +23,7 @@ def get_bq_data(query, replacement_dict={}):
         query = query.replace(f"<{k}>", v)
     return client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
 
-def main():
+def main(force_recalc=False):
     bins = 200
 
     rep_dict = {"START_TIMESTAMP_STR": "2024-5-10 10:00:00 UTC",
@@ -30,21 +31,36 @@ def main():
                 "DEMAND_PARTNER": "",
                 "SELECT_COLS": "prop_of_winning_bid_demand_partner"}
 
-    query = open(os.path.join(sys.path[0], "demand_partner_value_get_demand_partners.sql"), "r").read()
-    demand_partners = get_bq_data(query, rep_dict)['bidder_id'].to_list()
+    data_cache_filename = f'data_cache/common_data_{rep_dict['START_TIMESTAMP_STR']}_{rep_dict['END_TIMESTAMP_STR']}.pkl'
+    if force_recalc or not os.path.exists(data_cache_filename):
+        query = open(os.path.join(sys.path[0], "demand_partner_value_get_demand_partners.sql"), "r").read()
+        demand_partners = get_bq_data(query, rep_dict)['bidder_id'].to_list()
+        query = open(os.path.join(sys.path[0], "demand_partner_value_total_auctions.sql"), "r").read()
+        total_auction_count = get_bq_data(query, rep_dict).iloc[0, 0]
+        with open(data_cache_filename, 'wb') as f:
+            pickle.dump((demand_partners, total_auction_count), f)
 
-    query = open(os.path.join(sys.path[0], "demand_partner_value_total_auctions.sql"), "r").read()
-    total_auction_count = get_bq_data(query, rep_dict).iloc[0, 0]
+    with open(data_cache_filename, 'rb') as f:
+        (demand_partners, total_auction_count) = pickle.load(f)
 
     fig, ax = plt.subplots(figsize=(12, 9))
     for i, dp in enumerate(demand_partners):
-        rep_dict["DEMAND_PARTNER"] = dp
-        print(f"doing: {dp}")
+        data_cache_filename = f'data_cache/{dp}_{rep_dict['START_TIMESTAMP_STR']}_{rep_dict['END_TIMESTAMP_STR']}.pkl'
+        if force_recalc or not os.path.exists(data_cache_filename):
+            now = datetime.datetime.now()
+            rep_dict["DEMAND_PARTNER"] = dp
+            print(f"doing: {dp}, {now}")
 
-        df1 = get_bq_data(open(os.path.join(sys.path[0], "demand_partner_value_method1.sql"), "r").read(), rep_dict)
-        df2 = get_bq_data(open(os.path.join(sys.path[0], "demand_partner_value_method2.sql"), "r").read(), rep_dict)
+            df1 = get_bq_data(open(os.path.join(sys.path[0], "demand_partner_value_method1.sql"), "r").read(), rep_dict)
+            df2 = get_bq_data(open(os.path.join(sys.path[0], "demand_partner_value_method2.sql"), "r").read(), rep_dict)
+            with open(data_cache_filename, 'wb') as f:
+                pickle.dump((df1, df2), f)
 
-        col_name = f"{dp}: incl: {len(df2) / total_auction_count*100:0.0f}%, cpm uplift: {df1['avg_raw_cpm_winner_demand_partner_included_uplift'][0]:0.2f}"
+        with open(data_cache_filename, 'rb') as f:
+            (df1, df2) = pickle.load(f)
+
+        col_name = (f"{dp}: incl: {len(df2) / total_auction_count*100:0.0f}%, cpm uplift: {df1['avg_raw_cpm_winner_demand_partner_included_uplift'][0]:0.2f}, "
+                    f"cpm uplift bid: {df1['avg_raw_cpm_winner_demand_partner_bid_uplift'][0]:0.2f}")
 
         if i == 0:
             y, x, _ = plt.hist(df2[rep_dict['SELECT_COLS']], bins=bins, density=True, cumulative=True)
