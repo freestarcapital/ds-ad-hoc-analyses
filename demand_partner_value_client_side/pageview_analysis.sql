@@ -19,3 +19,4 @@ select coalesce(t1.pageview_id, t2.pageview_id) pageview_id,
   ifnull(count_bidsresponse_raw, 0) count_bidsresponse_raw
  from t1
 full outer join t2 on (t1.pageview_id = t2.pageview_id)
+

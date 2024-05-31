@@ -43,6 +43,7 @@ def main(force_recalc=False):
     with open(data_cache_filename, 'rb') as f:
         (demand_partners, total_auction_count) = pickle.load(f)
 
+    total = 0
     fig, ax = plt.subplots(figsize=(12, 9))
     for i, dp in enumerate(demand_partners):
         data_cache_filename = f'data_cache/{dp}_{rep_dict['START_TIMESTAMP_STR']}_{rep_dict['END_TIMESTAMP_STR']}.pkl'
@@ -59,8 +60,16 @@ def main(force_recalc=False):
         with open(data_cache_filename, 'rb') as f:
             (df1, df2) = pickle.load(f)
 
-        col_name = (f"{dp}: incl: {len(df2) / total_auction_count*100:0.0f}%, cpm uplift: {df1['avg_raw_cpm_winner_demand_partner_included_uplift'][0]:0.2f}, "
-                    f"cpm uplift bid: {df1['avg_raw_cpm_winner_demand_partner_bid_uplift'][0]:0.2f}")
+        incl = len(df2) / total_auction_count
+        cpm_uplift = df1['avg_raw_cpm_winner_demand_partner_included_uplift'][0]
+        cpm_uplift_bid = df1['avg_raw_cpm_winner_demand_partner_bid_uplift'][0]
+        winning_prop = (df2.values == 1).sum() / len(df2)
+
+        total += winning_prop * incl
+        print(f'{dp}: incl: {incl:0.2f}, win prop: {winning_prop:0.2f}, total: {total:0.4f}')
+
+        col_name = (f"{dp}: incl: {incl*100:0.0f}%, cpm uplift: {cpm_uplift:0.2f}, "
+                    f"cpm uplift bid: {cpm_uplift_bid:0.2f}")
 
         if i == 0:
             y, x, _ = plt.hist(df2[rep_dict['SELECT_COLS']], bins=bins, density=True, cumulative=True)
@@ -76,7 +85,7 @@ def main(force_recalc=False):
     df2.plot(ax=ax)
     ax.set_xlabel('Ratio of demand partner bid to winning bid (0 = dp included but no bid returned, 1 = won)')
     ax.set_ylabel('Percentage of demand partner bid requests returning bid ratio (or higher)')
-    fig.suptitle(f'Demand partner bid ratios for Server Side auction requests made {rep_dict["START_TIMESTAMP_STR"]} to {rep_dict["END_TIMESTAMP_STR"]}')
+    fig.suptitle(f'Demand partner bid ratios for Server Side auction requests made {rep_dict["START_TIMESTAMP_STR"]} to {rep_dict["END_TIMESTAMP_STR"]} {total:0.4f}')
     fig.savefig('plots/demand_partners.png')
 
 if __name__ == "__main__":
