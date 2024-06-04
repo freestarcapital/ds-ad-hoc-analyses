@@ -146,7 +146,7 @@ def main_bidswon_analysis(force_recalc=False):
     df2.plot(ax=ax)
     ax.set_xlabel('Ratio of demand partner bid to highest bid (0 = dp not included or no bid, 1 = winning)')
     ax.set_ylabel('Percentage of demand partner bid requests returning bid ratio (or higher)')
-    fig.suptitle(f'Demand partner bid ratios for winning bid in Prebid auctions')
+    fig.suptitle(f'Demand partner bid ratios for winning bid in Prebid auctions - ACTUAL VALUES ON Y-AXIS ARE UNDERESTIMATES DUE TO DATA INCOMPLETENESS')
     fig.savefig('plots/demand_partners_winning_bid.png')
 
 
