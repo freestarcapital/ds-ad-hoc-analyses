@@ -93,7 +93,7 @@ def main_bidsresponse_analysis(force_recalc=False):
     df2 = df2[col_order]
     df2.plot(ax=ax)
     ax.set_xlabel('Ratio of demand partner bid to highest bid (0 = dp not included or no bid, 1 = highest)')
-    ax.set_ylabel('Percentage of demand partner bid requests returning bid ratio (or higher)')
+    ax.set_ylabel('Percentage of demand partner bid requests returning at least bid ratio shown on x-axis')
     fig.suptitle(f'Demand partner bid ratios for highest bid in Prebid auctions')
     fig.savefig('plots/demand_partners_highest_bid.png')
 
@@ -131,6 +131,8 @@ def main_bidswon_analysis(force_recalc=False):
         with open(data_cache_filename, 'rb') as f:
             (df) = pickle.load(f)
 
+        df = df[df <= 1]
+
         col_name = dp
         if i == 0:
             y, x, _ = plt.hist(df[rep_dict['SELECT_COLS']], bins=bins, density=True, cumulative=True)
@@ -144,9 +146,9 @@ def main_bidswon_analysis(force_recalc=False):
     col_order = df2.iloc[0, :].sort_values(ascending=False).index.to_list()
     df2 = df2[col_order]
     df2.plot(ax=ax)
-    ax.set_xlabel('Ratio of demand partner bid to highest bid (0 = dp not included or no bid, 1 = winning)')
-    ax.set_ylabel('Percentage of demand partner bid requests returning bid ratio (or higher)')
-    fig.suptitle(f'Demand partner bid ratios for winning bid in Prebid auctions - ACTUAL VALUES ON Y-AXIS ARE UNDERESTIMATES DUE TO DATA INCOMPLETENESS')
+    ax.set_xlabel('Ratio of demand partner bid to highest bid (0 = dp not included or no bid, 1 = winner where prebid won)')
+    ax.set_ylabel('Percentage of demand partner bid requests returning at least bid ratio shown on x-axis')
+    fig.suptitle(f'Demand partner bid ratios for winning bid where Prebid won the auction')
     fig.savefig('plots/demand_partners_winning_bid.png')
 
 
@@ -155,6 +157,7 @@ if __name__ == "__main__":
 
 #    main_pageview()
 
-#    main_bidsresponse_analysis()
 
-    main_bidswon_analysis()
+    main_bidswon_analysis(force_recalc=True)
+
+    main_bidsresponse_analysis(force_recalc=True)

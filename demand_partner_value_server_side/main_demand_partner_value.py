@@ -83,7 +83,7 @@ def main(force_recalc=False):
     col_order = df2.iloc[0, :].sort_values(ascending=False).index.to_list()
     df2 = df2[col_order]
     df2.plot(ax=ax)
-    ax.set_xlabel('Ratio of demand partner bid to winning bid (0 = dp included but no bid returned, 1 = won)')
+    ax.set_xlabel('Ratio of demand partner bid to winning bid (0 = dp included but no bid returned, 1 = highest bid of server auction)')
     ax.set_ylabel('Percentage of demand partner bid requests returning bid ratio (or higher)')
     fig.suptitle(f'Demand partner bid ratios for Server Side auction requests made {rep_dict["START_TIMESTAMP_STR"]} to {rep_dict["END_TIMESTAMP_STR"]} {total:0.4f}')
     fig.savefig('plots/demand_partners.png')

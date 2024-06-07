@@ -27,13 +27,12 @@ def get_bq_data(query, replacement_dict={}):
         query = query.replace(f"<{k}>", v)
     return client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
 
-def main_browsi_1(force_recalc=False):
+def main_browsi_1(query_file="browsi_query_1_US_desktop", force_recalc=False, hist_bins=50, nbinsx=50, nbinsy=100,
+                  max_cpma=2, max_price_prediction=0.4, domain='all'):
 
-    bins = 200
-
-    data_cache_filename = f'data_cache/browsi_1.pkl'
+    data_cache_filename = f'data_cache/{query_file}.pkl'
     if force_recalc or not os.path.exists(data_cache_filename):
-        query = open(os.path.join(sys.path[0], "browsi_query_1.sql"), "r").read()
+        query = open(os.path.join(sys.path[0], f"{query_file}.sql"), "r").read()
         df = get_bq_data(query)
         with open(data_cache_filename, 'wb') as f:
             pickle.dump(df, f)
@@ -43,19 +42,28 @@ def main_browsi_1(force_recalc=False):
 
     df['price_prediction'] = [float(x) for x in df['price_prediction'].values]
 
-    df2 = df[(df['cpma'] < 2) & (df['price_prediction'] < 0.4)].copy()
+    print(f'domains found: {", ".join(list(df['domain'].unique()))}')
+    if domain != "all":
+        df = df[df['domain'] == domain]
+    domain_short = domain
+    if len(domain_short) > 4:
+        domain_short = domain_short[:4]
+
+    df2 = df[(df['cpma'] < max_cpma) & (df['price_prediction'] < max_price_prediction)].copy()
     df2['log_cpma'] = np.log(df2['cpma']+0.1)
+
 
     for cpma_type in ['cpma', 'log_cpma']:
         res = stats.linregress(df2['price_prediction'], df2[cpma_type])
-        title = f'{cpma_type} = {res.intercept:0.2f} + {res.slope:0.2f} * browsi price_prediction, R^2: {100 * res.rvalue ** 2:0.1f}%'
-        fig = px.density_heatmap(df2, x='price_prediction', y=cpma_type, nbinsx=50, nbinsy=100, title=title)
-        fig.write_image(f"plots/browsi_{cpma_type}.png")
+        title = f'{domain_short}, {cpma_type} = {res.intercept:0.2f} + {res.slope:0.2f} * browsi pp, R^2: {100 * res.rvalue ** 2:0.1f}%'
+        fig = px.density_heatmap(df2, x='price_prediction', y=cpma_type, nbinsx=nbinsx, nbinsy=nbinsy, title=title)
+        fig.write_image(f"plots/{query_file}_{cpma_type}_{domain}.png")
 
     N = 5
-    plot_specs = [('cpma', False, 2), ('cpma', True, 2), ('rpp', True, 80)]
+    plot_specs = [('cpma', True, 0, max_cpma), #('rpp', True, 0, 80),
+                  ('cpma', False, 0, max_cpma), ('log_cpma', False, -2, np.log(max_cpma+0.1))]
     fig, ax = plt.subplots(figsize=(16, 12), nrows=len(plot_specs))
-    for ax_i, (col_to_plot, cumulative, x_max) in enumerate(plot_specs):
+    for ax_i, (col_to_plot, cumulative, x_min, x_max) in enumerate(plot_specs):
         ax_ = ax[ax_i]
         col_stats = {}
 
@@ -65,10 +73,10 @@ def main_browsi_1(force_recalc=False):
             col_name = f'{price_prediction_lower:0.2f} to {price_prediction_upper:0.2f}'
 
             df3 = df2[(price_prediction_lower < df2['price_prediction']) & (df2['price_prediction'] <= price_prediction_upper)]
-            col_stats[col_name] = {"mean": df3[col_to_plot].mean(), "var": df3[col_to_plot].mean()}
+            col_stats[col_name] = {"mean": df3[col_to_plot].mean(), "var": df3[col_to_plot].var()}
 
             if i == 0:
-                y, x, _ = plt.hist(df3[col_to_plot], bins=bins, density=True, cumulative=cumulative)
+                y, x, _ = plt.hist(df3[col_to_plot], bins=hist_bins, density=True, cumulative=cumulative)
                 df_hist = pd.DataFrame(y, x[:-1], columns=[col_name])
             else:
                 y, _, _ = plt.hist(df3[col_to_plot], bins=x, density=True, cumulative=cumulative)
@@ -104,17 +112,24 @@ def main_browsi_1(force_recalc=False):
         df_hist = df_hist.rename(columns=col_rename)
 
         ax_.clear()
-        df_hist.plot(ax=ax_, xlim=[0, x_max])
+        df_hist.plot(ax=ax_, xlim=[x_min, x_max])
         ax_.set_xlabel(f'{col_to_plot}')
         ax_.set_ylabel(f'{"CDF" if cumulative else "PDF"} of sess with avg {col_to_plot} <= x-axis val')
-        fig.suptitle(f'Does browsi signal prediction session value? browsi data split into {N} equal bins. (auction_end)')
+        fig.suptitle(f'domain: {domain}, Does browsi signal prediction session value? browsi data split into {N} equal bins. (auction_end)')
 
-    fig.savefig('plots/browsi_density_plots.png')
+    fig.savefig(f'plots/{query_file}_density_plots_{domain}.png')
 
 
     j = 9
 
 if __name__ == "__main__":
 
+#    main_browsi_1("browsi_query_1_US_desktop", force_recalc=True)
 
-    main_browsi_1()
+    # for domain in ['all', 'lse.co.uk', 'baeldung.com', 'weareteachers.com']:
+    #     main_browsi_1("browsi_query_1", domain=domain)
+    #
+    #     main_browsi_1("browsi_query_1_US_desktop", domain=domain)
+
+    main_browsi_1("browsi_query_2")#, force_recalc=True, nbinsx=50, nbinsy=50, max_cpma=25, max_price_prediction=0.4)
+

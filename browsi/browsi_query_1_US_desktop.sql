@@ -15,29 +15,39 @@ WITH sessions AS (
 ), ad_requests AS (
   SELECT
         net.reg_domain(RefererURL) domain,
+        GeoLookup.CountryCode country_code,
+        `freestar-157323.ad_manager_dtf`.device_category(`freestar-157323.ad_manager_dtf`.DeviceType(DeviceCategory, OS)) device_category,
         REGEXP_EXTRACT(CustomTargeting,".*fs_session_id=(.*?)[;$]") session_id,
         CASE WHEN CostType="CPM" THEN CostPerUnitInNetworkCurrency/1000 ELSE 0 END rev,
         CASE WHEN LineItemId = 0 THEN 1 ELSE 0 END unfilled,
         CASE WHEN LineItemId = 0 THEN 0 ELSE 1 END imps
-  FROM `freestar-prod.data_transfer.NetworkImpressions` a
-  left join `freestar-157323.ad_manager_dtf.p_MatchTableLineItem_15184186` match on a.LineItemId=match.Id AND match._PARTITIONDATE = EventDateMST
+  FROM `freestar-prod.data_transfer.NetworkImpressions` NetworkImpressions
+  left join `freestar-157323.ad_manager_dtf.p_MatchTableLineItem_15184186` match
+        on NetworkImpressions.LineItemId=match.Id AND match._PARTITIONDATE = EventDateMST
+  LEFT JOIN `freestar-157323.ad_manager_dtf.p_MatchTableGeoTarget_15184186` GeoLookup
+        ON GeoLookup.Id = NetworkImpressions.CountryId AND GeoLookup._PARTITIONDATE = NetworkImpressions.EventDateMST
   WHERE EventDateMST = ddate
 
 UNION ALL
 
   SELECT
         net.reg_domain(RefererURL) domain,
+        GeoLookup.CountryCode country_code,
+        `freestar-157323.ad_manager_dtf`.device_category(`freestar-157323.ad_manager_dtf`.DeviceType(DeviceCategory, OS)) device_category,
         REGEXP_EXTRACT(CustomTargeting,".*fs_session_id=(.*?)[;$]") session_id,
         EstimatedBackfillRevenue rev,
         0 unfilled,
         1 imps
-  FROM `freestar-prod.data_transfer.NetworkBackfillImpressions` a
+  FROM `freestar-prod.data_transfer.NetworkBackfillImpressions` NetworkImpressions
+  LEFT JOIN `freestar-157323.ad_manager_dtf.p_MatchTableGeoTarget_15184186` GeoLookup
+        ON GeoLookup.Id = NetworkImpressions.CountryId AND GeoLookup._PARTITIONDATE = NetworkImpressions.EventDateMST
   WHERE EventDateMST = ddate
 ), agg AS (
   SELECT domain, session_id, SUM(rev) rev, SUM(imps) imps, SUM(unfilled) unfilled, SUM(imps)+SUM(unfilled) ad_requests,
   SAFE_DIVIDE(SUM(rev)*1000, SUM(imps)+SUM(unfilled)) cpma, SAFE_DIVIDE(SUM(rev)*1000, SUM(imps)) cpm,
   SUM(rev)*1000 rps
   FROM ad_requests
+  where country_code = 'US' and device_category = 'desktop'
   GROUP BY 1, 2
 )
 SELECT agg.domain, sessions.price_prediction, agg.cpma, SAFE_DIVIDE(rev*1000, sessions.page_count) rpp
