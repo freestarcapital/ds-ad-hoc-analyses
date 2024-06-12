@@ -6,7 +6,11 @@ with winner as
     and auction_id is not null and bidder_code is not null and cpm is not null
     and source = 'client'
     qualify (row_number() over (partition by auction_id order by cpm desc) = 1)
-    and auction_id in (select distinct auction_id from `freestar-157323.prod_eventstream.bidsresponse_raw`)
+    and auction_id in
+    (
+        select distinct auction_id from `freestar-157323.prod_eventstream.bidsresponse_raw`
+        where <START_UNIX_TIME_MS> < server_time and server_time < <END_UNIX_TIME_MS>
+    )
 ), demand_partner as
 (
     select auction_id, max(cpm) cpm_demand_partner

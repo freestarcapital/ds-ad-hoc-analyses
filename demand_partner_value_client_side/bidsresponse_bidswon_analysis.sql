@@ -6,7 +6,8 @@ with t1 as
   group by 1
 ), t2 as
 (
-  select auction_id, count(*) count_bidsresponse_raw, avg(server_time) avg_server_time
+  select
+  , count(*) count_bidsresponse_raw, avg(server_time) avg_server_time
   from `freestar-157323.prod_eventstream.bidsresponse_raw`
   where 1716465600000 < server_time and server_time < 1716469200000  -- 23 May 12:00 to 13:00 GMT
   and source = 'client'
