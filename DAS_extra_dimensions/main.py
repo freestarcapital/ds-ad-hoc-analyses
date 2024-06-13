@@ -20,36 +20,42 @@ project_id = "freestar-157323"
 client = bigquery.Client(project=project_id)
 bqstorageclient = bigquery_storage.BigQueryReadClient()
 
-def bq_do_query(query, replacement_dict={}):
+def get_bq_data(query, replacement_dict={}):
     for k, v in replacement_dict.items():
         query = query.replace(f"<{k}>", v)
-    result = client.query(query).result()
-    df = result.to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
-    return df
+    return client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
 
 def main():
-    rep_dict = {}
+    rep_dict = {"DAYS_BACK_START": "9",
+                "DAYS_BACK_END": "2"}
 
-    for (cc_name, cc_query) in [("CC_MERGE", "CASE WHEN session_count < 100 THEN 'default' ELSE country_code END"),
-                                ("CC_NO_MERGE", "country_code")]:
-        rep_dict['COUNTRY_CODE_NAME'] = cc_name
-        rep_dict['COUNTRY_CODE_QUERY'] = cc_query
+    df_list = []
+    for cc in ['_country_merge']:#, '']:
 
-        for extra_dim in ['ad_product', 'domain']:
+        query = open(os.path.join(sys.path[0], f"base_query{cc}.sql"), "r").read()
+        print(f'doing: {cc}, base query')
+        df = get_bq_data(query, rep_dict)
+        df['cc'] = cc
+        df['extra_dim'] = 'None'
+        print(df)
+        df_list.append(df)
+
+        for extra_dim in ['ad_product']:#, 'domain']:
             rep_dict['EXTRA_DIM'] = extra_dim
 
-            for fs_testgroup in ['optimised', 'experiment']:
-                rep_dict['FS_TESTGROUP'] = fs_testgroup
+            query = open(os.path.join(sys.path[0], f"extra_dims_query{cc}.sql"), "r").read()
+            print(f'doing: {cc}, {extra_dim}')
+            df = get_bq_data(query, rep_dict)
+            df['cc'] = cc
+            df['extra_dim'] = extra_dim
+            print(df)
+            df_list.append(df)
 
-                query = open(os.path.join(sys.path[0], "create_base_data_query.sql"), "r").read()
-                print(f'doing: {cc_name}, {extra_dim}, {fs_testgroup}')
-                bq_do_query(query, rep_dict)
+    df_results = pd.concat(df_list)
+    df_results.to_csv(f'results_{rep_dict['DAYS_BACK_START']}_{rep_dict['DAYS_BACK_END']}.csv')
+    print(df_results)
 
-            query = open(os.path.join(sys.path[0], "process_results.sql"), "r").read()
-            print(f'doing: {cc_name}, {extra_dim}, process results')
-            x = bq_do_query(query, rep_dict)
-            print(x)
-            f = 9
+    h = 0
 
 if __name__ == "__main__":
     main()
