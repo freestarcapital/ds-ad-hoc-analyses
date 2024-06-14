@@ -9,7 +9,7 @@ with base_data_domain_fs_testgroup as (
         and fs_testgroup in ('experiment', 'optimised')
         and country_code is not null
         and status != 'disabled'
-        and <EXTRA_DIM> not like '%video%'
+        and ad_product not like '%video%'
     group by fs_testgroup, bidder, country_code, device_category, rtt_category, fsrefresh, <EXTRA_DIM>, status
 ), base_data_domain_expt as (
     select bidder, country_code, device_category, rtt_category, fsrefresh, <EXTRA_DIM>, status, revenue, session_count, rps
