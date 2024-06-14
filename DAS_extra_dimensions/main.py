@@ -26,11 +26,11 @@ def get_bq_data(query, replacement_dict={}):
     return client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
 
 def main():
-    rep_dict = {"DAYS_BACK_START": "9",
+    rep_dict = {"DAYS_BACK_START": "3",
                 "DAYS_BACK_END": "2"}
 
     df_list = []
-    for cc in ['_country_merge']:#, '']:
+    for cc in ['_country_merge', '']:
 
         query = open(os.path.join(sys.path[0], f"base_query{cc}.sql"), "r").read()
         print(f'doing: {cc}, base query')
@@ -40,7 +40,7 @@ def main():
         print(df)
         df_list.append(df)
 
-        for extra_dim in ['ad_product']:#, 'domain']:
+        for extra_dim in ['ad_product', 'domain']:
             rep_dict['EXTRA_DIM'] = extra_dim
 
             query = open(os.path.join(sys.path[0], f"extra_dims_query{cc}.sql"), "r").read()

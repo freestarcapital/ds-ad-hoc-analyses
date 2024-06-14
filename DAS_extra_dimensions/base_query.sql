@@ -26,6 +26,5 @@ with base as (
     select o.*, e.rps rps, e.rps * o.session_count revenue
     from results_expt e join results_opt o using (bidder, country_code, device_category, rtt_category, fsrefresh)
 )
-select 'exisiting dimensions only' scenario, sum(session_count) session_count, sum(revenue) revenue, sum(revenue)/sum(session_count)*1000 rps,
-0 as percent_increase_in_revenue
+select count(*) unique_cohorts, sum(session_count) total_sessions, sum(revenue) revenue_no_domain, 0 revenue_domain
 from results

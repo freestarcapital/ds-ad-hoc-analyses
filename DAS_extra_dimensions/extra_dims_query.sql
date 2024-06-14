@@ -1,4 +1,4 @@
-with base_with_extra_dim as (
+with base_data_domain_fs_testgroup as (
     SELECT fs_testgroup, bidder, rtt_category, fsrefresh, country_code,
         `freestar-157323.ad_manager_dtf`.device_category(device_category) device_category, <EXTRA_DIM>, status,
         sum(revenue) revenue,
@@ -9,48 +9,43 @@ with base_with_extra_dim as (
         and fs_testgroup in ('experiment', 'optimised')
         and country_code is not null
         and status != 'disabled'
-        and ad_product not like '%video%'
+        and <EXTRA_DIM> not like '%video%'
     group by fs_testgroup, bidder, country_code, device_category, rtt_category, fsrefresh, <EXTRA_DIM>, status
-), results_with_extra_dim_expt as (
-    select *
-    from base_with_extra_dim
+), base_data_domain_expt as (
+    select bidder, country_code, device_category, rtt_category, fsrefresh, <EXTRA_DIM>, status, revenue, session_count, rps
+    from base_data_domain_fs_testgroup
     where fs_testgroup = 'experiment'
+), results_domain_expt as (
+    select bidder, country_code, device_category, rtt_category, fsrefresh, <EXTRA_DIM>, status, rps
+    from base_data_domain_expt
     qualify row_number() over (partition by bidder, country_code, device_category, rtt_category, fsrefresh, <EXTRA_DIM> order by rps desc) = 1
-), results_with_extra_dim_opt as (
+), base_data_no_domain_expt as (
+    select bidder, country_code, device_category, rtt_category, fsrefresh, status, safe_divide(sum(revenue), sum(session_count)) rps
+    from base_data_domain_expt
+    group by bidder, country_code, device_category, rtt_category, fsrefresh, status
+), decision_no_domain_expt as (
+    select bidder, country_code, device_category, rtt_category, fsrefresh, status
+    from base_data_no_domain_expt
+    qualify row_number() over (partition by bidder, country_code, device_category, rtt_category, fsrefresh order by rps desc) = 1
+), results_no_domain_expt as (
+    select base_data_domain_expt.* except (revenue, session_count)
+    from decision_no_domain_expt
+    join base_data_domain_expt using (bidder, country_code, device_category, rtt_category, fsrefresh, status)
+), results_domain_opt as (
     select bidder, country_code, device_category, rtt_category, fsrefresh, <EXTRA_DIM>, sum(session_count) session_count
-    from base_with_extra_dim
+    from base_data_domain_fs_testgroup
     where fs_testgroup = 'optimised'
     group by bidder, country_code, device_category, rtt_category, fsrefresh, <EXTRA_DIM>
-), results_with_extra_dim as (
-    select o.*, e.rps rps, e.rps * o.session_count revenue
-    from results_with_extra_dim_expt e join results_with_extra_dim_opt o using (bidder, country_code, device_category, rtt_category, fsrefresh, <EXTRA_DIM>)
-), base_without_extra_dim as (
-    select base_with_extra_dim.*
-    from base_with_extra_dim join results_with_extra_dim using (bidder, country_code, device_category, rtt_category, fsrefresh, <EXTRA_DIM>)
-), base_without_extra_dim_expt as (
-    select bidder, country_code, device_category, rtt_category, fsrefresh, status, safe_divide(sum(revenue), sum(session_count)) rps
-    from base_without_extra_dim
-    where fs_testgroup = 'experiment'
-    group by bidder, country_code, device_category, rtt_category, fsrefresh, status
-), results_without_extra_dim_expt as (
-    select *
-    from base_without_extra_dim_expt
-    qualify row_number() over (partition by bidder, country_code, device_category, rtt_category, fsrefresh order by rps desc) = 1
-), results_without_extra_dim_opt as (
-    select bidder, country_code, device_category, rtt_category, fsrefresh, sum(session_count) session_count
-    from base_without_extra_dim
-    where fs_testgroup = 'optimised'
-    group by bidder, country_code, device_category, rtt_category, fsrefresh
-), results_without_extra_dim as (
-    select o.*, e.rps rps, e.rps * o.session_count revenue
-    from results_without_extra_dim_expt e join results_without_extra_dim_opt o using (bidder, country_code, device_category, rtt_category, fsrefresh)
-), summary as (
-    select 'with extra dimension' scenario, sum(session_count) session_count, sum(revenue) revenue, sum(revenue)/sum(session_count)*1000 rps
-    from results_with_extra_dim
-    union all
-    select 'without extra dimension' scenario, sum(session_count) session_count, sum(revenue) revenue, sum(revenue)/sum(session_count)*1000 rps
-    from results_without_extra_dim
+), results_all as (
+    select t1.*, 
+        t2.status as status_domain, t2.rps rps_domain, t2.rps * session_count revenue_domain,
+        t3.status as status_no_domain, t3.rps rps_no_domain, t3.rps * session_count revenue_no_domain
+    from results_domain_opt t1
+    join results_domain_expt t2 using (bidder, country_code, device_category, rtt_category, fsrefresh, <EXTRA_DIM>)
+    join results_no_domain_expt t3 using (bidder, country_code, device_category, rtt_category, fsrefresh, <EXTRA_DIM>)
 )
-select *, 100 * (revenue / (select revenue from summary where scenario = 'without extra dimension') - 1) as percent_increase_in_revenue
-from summary
-order by scenario desc
+select count(*) unique_cohorts, 
+    sum(session_count) total_sessions,
+    sum(revenue_no_domain) revenue_no_domain, 
+    sum(revenue_domain) revenue_domain 
+from results_all
