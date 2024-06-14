@@ -30,17 +30,17 @@ def main():
                 "DAYS_BACK_END": "2"}
 
     df_list = []
-    for cc in ['']:#'_country_merge', '']:
+    for cc in ['_country_merge', '']:
 
-        # query = open(os.path.join(sys.path[0], f"base_query{cc}.sql"), "r").read()
-        # print(f'doing: {cc}, base query')
-        # df = get_bq_data(query, rep_dict)
-        # df['cc'] = cc
-        # df['extra_dim'] = 'None'
-        # print(df)
-        # df_list.append(df)
+        query = open(os.path.join(sys.path[0], f"base_query{cc}.sql"), "r").read()
+        print(f'doing: {cc}, base query')
+        df = get_bq_data(query, rep_dict)
+        df['cc'] = cc
+        df['extra_dim'] = 'None'
+        print(df)
+        df_list.append(df)
 
-        for extra_dim in ['ad_product, domain', 'ad_product', 'domain']:
+        for extra_dim in ['ad_product', 'domain', 'ad_product, domain']:
             rep_dict['EXTRA_DIM'] = extra_dim
 
             query = open(os.path.join(sys.path[0], f"extra_dims_query{cc}.sql"), "r").read()
