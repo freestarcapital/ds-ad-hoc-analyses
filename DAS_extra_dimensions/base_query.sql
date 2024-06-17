@@ -1,3 +1,5 @@
+CREATE OR REPLACE TABLE `sublime-elixir-273810.ds_experiments_us.<TABLE_NAME>` AS
+
 with base as (
     SELECT fs_testgroup, bidder, rtt_category, fsrefresh,
         country_code,
@@ -26,5 +28,7 @@ with base as (
     select o.*, e.rps rps, e.rps * o.session_count revenue
     from results_expt e join results_opt o using (bidder, country_code, device_category, rtt_category, fsrefresh)
 )
+select * from results;
+
 select count(*) unique_cohorts, sum(session_count) total_sessions, sum(revenue) revenue_no_domain, 0 revenue_domain
-from results
+from `sublime-elixir-273810.ds_experiments_us.<TABLE_NAME>`;

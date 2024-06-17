@@ -1,3 +1,5 @@
+CREATE OR REPLACE TABLE `sublime-elixir-273810.ds_experiments_us.<TABLE_NAME>` AS
+
 with base_data_domain_fs_testgroup as (
     SELECT fs_testgroup, bidder, rtt_category, fsrefresh, country_code,
         `freestar-157323.ad_manager_dtf`.device_category(device_category) device_category, <EXTRA_DIM>, status,
@@ -44,8 +46,10 @@ with base_data_domain_fs_testgroup as (
     join results_domain_expt t2 using (bidder, country_code, device_category, rtt_category, fsrefresh, <EXTRA_DIM>)
     join results_no_domain_expt t3 using (bidder, country_code, device_category, rtt_category, fsrefresh, <EXTRA_DIM>)
 )
-select count(*) unique_cohorts, 
+select * from results_all;
+
+select count(*) unique_cohorts,
     sum(session_count) total_sessions,
-    sum(revenue_no_domain) revenue_no_domain, 
-    sum(revenue_domain) revenue_domain 
-from results_all
+    sum(revenue_no_domain) revenue_no_domain,
+    sum(revenue_domain) revenue_domain
+from `sublime-elixir-273810.ds_experiments_us.<TABLE_NAME>`;
