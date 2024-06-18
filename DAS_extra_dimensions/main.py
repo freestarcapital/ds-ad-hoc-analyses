@@ -9,6 +9,7 @@ import datetime
 import pickle
 import plotly.express as px
 import kaleido
+from scipy.stats import linregress
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 1000)
@@ -26,17 +27,42 @@ def get_bq_data(query, replacement_dict={}):
         query = query.replace(f"<{k}>", v)
     return client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
 
+def plot_scatter(df, title, filename, x_col='rps_domain', y_col='rps_domain_opt'):
+    x = df[x_col] * 1000
+    y = df[y_col] * 1000
+    fig, ax = plt.subplots(figsize=(9, 6))
+    ax.scatter(x, y)
+    result = linregress(x, y)
+    X = np.array([min(x), max(x)])
+    plt.plot(X, result.intercept + result.slope * X, 'r-')
+    plt.title(
+        f'{title}: {y_col} ~ {result.intercept:0.2f} + {result.slope:0.2f} x {x_col}, R^2: {100 * (result.rvalue ** 2):0.1f}%')
+    plt.xlabel(x_col)
+    plt.ylabel(y_col)
+    fig.savefig(f'plots/{filename}.png')
+
+def plot_percentage_variation(df, extra_dim, filename):
+    z = df['percent_diff']
+    y, x, _ = plt.hist(z, bins=200, density=True, cumulative=False)
+    fig, ax = plt.subplots(figsize=(12, 9))
+    pd.DataFrame(y, index=pd.Index(x[1:])).plot(xlim=[-50, 50], legend=None, ax=ax)
+    ax.set_xlabel('Percentage increase in optimised dataset revenue vs experimental dataset revenue')
+    ax.set_ylabel('Density function')
+    fig.suptitle(f'Histogram of optimised revenue vs experimental revenue for {extra_dim}, mean: {np.mean(z):0.1f}%, stddev: {np.std(z):0.1f}%')
+    fig.savefig(f'plots/{filename}_base.png')
+
+
 def main():
     max_client_bidders = 8
     max_total_bidders = 13
 
-    plots_only = True
+    plots_only = False
 
     rep_dict = {"DAYS_BACK_START": "9",
                 "DAYS_BACK_END": "2"}
 
     df_list = []
-    for cc in ['_country_merge', '']:
+    for cc in ['_country_merge']:#, '']:
         df_partial_improvement_list = []
         summary = {}
 
@@ -50,7 +76,15 @@ def main():
             print(df)
             df_list.append(df)
 
-        query = (f"select count(*) total_cohorts " 
+        query = f"select rps, rps_opt from `sublime-elixir-273810.ds_experiments_us.{rep_dict['TABLE_NAME']}` where rps_opt is not NULL"
+        plot_scatter(get_bq_data(query, rep_dict), 'base', f'override_improvement_scatter{cc}_base', 'rps', 'rps_opt')
+
+        query = (f"select safe_divide(revenue_opt-revenue, 0.5*(revenue_opt+revenue)) * 100 percent_diff "
+                 f"from `sublime-elixir-273810.ds_experiments_us.{rep_dict['TABLE_NAME']}` "
+                 f"where revenue_opt is not null")
+        plot_percentage_variation(get_bq_data(query, rep_dict), 'base', f'override_improvement_rev_var{cc}_base')
+
+        query = (f"select count(*) total_cohorts "
                  f"from `sublime-elixir-273810.ds_experiments_us.{rep_dict['TABLE_NAME']}`")
         df_3 = get_bq_data(query, rep_dict)
         summary[f'total_cohorts_base'] = df_3.iloc[0, 0]
@@ -91,6 +125,14 @@ def main():
                 print(df)
                 df_list.append(df)
 
+            query = f"select rps_domain, rps_domain_opt from `sublime-elixir-273810.ds_experiments_us.{rep_dict['TABLE_NAME']}` where rps_domain_opt is not NULL"
+            plot_scatter(get_bq_data(query, rep_dict), extra_dim_clean, f'override_improvement_scatter{cc}_{extra_dim_clean}')
+
+            query = (f"select safe_divide(revenue_domain_opt_rps-revenue_domain, 0.5*(revenue_domain_opt_rps+revenue_domain)) * 100 percent_diff "
+                     f"from `sublime-elixir-273810.ds_experiments_us.{rep_dict['TABLE_NAME']}` "
+                     f"where revenue_domain_opt_rps is not null")
+            plot_percentage_variation(get_bq_data(query, rep_dict), extra_dim_clean, f'override_improvement_rev_var{cc}_{extra_dim_clean}')
+
             query = (f"select sum(revenue_domain - revenue_no_domain) over(order by revenue_domain - revenue_no_domain desc) additional_revenue "
                      f"from `sublime-elixir-273810.ds_experiments_us.{rep_dict['TABLE_NAME']}` "
                      f"where status_domain != status_no_domain "
@@ -103,10 +145,8 @@ def main():
             df_3 = get_bq_data(query, rep_dict)
 
             legend_text = f"{extra_dim.replace(', ', '_')}: max added cohorts: {len(df_2) / 1e3:0.0f}k, max rev uplift: {df_2.iloc[-1, 0] / df_3.iloc[0, 0] * 100:0.1f}%"
-#            legend_text = f"{extra_dim.replace(', ', '_')}: max rev uplift: {df_2.iloc[-1, 0] / df_3.iloc[0, 0] * 100:0.1f}%"
             df_2 = df_2.rename(columns={'additional_revenue': legend_text})
 
-#            df_partial_improvement_list.append(df_2)
             df_partial_improvement_list.append(df_2 / df_3.iloc[0, 0] * 100)
             summary[f'extra_cohorts_{extra_dim}'] = len(df_2)
 
