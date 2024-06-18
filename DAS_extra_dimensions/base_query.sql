@@ -25,7 +25,7 @@ with base as (
     where fs_testgroup = 'optimised'
     group by bidder, country_code, device_category, rtt_category, fsrefresh
 ), results as (
-    select o.*, e.rps rps, e.rps * o.session_count revenue
+    select o.*, e.status, e.rps, e.rps * o.session_count revenue
     from results_expt e join results_opt o using (bidder, country_code, device_category, rtt_category, fsrefresh)
 )
 select * from results;

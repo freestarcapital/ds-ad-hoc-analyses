@@ -27,6 +27,9 @@ def get_bq_data(query, replacement_dict={}):
     return client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
 
 def main():
+    max_client_bidders = 8
+    max_total_bidders = 13
+
     plots_only = True
 
     rep_dict = {"DAYS_BACK_START": "9",
@@ -51,6 +54,28 @@ def main():
                  f"from `sublime-elixir-273810.ds_experiments_us.{rep_dict['TABLE_NAME']}`")
         df_3 = get_bq_data(query, rep_dict)
         summary[f'total_cohorts_base'] = df_3.iloc[0, 0]
+
+        query = (f"select sum(if(status = 'client', 1, 0)) client, "
+                 f"sum(if(status != 'off', 1, 0)) on_status "
+                 f"from `sublime-elixir-273810.ds_experiments_us.{rep_dict['TABLE_NAME']}` "
+                 f"group by country_code, device_category, rtt_category, fsrefresh")
+        df_5 = get_bq_data(query, rep_dict)
+
+        bins = np.arange(df_5.max().max() + 1)
+        status_counts = pd.DataFrame(index=pd.Index(bins[:-1]))
+        for col_name, col_data in df_5.items():
+            y, _, _ = plt.hist(col_data, bins=bins, density=True, cumulative=True)
+            status_counts[col_name] = 100 * y
+            N = max_total_bidders if 'on' in col_name else max_client_bidders
+            status_counts = status_counts.rename(columns={
+                col_name: f'{col_name}, count <= {N}: {status_counts[col_name].loc[N]:0.1f}%, mean count: {np.mean(col_data):0.1f}'})
+
+        fig, ax = plt.subplots(figsize=(12, 9))
+        status_counts.plot(ax=ax)
+        ax.set_xlabel('Number (count) of bidders with status shown')
+        ax.set_ylabel('Percentage of cohorts with at least bidder count shown on x-axis')
+        fig.suptitle(f'Client and on bidder count status when no dimensions added')
+        fig.savefig(f'plots/override_improvement_bidder_count{cc}_base.png')
 
         for extra_dim in ['ad_product', 'domain', 'ad_product, domain']:
             rep_dict['EXTRA_DIM'] = extra_dim
@@ -87,8 +112,8 @@ def main():
 
             query = (f"select sum(if(status_no_domain = 'client', 1, 0)) no_{extra_dim_clean}_client, "
                      f"sum(if(status_domain = 'client', 1, 0)) {extra_dim_clean}_client, "
-                     f"sum(if(status_no_domain != 'on', 1, 0)) no_{extra_dim_clean}_on, "
-                     f"sum(if(status_domain != 'on', 1, 0)) {extra_dim_clean}_on "
+                     f"sum(if(status_no_domain != 'off', 1, 0)) no_{extra_dim_clean}_on, "
+                     f"sum(if(status_domain != 'off', 1, 0)) {extra_dim_clean}_on "
                      f"from `sublime-elixir-273810.ds_experiments_us.{rep_dict['TABLE_NAME']}` "
                      f"group by country_code, device_category, rtt_category, fsrefresh, {extra_dim}")
             df_5 = get_bq_data(query, rep_dict)
@@ -98,14 +123,14 @@ def main():
             for col_name, col_data in df_5.items():
                 y, _, _ = plt.hist(col_data, bins=bins, density=True, cumulative=True)
                 status_counts[col_name] = 100 * y
-                N = 12 if 'on' in col_name else 8
+                N = max_total_bidders if 'on' in col_name else max_client_bidders
                 status_counts = status_counts.rename(columns={col_name: f'{col_name}, count <= {N}: {status_counts[col_name].loc[N]:0.1f}%, mean count: {np.mean(col_data):0.1f}'})
 
             fig, ax = plt.subplots(figsize=(12, 9))
             status_counts.plot(ax=ax)
             ax.set_xlabel('Number (count) of bidders with status shown')
             ax.set_ylabel('Percentage of cohorts with at least bidder count shown on x-axis')
-            fig.suptitle(f'Effect of adding dimension {extra_dim} to client and off bidder count status')
+            fig.suptitle(f'Effect of adding dimension {extra_dim} to client and on bidder count status')
             fig.savefig(f'plots/override_improvement_bidder_count{cc}_{extra_dim_clean}.png')
 
         fig, ax = plt.subplots(figsize=(12, 9), nrows=2)
