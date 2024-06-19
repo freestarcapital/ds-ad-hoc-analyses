@@ -1,4 +1,4 @@
-DECLARE ddate DATE DEFAULT "2024-05-31";
+DECLARE ddate DATE DEFAULT "<DDATE>";
 
 SELECT "" domain, bwr.cpm/1e4 cpma, predict.browsiPricePredicition price_prediction
  FROM `freestar-157323.prod_eventstream.bidswon_raw` bwr

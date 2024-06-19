@@ -28,12 +28,15 @@ def get_bq_data(query, replacement_dict={}):
     return client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
 
 def main_browsi_1(query_file="browsi_query_1_US_desktop", force_recalc=False, hist_bins=50, nbinsx=50, nbinsy=100,
-                  max_cpma=2, max_price_prediction=0.4, domain='all'):
+                  max_cpma=4, max_price_prediction=1, domain='all'):
 
-    data_cache_filename = f'data_cache/{query_file}.pkl'
+#    ddate = "2024-6-18"
+    ddate = "2024-6-19"
+
+    data_cache_filename = f'data_cache/{query_file}_{ddate}.pkl'
     if force_recalc or not os.path.exists(data_cache_filename):
         query = open(os.path.join(sys.path[0], f"{query_file}.sql"), "r").read()
-        df = get_bq_data(query)
+        df = get_bq_data(query, {'DDATE': ddate})
         with open(data_cache_filename, 'wb') as f:
             pickle.dump(df, f)
 
@@ -52,12 +55,11 @@ def main_browsi_1(query_file="browsi_query_1_US_desktop", force_recalc=False, hi
     df2 = df[(df['cpma'] < max_cpma) & (df['price_prediction'] < max_price_prediction)].copy()
     df2['log_cpma'] = np.log(df2['cpma']+0.1)
 
-
     for cpma_type in ['cpma', 'log_cpma']:
         res = stats.linregress(df2['price_prediction'], df2[cpma_type])
         title = f'{domain_short}, {cpma_type} = {res.intercept:0.2f} + {res.slope:0.2f} * browsi pp, R^2: {100 * res.rvalue ** 2:0.1f}%'
         fig = px.density_heatmap(df2, x='price_prediction', y=cpma_type, nbinsx=nbinsx, nbinsy=nbinsy, title=title)
-        fig.write_image(f"plots/{query_file}_{cpma_type}_{domain}.png")
+        fig.write_image(f"plots/{query_file}_{cpma_type}_{domain}_{ddate}.png")
 
     N = 5
     plot_specs = [('cpma', True, 0, max_cpma), #('rpp', True, 0, 80),
@@ -117,19 +119,18 @@ def main_browsi_1(query_file="browsi_query_1_US_desktop", force_recalc=False, hi
         ax_.set_ylabel(f'{"CDF" if cumulative else "PDF"} of sess with avg {col_to_plot} <= x-axis val')
         fig.suptitle(f'domain: {domain}, Does browsi signal prediction session value? browsi data split into {N} equal bins. (auction_end)')
 
-    fig.savefig(f'plots/{query_file}_density_plots_{domain}.png')
+    fig.savefig(f'plots/{query_file}_density_plots_{domain}_{ddate}.png')
 
+    return list(df['domain'].unique())
 
-    j = 9
 
 if __name__ == "__main__":
+    force_recalc = False
 
-#    main_browsi_1("browsi_query_1_US_desktop", force_recalc=True)
+    for query_file in ["browsi_query_1", "browsi_query_1_US_desktop"]:
+        domains = main_browsi_1(query_file, force_recalc=force_recalc)
+        for domain in domains:
+             main_browsi_1(query_file, domain=domain, force_recalc=False)
 
-    # for domain in ['all', 'lse.co.uk', 'baeldung.com', 'weareteachers.com']:
-    #     main_browsi_1("browsi_query_1", domain=domain)
-    #
-    #     main_browsi_1("browsi_query_1_US_desktop", domain=domain)
-
-    main_browsi_1("browsi_query_2")#, force_recalc=True, nbinsx=50, nbinsy=50, max_cpma=25, max_price_prediction=0.4)
+    main_browsi_1("browsi_query_2", force_recalc=force_recalc)#, nbinsx=50, nbinsy=50, max_cpma=25, max_price_prediction=0.4)
 

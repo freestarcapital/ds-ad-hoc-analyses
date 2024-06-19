@@ -1,4 +1,4 @@
-DECLARE ddate DATE DEFAULT "2024-05-31";
+DECLARE ddate DATE DEFAULT "<DDATE>";
 
 WITH sessions AS (
   SELECT net.reg_domain(auc_end.page_url) domain,
