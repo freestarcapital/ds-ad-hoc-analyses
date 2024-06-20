@@ -53,10 +53,13 @@ def plot_percentage_variation(df, extra_dim, filename):
 
 
 def main():
+    s100 = '_100'
+    s100 = ''
+
     max_client_bidders = 8
     max_total_bidders = 13
 
-    plots_only = False
+    plots_only = True
 
     rep_dict = {"DAYS_BACK_START": "9",
                 "DAYS_BACK_END": "2"}
@@ -133,10 +136,10 @@ def main():
                      f"where revenue_domain_opt_rps is not null")
             plot_percentage_variation(get_bq_data(query, rep_dict), extra_dim_clean, f'override_improvement_rev_var{cc}_{extra_dim_clean}')
 
-            query = (f"select sum(revenue_domain - revenue_no_domain) over(order by revenue_domain - revenue_no_domain desc) additional_revenue "
+            query = (f"select sum(revenue_domain{s100} - revenue_no_domain) over(order by revenue_domain{s100} - revenue_no_domain desc) additional_revenue "
                      f"from `sublime-elixir-273810.ds_experiments_us.{rep_dict['TABLE_NAME']}` "
-                     f"where status_domain != status_no_domain "
-                     f"order by revenue_domain - revenue_no_domain desc")
+                     f"where status_domain{s100} != status_no_domain "
+                     f"order by revenue_domain{s100} - revenue_no_domain desc")
             df_2 = get_bq_data(query, rep_dict)
             df_2 = df_2.set_index(pd.Index(1 + np.arange(len(df_2))))
 
@@ -178,7 +181,7 @@ def main():
         title = f"Revenue increase as overrides are added to {summary['total_cohorts_base'] / 1e3:0.0f}k base cohorts"
         df_partial_improvement.plot(xlabel='Number of overrides', ylabel='Percent increase in revenue', title=title, ax=ax[0])
         df_partial_improvement.plot(logx=True, xlabel='Number of overrides', ylabel='Percent increase in revenue', title=title, ax=ax[1])
-        fig.savefig(f'plots/override_improvement{cc}.png')
+        fig.savefig(f'plots/override_improvement{cc}{s100}.png')
 
     if not plots_only:
         df_results = pd.concat(df_list)
@@ -186,8 +189,92 @@ def main():
         print(df_results)
 
 
+def main_bootstrap_rev():
+    do_calc_queries = True
 
-    h = 0
+    rep_dict = {"DAYS_BACK_START": "9",
+                "DAYS_BACK_END": "2"}
+
+    for cc in ['_country_merge', '']:
+
+        rep_dict['TABLE_NAME'] = f'das_extra_dim_results_all{cc}_base_{rep_dict['DAYS_BACK_START']}_{rep_dict['DAYS_BACK_END']}'
+
+        if do_calc_queries:
+            query = open(os.path.join(sys.path[0], f"base_query{cc}.sql"), "r").read()
+            print(f'doing: {cc}, base query')
+            get_bq_data(query, rep_dict)
+
+        query = f"select sum(revenue) from `sublime-elixir-273810.ds_experiments_us.{rep_dict['TABLE_NAME']}`"
+        base_mean = get_bq_data(query).iloc[0, 0]
+
+        NN = 1000
+
+        hist_df_list = []
+        for rand_prop in [0.1, 0.25, 0.5, 0.75]:
+            query = "select "
+            query += ",".join(np.repeat(f"sum(if(rand()< {rand_prop},coalesce(revenue_opt,revenue),revenue))", NN))
+            query += f" from `sublime-elixir-273810.ds_experiments_us.{rep_dict['TABLE_NAME']}`"
+            revenue_estimates = get_bq_data(query).iloc[0, :].values
+
+            bin_counts, bins, _ = plt.hist(revenue_estimates, bins=100, density=True, cumulative=True)
+            hist_df_list.append(
+                pd.DataFrame(bin_counts, index=pd.Index(bins[1:]), columns=[f'rand_perc_{rand_prop * 100:0.0f}']))
+
+        revenue_df = pd.concat(hist_df_list).sort_index().bfill().ffill()
+        fig, ax = plt.subplots(figsize=(12, 9))
+        revenue_df.plot(ax=ax, xlabel='Revenue', ylabel='Cumulative probability of revenue shown on x-axis',
+                       title=f'Revenue estimate with uncertainty for base, revenue:{base_mean:0.0f}')
+        fig.savefig(f'plots/revenue_variation_base{cc}.png')
+
+        for extra_dim in ['ad_product', 'domain', 'ad_product, domain']:
+            rep_dict['EXTRA_DIM'] = extra_dim
+            extra_dim_clean = extra_dim.replace(', ', '')
+            rep_dict['TABLE_NAME'] = f'das_extra_dim_results_all{cc}_{extra_dim_clean}_{rep_dict['DAYS_BACK_START']}_{rep_dict['DAYS_BACK_END']}'
+
+            if not do_calc_queries:
+                query = open(os.path.join(sys.path[0], f"extra_dims_query{cc}.sql"), "r").read()
+                print(f'doing: {cc}, {extra_dim}')
+                get_bq_data(query, rep_dict)
+
+            query = (f"select sum(revenue_no_domain) revenue_no_domain, sum(revenue_domain) revenue_domain "
+                     f"from `sublime-elixir-273810.ds_experiments_us.{rep_dict['TABLE_NAME']}`")
+            mean_revenues = get_bq_data(query).iloc[0]
+
+            NN = 1000
+
+            hist_df_list = []
+            for rand_prop in [0.1, 0.25, 0.5, 0.75]:
+                query = "select "
+                query += ",".join(np.repeat(f"sum(if(rand()< {rand_prop},coalesce(revenue_domain_opt_rps,revenue_domain),revenue_domain))", NN))
+                query += f" from `sublime-elixir-273810.ds_experiments_us.{rep_dict['TABLE_NAME']}`"
+                revenue_estimates = get_bq_data(query).iloc[0, :].values
+                perc_uplift = (revenue_estimates / mean_revenues['revenue_no_domain'] - 1) * 100
+
+                bin_counts, bins, _ = plt.hist(perc_uplift, bins=100, density=True, cumulative=True)
+                hist_df_list.append(pd.DataFrame(bin_counts, index=pd.Index(bins[1:]), columns=[f'rand_perc_{rand_prop*100:0.0f}']))
+
+            uplift_df = pd.concat(hist_df_list).sort_index().bfill().ffill()
+            fig, ax = plt.subplots(figsize=(12, 9))
+            uplift_df.plot(ax=ax, xlabel='Revenue uplift in %', ylabel='Cumulative probability of uplift shown on x-axis',
+                           title=f'Revenue uplift estimate with uncertainty estimates for adding {extra_dim_clean}')
+            fig.savefig(f'plots/revenue_variation{cc}_{extra_dim_clean}.png')
+
+def main_expt_vs_opt():
+    query = open(os.path.join(sys.path[0], f"expt_vs_opt.sql"), "r").read()
+    zzz = get_bq_data(query)
+
+    bin_counts, bins, _ = plt.hist(zzz.iloc[:,0].values, bins=100, density=True, cumulative=True)
+    df = pd.DataFrame(bin_counts, index=pd.Index(bins[1:]))
+
+    fig, ax = plt.subplots(figsize=(12, 9))
+    df.plot(ax=ax, xlabel='% optimised rps is greater than experiment rps', ylabel='Cumulative proportion',
+            xlim=[-10, 50], title=f"total cohort: {len(zzz)}")
+    fig.savefig(f'plots/expt_vs_opt.png')
+
 
 if __name__ == "__main__":
     main()
+
+    #main_bootstrap_rev()
+
+#    main_expt_vs_opt()

@@ -25,7 +25,7 @@ with base as (
     where fs_testgroup = 'optimised'
     group by bidder, country_code, device_category, rtt_category, fsrefresh
 ), results_opt_winning_rps as (
-    select r.* except (status, revenue, session_count)
+    select b.* except (status, revenue, session_count)
     from base b
     join results_expt r using (bidder, country_code, device_category, rtt_category, fsrefresh, status)
     where b.fs_testgroup = 'optimised' and b.session_count > 100
