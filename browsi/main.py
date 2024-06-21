@@ -28,26 +28,32 @@ def get_bq_data(query, replacement_dict={}):
     return client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
 
 def main_browsi_1(query_file="browsi_query_1_US_desktop", force_recalc=False, hist_bins=50, nbinsx=50, nbinsy=100,
-                  max_cpma=4, max_price_prediction=1, domain='all'):
+                  max_cpma=4, max_price_prediction=1, domain='all', pp_col='price_prediction', N_buckets=5):
 
-#    ddate = "2024-6-18"
-    ddate = "2024-6-19"
+    print(domain)
 
-    data_cache_filename = f'data_cache/{query_file}_{ddate}.pkl'
+    ddate = "2024-6-18"
+    ddate_end = "2024-6-30"
+
+    data_cache_filename = f'data_cache/{query_file}_{ddate}_{ddate_end}.pkl'
     if force_recalc or not os.path.exists(data_cache_filename):
         query = open(os.path.join(sys.path[0], f"{query_file}.sql"), "r").read()
-        df = get_bq_data(query, {'DDATE': ddate})
+        df = get_bq_data(query, {'DDATE': ddate, 'DDATE_START': ddate, 'DDATE_END': ddate_end})
         with open(data_cache_filename, 'wb') as f:
             pickle.dump(df, f)
 
     with open(data_cache_filename, 'rb') as f:
         df = pickle.load(f)
 
-    df['price_prediction'] = [float(x) for x in df['price_prediction'].values]
+    df['price_prediction'] = [float(x) for x in df[pp_col].values]
 
     print(f'domains found: {", ".join(list(df['domain'].unique()))}')
     if domain != "all":
         df = df[df['domain'] == domain]
+    if len(df) <= 100:
+        print(f'too few rows for {domain}, skipping')
+        return
+
     domain_short = domain
     if len(domain_short) > 4:
         domain_short = domain_short[:4]
@@ -59,9 +65,8 @@ def main_browsi_1(query_file="browsi_query_1_US_desktop", force_recalc=False, hi
         res = stats.linregress(df2['price_prediction'], df2[cpma_type])
         title = f'{domain_short}, {cpma_type} = {res.intercept:0.2f} + {res.slope:0.2f} * browsi pp, R^2: {100 * res.rvalue ** 2:0.1f}%'
         fig = px.density_heatmap(df2, x='price_prediction', y=cpma_type, nbinsx=nbinsx, nbinsy=nbinsy, title=title)
-        fig.write_image(f"plots/{query_file}_{cpma_type}_{domain}_{ddate}.png")
+        fig.write_image(f"plots/{query_file}_{cpma_type}_{domain}_{pp_col}_{ddate}_{ddate_end}.png")
 
-    N = 5
     plot_specs = [('cpma', True, 0, max_cpma), #('rpp', True, 0, 80),
                   ('cpma', False, 0, max_cpma), ('log_cpma', False, -2, np.log(max_cpma+0.1))]
     fig, ax = plt.subplots(figsize=(16, 12), nrows=len(plot_specs))
@@ -70,8 +75,8 @@ def main_browsi_1(query_file="browsi_query_1_US_desktop", force_recalc=False, hi
         col_stats = {}
 
         price_prediction_lower = -0.001
-        for i, n in enumerate(np.arange(1, N+1)):
-            price_prediction_upper = df2['price_prediction'].quantile(n / N)
+        for i, n in enumerate(np.arange(1, N_buckets+1)):
+            price_prediction_upper = df2['price_prediction'].quantile(n / N_buckets)
             col_name = f'{price_prediction_lower:0.2f} to {price_prediction_upper:0.2f}'
 
             df3 = df2[(price_prediction_lower < df2['price_prediction']) & (df2['price_prediction'] <= price_prediction_upper)]
@@ -87,10 +92,10 @@ def main_browsi_1(query_file="browsi_query_1_US_desktop", force_recalc=False, hi
             price_prediction_lower = price_prediction_upper
 
         buckets = list(col_stats.keys())
-        z_scores = np.zeros([N, N])
-        p_scores = np.zeros([N, N])
-        for n1 in range(N):
-            for n2 in range(N):
+        z_scores = np.zeros([N_buckets, N_buckets])
+        p_scores = np.zeros([N_buckets, N_buckets])
+        for n1 in range(N_buckets):
+            for n2 in range(N_buckets):
                 z_scores[n1, n2] = (col_stats[buckets[n1]]['mean'] - col_stats[buckets[n2]]['mean']) / np.sqrt(
                     col_stats[buckets[n1]]['var'] + col_stats[buckets[n2]]['var'])
                 p_scores[n1, n2] = 1 - stats.norm.sf(
@@ -117,9 +122,9 @@ def main_browsi_1(query_file="browsi_query_1_US_desktop", force_recalc=False, hi
         df_hist.plot(ax=ax_, xlim=[x_min, x_max])
         ax_.set_xlabel(f'{col_to_plot}')
         ax_.set_ylabel(f'{"CDF" if cumulative else "PDF"} of sess with avg {col_to_plot} <= x-axis val')
-        fig.suptitle(f'domain: {domain}, Does browsi signal prediction session value? browsi data split into {N} equal bins. (auction_end)')
+        fig.suptitle(f'domain: {domain}, Does browsi signal prediction session value? browsi data split into {N_buckets} equal bins. points: {len(df2)}')
 
-    fig.savefig(f'plots/{query_file}_density_plots_{domain}_{ddate}.png')
+    fig.savefig(f'plots/{query_file}_density_plots_{domain}_{pp_col}_{ddate}_{ddate_end}.png')
 
     return list(df['domain'].unique())
 
@@ -127,10 +132,21 @@ def main_browsi_1(query_file="browsi_query_1_US_desktop", force_recalc=False, hi
 if __name__ == "__main__":
     force_recalc = False
 
-    for query_file in ["browsi_query_1", "browsi_query_1_US_desktop"]:
-        domains = main_browsi_1(query_file, force_recalc=force_recalc)
-        for domain in domains:
-             main_browsi_1(query_file, domain=domain, force_recalc=False)
+    #query_file = "browsi_query_1_first_impression"
+    query_file = "browsi_query_1_first_price_prediction"
 
-    main_browsi_1("browsi_query_2", force_recalc=force_recalc)#, nbinsx=50, nbinsy=50, max_cpma=25, max_price_prediction=0.4)
+    max_cpma = 4
+    N_buckets = 5
+
+    for pp_col in ['price_prediction_first', 'price_prediction_last', 'price_prediction_session_avg']:
+        domains = main_browsi_1(query_file, force_recalc=force_recalc, pp_col=pp_col, max_cpma=max_cpma, N_buckets=N_buckets)
+        for domain in domains:
+             main_browsi_1(query_file, domain=domain, force_recalc=False, pp_col=pp_col, max_cpma=max_cpma, N_buckets=N_buckets)
+
+    # for query_file in ["browsi_query_1", "browsi_query_1_US_desktop"]:
+    #     domains = main_browsi_1(query_file, force_recalc=force_recalc)
+    #     for domain in domains:
+    #          main_browsi_1(query_file, domain=domain, force_recalc=False)
+    #
+    # main_browsi_1("browsi_query_2", force_recalc=force_recalc)#, nbinsx=50, nbinsy=50, max_cpma=25, max_price_prediction=0.4)
 
