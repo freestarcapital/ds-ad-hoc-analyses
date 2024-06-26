@@ -271,10 +271,31 @@ def main_expt_vs_opt():
             xlim=[-10, 50], title=f"total cohort: {len(zzz)}")
     fig.savefig(f'plots/expt_vs_opt.png')
 
+def main_expt_vs_opt_floors_hour():
+    query = open(os.path.join(sys.path[0], f"expt_vs_opt_floors_hour.sql"), "r").read()
+    zzz = get_bq_data(query)
+    j = 0
+
+    floors_hours = zzz['floors_hour'].unique()
+
+    df_list = []
+    for fh in floors_hours:
+        zzz_fh = zzz[zzz['floors_hour'] == fh]
+        bin_counts, bins, _ = plt.hist(zzz_fh.iloc[:, 1].values, bins=100, density=True, cumulative=True)
+        df_list.append(pd.DataFrame(bin_counts, index=pd.Index(bins[1:]), columns=[fh]))
+
+    df = pd.concat(df_list, axis=1).sort_index().ffill().bfill()
+    fig, ax = plt.subplots(figsize=(12, 9))
+    df.plot(ax=ax, xlabel='% optimised rps is greater than experiment rps', ylabel='Cumulative proportion',
+            xlim=[-30, 60], title=f"total cohort: {len(zzz)}, broken down floors_hour")
+    fig.savefig(f'plots/expt_vs_opt_floors_hour.png')
+
 
 if __name__ == "__main__":
-    main()
+    #main()
 
     #main_bootstrap_rev()
 
 #    main_expt_vs_opt()
+
+    main_expt_vs_opt_floors_hour()

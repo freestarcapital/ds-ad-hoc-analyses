@@ -35,7 +35,11 @@ def main_browsi_1(query_file="browsi_query_1_US_desktop", force_recalc=False, hi
     ddate = "2024-6-18"
     ddate_end = "2024-6-30"
 
-    data_cache_filename = f'data_cache/{query_file}_{ddate}_{ddate_end}.pkl'
+    if 'first' in query_file:
+        data_cache_filename = f'data_cache/{query_file}_{ddate}_{ddate_end}.pkl'
+    else:
+        data_cache_filename = f'data_cache/{query_file}_{ddate}.pkl'
+
     if force_recalc or not os.path.exists(data_cache_filename):
         query = open(os.path.join(sys.path[0], f"{query_file}.sql"), "r").read()
         df = get_bq_data(query, {'DDATE': ddate, 'DDATE_START': ddate, 'DDATE_END': ddate_end})
@@ -134,6 +138,7 @@ if __name__ == "__main__":
 
     #query_file = "browsi_query_1_first_impression"
     query_file = "browsi_query_1_first_price_prediction"
+#    query_file = "browsi_query_1"
 
     max_cpma = 4
     N_buckets = 5
