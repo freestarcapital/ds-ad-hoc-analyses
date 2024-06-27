@@ -296,6 +296,6 @@ if __name__ == "__main__":
 
     #main_bootstrap_rev()
 
-#    main_expt_vs_opt()
+    main_expt_vs_opt()
 
-    main_expt_vs_opt_floors_hour()
+#    main_expt_vs_opt_floors_hour()

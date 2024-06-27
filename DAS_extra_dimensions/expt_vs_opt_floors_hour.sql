@@ -7,7 +7,7 @@ with base as (
         coalesce(safe_divide(sum(if(fs_testgroup='experiment', revenue, 0)), sum(if(fs_testgroup='experiment', session_count, 0))), 0) rps_expt,
         coalesce(safe_divide(sum(if(fs_testgroup='optimised', revenue, 0)), sum(if(fs_testgroup='optimised', session_count, 0))), 0) rps_opt
     FROM `freestar-157323.ad_manager_dtf.daily_client_server_mask_reporting_refresh_w_domain_expanded`
-    WHERE DATE >= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY) AND DATE <= DATE_SUB(CURRENT_DATE(), INTERVAL 2 DAY)
+    WHERE DATE >= DATE_SUB(CURRENT_DATE(), INTERVAL 9 DAY) AND DATE <= DATE_SUB(CURRENT_DATE(), INTERVAL 2 DAY)
         and fs_testgroup in ('experiment', 'optimised')
         and country_code is not null
         and status != 'disabled'
