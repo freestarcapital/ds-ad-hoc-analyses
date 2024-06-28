@@ -1,12 +1,14 @@
 
-CREATE OR REPLACE TABLE `sublime-elixir-273810.ds_experiments_us.DAS_bidder_investigation` AS
+DECLARE processing_date DATE DEFAULT "{processing_date}";
+
+CREATE OR REPLACE TABLE `sublime-elixir-273810.ds_experiments_us.DAS_bidder_investigation_{processing_date}` AS
 
 with base as (
     SELECT date, bidder,country_code, rtt_category,
     `freestar-157323.ad_manager_dtf`.device_category(device_category) device_category,
     status, session_count, revenue,impressions,unfilled,
     FROM freestar-157323.ad_manager_dtf.daily_client_server_mask_reporting_expanded_v1
-    WHERE DATE>= DATE_SUB(CURRENT_DATE(),INTERVAL {day_interval} DAY) AND DATE<= DATE_SUB(CURRENT_DATE(),INTERVAL 1 DAY)
+    WHERE DATE>= DATE_SUB(processing_date, INTERVAL {day_interval} DAY) AND DATE<= DATE_SUB(processing_date, INTERVAL 1 DAY)
     and fs_testgroup = 'experiment'
     and country_code is not null
     and status != 'disabled'
