@@ -1,10 +1,10 @@
 DECLARE processing_date DATE DEFAULT "{processing_date}";
 
-CREATE OR REPLACE TABLE `sublime-elixir-273810.ds_experiments_us.DAS_bidder_avg_rps_{processing_date}_{day_interval}` AS
+CREATE OR REPLACE TABLE `sublime-elixir-273810.ds_experiments_us.DAS_bidder_avg_rps_{processing_date}` AS
 
 with a0 as (
  select *, if(rtt_v2='default', 80, cast(rtt_v2 as int64)) rtt_v3
- from `sublime-elixir-273810.ds_experiments_us.DAS_bidder_investigation_{processing_date}_{day_interval}`
+ from `sublime-elixir-273810.ds_experiments_us.DAS_bidder_investigation_{processing_date}`
 ),
 a1 as (
   select distinct bidder
@@ -33,14 +33,37 @@ select distinct device_category, rtt_v3
   on t2.bidder=t4.bidder and t2.device_category=t4.device_category and t2.rtt_v3<=t4.rtt_v3 and country_code_match = 'default'
   group by 1, 2, 3, 4, 5, rtt_v3_match_CC
 ), t4 as (
-  select t3.bidder, t3.country_code, t3.rtt_v3, t3.device_category, t3.country_code_match, t3.rtt_v3_match, a0.status, a0.avg_rps
+  select t3.bidder, t3.country_code, t3.rtt_v3, t3.device_category, t3.country_code_match, t3.rtt_v3_match, a0.status, a0.avg_rps,
+  a0.status = 'client' is_client, a0.status in ('client', 'server') is_client_or_server
   from t3
   join a0 on t3.bidder=a0.bidder and t3.device_category=a0.device_category and t3.country_code_match=a0.country_code and t3.rtt_v3_match=a0.rtt_v3
   where rtt_v3_match is not null
 )
 select DATE_SUB(processing_date, INTERVAL 1 DAY) date, *,
-    row_number() over (partition by country_code, rtt_v3, device_category, status order by avg_rps desc) status_rank
+    if(is_client, row_number() over (partition by country_code, rtt_v3, device_category, is_client order by avg_rps desc), -1) client_rank,
+      countif(is_client) over (partition by country_code, rtt_v3, device_category) client_bidders,
+      if(is_client_or_server, row_number() over (partition by country_code, rtt_v3, device_category, is_client_or_server order by avg_rps desc), -1) client_or_server_rank,
+      countif(is_client_or_server) over (partition by country_code, rtt_v3, device_category) client_or_server_bidders,
+    case when device_category = 'smartphone-ios'
+        then
+        case when rtt_v3 = 25 then 'fast'
+             when rtt_v3 = 40 then 'medium'
+             else 'slow'
+        end
+      when device_category = 'desktop'
+      then
+        case when rtt_v3 = 20 then 'fast'
+             when rtt_v3 = 35 then 'medium'
+             else 'slow'
+        end
+      else
+        case when rtt_v3 = 7 then 'superfast'
+            when rtt_v3 = 30 then 'fast'
+            when rtt_v3 = 50 then 'medium'
+            else 'slow'
+        end
+      end rtt_category
 from t4;
 
-select * from `sublime-elixir-273810.ds_experiments_us.DAS_bidder_avg_rps_{processing_date}_{day_interval}`
+select * from `sublime-elixir-273810.ds_experiments_us.DAS_bidder_avg_rps_{processing_date}`
 

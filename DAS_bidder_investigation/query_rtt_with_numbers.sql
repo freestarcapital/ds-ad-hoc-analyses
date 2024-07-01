@@ -1,7 +1,7 @@
 
 DECLARE processing_date DATE DEFAULT "{processing_date}";
 
-CREATE OR REPLACE TABLE `sublime-elixir-273810.ds_experiments_us.DAS_bidder_investigation_{processing_date}_{day_interval}` AS
+CREATE OR REPLACE TABLE `sublime-elixir-273810.ds_experiments_us.DAS_bidder_investigation_{processing_date}` AS
 
 with base as (
     SELECT date, bidder,country_code, rtt_category,

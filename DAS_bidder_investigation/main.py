@@ -28,74 +28,71 @@ def get_bq_data(query, replacement_dict={}):
         query = query.replace("{"+k+"}", f'{v}')
     return client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
 
-def main_ad_requests_by_status():
+def get_data(last_date=datetime.date.today() - datetime.timedelta(days=1), days=30, force_recalc=False):
 
-    bidder = 'rise'
-    device_category = 'smartphone-ios'
+    data_cache_filename = f'data_cache/DAS_bidder_investigation_{last_date}_{days}.pkl'
 
-    # query = open(os.path.join(sys.path[0], "query_rtt_with_numbers.sql"), "r").read()
-    # get_bq_data(query, repl_dict)
-
-    repl_dict = {'day_interval': 8,
-                 'perc': 0.01,
-                 'fallback_rps_perc': 10}
-
-    dt = datetime.date(2024, 6, 27)
-    df_list = []
-    for d in range(20):
-        repl_dict['processing_date'] = (dt - datetime.timedelta(days=d)).strftime("%Y-%m-%d")
-        print(f'processing date: {repl_dict['processing_date']}')
-
-        # query = open(os.path.join(sys.path[0], "query_rtt_with_numbers_with_query_rtt_category_raw.sql"), "r").read()
-        # get_bq_data(query, repl_dict)
-
-        query = open(os.path.join(sys.path[0], "query_sessions.sql"), "r").read()
-        df_list.append(get_bq_data(query, repl_dict))
-
-    df = pd.concat(df_list)
-    df = df[(df['bidder'] == bidder) & (df['device_category'] == device_category)]
-    df_pivot = df.pivot(columns='status', values='ad_requests_prop', index='date')
-    fig, ax = plt.subplots(figsize=(12, 9))
-    df_pivot.plot(ylabel='ad_requests proportion', title=f'ad_requests proportion by status for {bidder} {device_category}', ax=ax)
-    fig.savefig(f'plots/ad_requests_by_status_{bidder}_{device_category}')
-
-def main_bidder_ordering():
-    bidder = 'rise'
-    device_category = 'smartphone-ios'
-    country_code = 'US'
-    status = 'client'
+    if not force_recalc and os.path.exists(data_cache_filename):
+        with open(data_cache_filename, 'rb') as f:
+            df = pickle.load(f)
+        return df
 
     repl_dict = {'day_interval': 2,
                  'perc': 0.01,
                  'fallback_rps_perc': 10}
 
-    dt = datetime.date(2024, 6, 27)
-#    dt = datetime.date(2024, 6, 15)
     df_list = []
-    for d in range(6):
-        repl_dict['processing_date'] = (dt - datetime.timedelta(days=d)).strftime("%Y-%m-%d")
+    for d in range(days):
+        repl_dict['processing_date'] = (last_date - datetime.timedelta(days=d)).strftime("%Y-%m-%d")
         print(f'processing date: {repl_dict['processing_date']}')
-
-        # query = open(os.path.join(sys.path[0], "query_rtt_category_raw.sql"), "r").read()
-        # get_bq_data(query, repl_dict)
 
         query = open(os.path.join(sys.path[0], "query_rtt_with_numbers.sql"), "r").read()
         get_bq_data(query, repl_dict)
 
         query = open(os.path.join(sys.path[0], "bidder_avg_rps.sql"), "r").read()
-        x = get_bq_data(query, repl_dict)
-        z = x[(x['bidder'] == bidder) & (x['device_category'] == device_category) & (x['country_code'] == country_code) & (x['status'] == status)]
-        df_list.append(z)
+        df_day = get_bq_data(query, repl_dict)
+        df_list.append(df_day)
 
     df = pd.concat(df_list)
-    df_pivot = df.pivot(index='date', columns='rtt_v3', values='status_rank').sort_index()
-    fig, ax = plt.subplots(figsize=(12, 9))
-    df_pivot.plot(ylabel=f'bidder rank', ax=ax,
-                  title=f'bidder rank for status: {status}, bidder: {bidder}, country_code: {country_code}, device_category: {device_category}, day_interval: {repl_dict["day_interval"]}')
-    fig.savefig(f'plots/bidder_rank_{status}_{bidder}_{country_code}_{device_category}_dayint_{repl_dict["day_interval"]}')
+    with open(data_cache_filename, 'wb') as f:
+        pickle.dump(df, f)
+    return df
+
+def main(force_recalc=False):
+    client_rank_limit = 8
+    client_or_server_rank_limit = 13
+    df = get_data(force_recalc=force_recalc)
+    df = df.set_index(pd.to_datetime(df['date']))
+    df = df.sort_index()
+
+    bidder = 'rise'
+    device_category = 'smartphone-ios'
+    country_code = 'US'
+
+    df = df[(df['bidder'] == bidder) & (df['device_category'] == device_category) & (df['country_code'] == country_code)]
+    df[f'is_client_top_{client_rank_limit}'] = df['client_rank'] <= client_rank_limit
+    df[f'is_client_or_server_top_{client_or_server_rank_limit}'] = df['client_or_server_rank'] <= client_or_server_rank_limit
+
+    fig, ax = plt.subplots(figsize=(16, 12), nrows=3, ncols=3)
+    for i, rtt in enumerate(df['rtt_v3'].unique()):
+
+        df_rtt = df[df['rtt_v3'] == rtt]
+
+        df_rtt[['client_rank', 'client_bidders', 'client_or_server_rank', 'client_or_server_bidders']].plot(style='x-',
+                ax=ax[i, 0], ylabel=f'rtt: {rtt}')
+        df_rtt[['avg_rps']].plot(style='x-', ax=ax[i, 0], secondary_y='avg_rps')
+
+        (1 * df_rtt[['is_client', f'is_client_top_{client_rank_limit}', 'avg_rps']]).plot(style='x-',
+                ax=ax[i, 1], ylabel=f'rtt: {rtt}', secondary_y='avg_rps')
+
+        (1 * df_rtt[['is_client_or_server', f'is_client_or_server_top_{client_or_server_rank_limit}', 'avg_rps']]).plot(style='x-',
+                ax=ax[i, 2], ylabel=f'rtt: {rtt}', secondary_y='avg_rps')
+
+    title = f'bidder_investigation_{bidder}_{country_code}_{device_category}'
+    fig.suptitle(title.replace('_', ' '))
+    fig.savefig(f'plots/{title}.png')
 
 
 if __name__ == "__main__":
-#    main_ad_requests_by_status()
 
-    main_bidder_ordering()
+    main()

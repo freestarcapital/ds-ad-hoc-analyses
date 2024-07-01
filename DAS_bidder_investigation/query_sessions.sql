@@ -27,5 +27,5 @@ DECLARE processing_date DATE DEFAULT "{processing_date}";
 --group by 1, 2, 3, 4;
 
 select date, bidder, device_category, status,
-    ad_requests / sum(ad_requests) over(partition by date, bidder, device_category) ad_requests_prop
+    ad_requests / sum(ad_requests) over(partition by date, bidder, device_category) ad_req
 from `sublime-elixir-273810.ds_experiments_us.DAS_bidder_summary_{processing_date}`
