@@ -65,22 +65,22 @@ def main_bidder_ordering():
     country_code = 'US'
     status = 'client'
 
-    repl_dict = {'day_interval': 8,
+    repl_dict = {'day_interval': 2,
                  'perc': 0.01,
                  'fallback_rps_perc': 10}
 
     dt = datetime.date(2024, 6, 27)
 #    dt = datetime.date(2024, 6, 15)
     df_list = []
-    for d in range(20):
+    for d in range(6):
         repl_dict['processing_date'] = (dt - datetime.timedelta(days=d)).strftime("%Y-%m-%d")
         print(f'processing date: {repl_dict['processing_date']}')
 
         # query = open(os.path.join(sys.path[0], "query_rtt_category_raw.sql"), "r").read()
         # get_bq_data(query, repl_dict)
 
-        # query = open(os.path.join(sys.path[0], "query_rtt_with_numbers.sql"), "r").read()
-        # get_bq_data(query, repl_dict)
+        query = open(os.path.join(sys.path[0], "query_rtt_with_numbers.sql"), "r").read()
+        get_bq_data(query, repl_dict)
 
         query = open(os.path.join(sys.path[0], "bidder_avg_rps.sql"), "r").read()
         x = get_bq_data(query, repl_dict)
@@ -88,10 +88,11 @@ def main_bidder_ordering():
         df_list.append(z)
 
     df = pd.concat(df_list)
-    df_pivot = df.pivot(index='date', columns='rtt_v2', values='status_rank').sort_index()
+    df_pivot = df.pivot(index='date', columns='rtt_v3', values='status_rank').sort_index()
     fig, ax = plt.subplots(figsize=(12, 9))
-    df_pivot.plot(ylabel=f'bidder rank', title=f'bidder rank for status: {status}, bidder: {bidder}, country_code: {country_code}, device_category: {device_category}', ax=ax)
-    fig.savefig(f'plots/bidder_rank_{status}_{bidder}_{country_code}_{device_category}')
+    df_pivot.plot(ylabel=f'bidder rank', ax=ax,
+                  title=f'bidder rank for status: {status}, bidder: {bidder}, country_code: {country_code}, device_category: {device_category}, day_interval: {repl_dict["day_interval"]}')
+    fig.savefig(f'plots/bidder_rank_{status}_{bidder}_{country_code}_{device_category}_dayint_{repl_dict["day_interval"]}')
 
 
 if __name__ == "__main__":
