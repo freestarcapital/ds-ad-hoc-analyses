@@ -33,6 +33,7 @@ def get_data(last_date=datetime.date.today() - datetime.timedelta(days=1), days=
     data_cache_filename = f'data_cache/DAS_bidder_investigation_{last_date}_{days}.pkl'
 
     if not force_recalc and os.path.exists(data_cache_filename):
+        print(f'found existing data file, loading {data_cache_filename}')
         with open(data_cache_filename, 'rb') as f:
             df = pickle.load(f)
         return df
@@ -58,10 +59,10 @@ def get_data(last_date=datetime.date.today() - datetime.timedelta(days=1), days=
         pickle.dump(df, f)
     return df
 
-def main(force_recalc=False):
+def main(last_date=datetime.date.today() - datetime.timedelta(days=1), days=30, force_recalc=False):
     client_rank_limit = 8
     client_or_server_rank_limit = 13
-    df = get_data(force_recalc=force_recalc)
+    df = get_data(last_date, days, force_recalc)
     df = df.set_index(pd.to_datetime(df['date']))
     df = df.sort_index()
 
@@ -74,25 +75,23 @@ def main(force_recalc=False):
     df[f'is_client_or_server_top_{client_or_server_rank_limit}'] = df['client_or_server_rank'] <= client_or_server_rank_limit
 
     fig, ax = plt.subplots(figsize=(16, 12), nrows=3, ncols=3)
-    for i, rtt in enumerate(df['rtt_v3'].unique()):
+    for i, rtt in enumerate(np.sort(np.array(df['rtt_v3'].unique()))):
 
         df_rtt = df[df['rtt_v3'] == rtt]
 
         df_rtt[['client_rank', 'client_bidders', 'client_or_server_rank', 'client_or_server_bidders']].plot(style='x-',
                 ax=ax[i, 0], ylabel=f'rtt: {rtt}')
-        df_rtt[['avg_rps']].plot(style='x-', ax=ax[i, 0], secondary_y='avg_rps')
 
-        (1 * df_rtt[['is_client', f'is_client_top_{client_rank_limit}', 'avg_rps']]).plot(style='x-',
-                ax=ax[i, 1], ylabel=f'rtt: {rtt}', secondary_y='avg_rps')
+        (1 * df_rtt[['is_client', f'is_client_top_{client_rank_limit}']]).plot(style='x-',
+                ax=ax[i, 1], ylabel=f'rtt: {rtt}')
 
-        (1 * df_rtt[['is_client_or_server', f'is_client_or_server_top_{client_or_server_rank_limit}', 'avg_rps']]).plot(style='x-',
-                ax=ax[i, 2], ylabel=f'rtt: {rtt}', secondary_y='avg_rps')
+        (1 * df_rtt[['is_client_or_server', f'is_client_or_server_top_{client_or_server_rank_limit}']]).plot(style='x-',
+                ax=ax[i, 2], ylabel=f'rtt: {rtt}')
 
-    title = f'bidder_investigation_{bidder}_{country_code}_{device_category}'
-    fig.suptitle(title.replace('_', ' '))
-    fig.savefig(f'plots/{title}.png')
+    fig.suptitle(f'Bidder Report for bidder: {bidder} in segment: {country_code}, {device_category}')
+    fig.savefig(f'plots/bidder_investigation_{bidder}_{country_code}_{device_category}_{last_date}_{days}.png')
 
 
 if __name__ == "__main__":
 
-    main()
+    main(last_date=datetime.date(2024, 6, 30), days=90)

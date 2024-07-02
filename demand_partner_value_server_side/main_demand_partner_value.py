@@ -26,8 +26,8 @@ def get_bq_data(query, replacement_dict={}):
 def main(force_recalc=False):
     bins = 200
 
-    rep_dict = {"START_TIMESTAMP_STR": "2024-5-10 10:00:00 UTC",
-                "END_TIMESTAMP_STR": "2024-5-11 10:00:00 UTC",
+    rep_dict = {"START_TIMESTAMP_STR": "2024-6-29 10:00:00 UTC",
+                "END_TIMESTAMP_STR": "2024-6-30 10:00:00 UTC",
                 "DEMAND_PARTNER": "",
                 "SELECT_COLS": "prop_of_winning_bid_demand_partner"}
 

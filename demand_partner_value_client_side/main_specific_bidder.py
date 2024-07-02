@@ -25,17 +25,18 @@ def get_bq_data(query, replacement_dict={}):
         query = query.replace(f"<{k}>", str(v))
     return client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
 
-def main_bidsresponse_analysis(dt_end, data_hours=1, force_recalc=False):
+def main_bidsresponse_analysis(dt_end, specific_bidder, data_hours=1, force_recalc=False):
     bins = 200
 
     rep_dict = {"DEMAND_PARTNER": "",
     "SELECT_COLS": "prop_of_winning_bid_demand_partner",
     "START_UNIX_TIME_MS": str(int(datetime.datetime.timestamp(dt_end - datetime.timedelta(hours=data_hours)) * 1000)),
-    "END_UNIX_TIME_MS": str(int(datetime.datetime.timestamp(dt_end) * 1000))}
+    "END_UNIX_TIME_MS": str(int(datetime.datetime.timestamp(dt_end) * 1000)),
+    "SPECIFIC_BIDDER": specific_bidder}
 
-    data_cache_filename = f'data_cache/bidsresponse_common_data_{rep_dict['START_UNIX_TIME_MS']}_{rep_dict['END_UNIX_TIME_MS']}'
+    data_cache_filename = f'data_cache/bidsresponse_common_data_{rep_dict['START_UNIX_TIME_MS']}_{rep_dict['END_UNIX_TIME_MS']}_{specific_bidder}.pkl'
     if force_recalc or not os.path.exists(data_cache_filename):
-        query = open(os.path.join(sys.path[0], "bidsresponse_get_demand_partners.sql"), "r").read()
+        query = open(os.path.join(sys.path[0], "bidsresponse_get_demand_partners_specific_bidder.sql"), "r").read()
         demand_partners = get_bq_data(query, rep_dict)['bidder_code'].to_list()
         with open(data_cache_filename, 'wb') as f:
             pickle.dump((demand_partners), f)
@@ -51,7 +52,7 @@ def main_bidsresponse_analysis(dt_end, data_hours=1, force_recalc=False):
             rep_dict["DEMAND_PARTNER"] = dp
             print(f"doing: {dp}, {now}")
 
-            df = get_bq_data(open(os.path.join(sys.path[0], "bidsresponse_query.sql"), "r").read(), rep_dict)
+            df = get_bq_data(open(os.path.join(sys.path[0], "bidsresponse_query_specific_bidder.sql"), "r").read(), rep_dict)
             with open(data_cache_filename, 'wb') as f:
                 pickle.dump((df), f)
 
@@ -73,22 +74,25 @@ def main_bidsresponse_analysis(dt_end, data_hours=1, force_recalc=False):
     df2.plot(ax=ax)
     ax.set_xlabel('Ratio of demand partner bid to highest bid (0 = dp not included or no bid, 1 = highest)')
     ax.set_ylabel('Percentage of demand partner bid requests returning at least bid ratio shown on x-axis')
-    fig.suptitle(f'Demand partner bid ratios for highest bid in Prebid auctions')
-    fig.savefig(f'plots/demand_partners_highest_bid_{dt_end.strftime("%Y%m%d-%H%M")}_{data_hours}.png')
+    plot_filename = f'plots/demand_partners_highest_bid_{dt_end.strftime("%Y%m%d-%H%M")}_{data_hours}_{specific_bidder}.png'
+    title = f'Demand partner bid ratios for highest bid in Prebid auctions ({specific_bidder} sites only)'
+    fig.suptitle(title)
+    fig.savefig(plot_filename)
 
-def main_bidswon_analysis(dt_end, data_hours=1, force_recalc=False):
+def main_bidswon_analysis(dt_end, specific_bidder, data_hours=1, force_recalc=False):
     bins = 200
 
     rep_dict = {"DEMAND_PARTNER": "",
                 "SELECT_COLS": "prop_of_winning_bid_demand_partner",
                 "START_UNIX_TIME_MS": str(int(datetime.datetime.timestamp(dt_end - datetime.timedelta(hours=data_hours)) * 1000)),
-                "END_UNIX_TIME_MS": str(int(datetime.datetime.timestamp(dt_end) * 1000))}
+                "END_UNIX_TIME_MS": str(int(datetime.datetime.timestamp(dt_end) * 1000)),
+                "SPECIFIC_BIDDER": specific_bidder}
 
-    data_cache_filename = f'data_cache/bidsresponse_common_data_{rep_dict['START_UNIX_TIME_MS']}_{rep_dict['END_UNIX_TIME_MS']}.pkl'
     print(f'START_UNIX_TIME_MS: {rep_dict["START_UNIX_TIME_MS"]}, END_UNIX_TIME_MS: {rep_dict["END_UNIX_TIME_MS"]}')
 
+    data_cache_filename = f'data_cache/bidsresponse_common_data_{rep_dict['START_UNIX_TIME_MS']}_{rep_dict['END_UNIX_TIME_MS']}_{specific_bidder}.pkl'
     if force_recalc or not os.path.exists(data_cache_filename):
-        query = open(os.path.join(sys.path[0], "bidsresponse_get_demand_partners.sql"), "r").read()
+        query = open(os.path.join(sys.path[0], "bidsresponse_get_demand_partners_specific_bidder.sql"), "r").read()
         demand_partners = get_bq_data(query, rep_dict)['bidder_code'].to_list()
         with open(data_cache_filename, 'wb') as f:
             pickle.dump((demand_partners), f)
@@ -104,7 +108,7 @@ def main_bidswon_analysis(dt_end, data_hours=1, force_recalc=False):
             rep_dict["DEMAND_PARTNER"] = dp
             print(f"doing: {dp}, {now}")
 
-            df = get_bq_data(open(os.path.join(sys.path[0], "bidswon_query.sql"), "r").read(), rep_dict)
+            df = get_bq_data(open(os.path.join(sys.path[0], "bidswon_query_specific_bidder.sql"), "r").read(), rep_dict)
             with open(data_cache_filename, 'wb') as f:
                 pickle.dump((df), f)
 
@@ -128,18 +132,20 @@ def main_bidswon_analysis(dt_end, data_hours=1, force_recalc=False):
     df2.plot(ax=ax)
     ax.set_xlabel('Ratio of demand partner bid to highest bid (0 = dp not included or no bid, 1 = winner where prebid won)')
     ax.set_ylabel('Percentage of demand partner bid requests returning at least bid ratio shown on x-axis')
-    plot_filename = f'plots/demand_partners_winning_bid_{dt_end.strftime("%Y%m%d-%H%M")}_{data_hours}'
-    title = 'Demand partner bid ratios for winning bid where Prebid won the auction'
+    plot_filename = f'plots/demand_partners_winning_bid_{dt_end.strftime("%Y%m%d-%H%M")}_{data_hours}_{specific_bidder}.png'
+    title = f'Demand partner bid ratios for winning bid where Prebid won the auction ({specific_bidder} sites only)'
     fig.suptitle(title)
-    fig.savefig(plot_filename + '.png')
+    fig.savefig(plot_filename)
 
 
 if __name__ == "__main__":
+
     force_recalc = False
     data_hours = 24
 
     dt_end = datetime.datetime(2024, 6, 30, 10, 0, 0)
+    specific_bidder = 'insticator'
 
-    main_bidswon_analysis(dt_end, data_hours=data_hours, force_recalc=force_recalc)
+    main_bidswon_analysis(dt_end, specific_bidder, data_hours=data_hours, force_recalc=force_recalc)
 
-    main_bidsresponse_analysis(dt_end, data_hours=data_hours, force_recalc=force_recalc)
+    main_bidsresponse_analysis(dt_end, specific_bidder, data_hours=data_hours, force_recalc=force_recalc)
