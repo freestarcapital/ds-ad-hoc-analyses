@@ -46,7 +46,7 @@ def main_bidsresponse_analysis(dt_end, specific_bidder, data_hours=1, force_reca
 
     fig, ax = plt.subplots(figsize=(12, 9))
     for i, dp in enumerate(demand_partners):
-        data_cache_filename = f'data_cache/bidsresponse_{dp}_{rep_dict['START_UNIX_TIME_MS']}_{rep_dict['END_UNIX_TIME_MS']}.pkl'
+        data_cache_filename = f'data_cache/bidsresponse_{dp}_{rep_dict['START_UNIX_TIME_MS']}_{rep_dict['END_UNIX_TIME_MS']}_{specific_bidder}.pkl'
         if force_recalc or not os.path.exists(data_cache_filename):
             now = datetime.datetime.now()
             rep_dict["DEMAND_PARTNER"] = dp
@@ -102,7 +102,7 @@ def main_bidswon_analysis(dt_end, specific_bidder, data_hours=1, force_recalc=Fa
 
     fig, ax = plt.subplots(figsize=(12, 9))
     for i, dp in enumerate(demand_partners):
-        data_cache_filename = f'data_cache/bidswon_{dp}_{rep_dict['START_UNIX_TIME_MS']}_{rep_dict['END_UNIX_TIME_MS']}.pkl'
+        data_cache_filename = f'data_cache/bidswon_{dp}_{rep_dict['START_UNIX_TIME_MS']}_{rep_dict['END_UNIX_TIME_MS']}_{specific_bidder}.pkl'
         if force_recalc or not os.path.exists(data_cache_filename):
             now = datetime.datetime.now()
             rep_dict["DEMAND_PARTNER"] = dp
@@ -140,8 +140,8 @@ def main_bidswon_analysis(dt_end, specific_bidder, data_hours=1, force_recalc=Fa
 
 if __name__ == "__main__":
 
-    force_recalc = False
-    data_hours = 24
+    force_recalc = True
+    data_hours = 1
 
     dt_end = datetime.datetime(2024, 6, 30, 10, 0, 0)
     specific_bidder = 'insticator'

@@ -135,8 +135,8 @@ def main_bidswon_analysis(dt_end, data_hours=1, force_recalc=False):
 
 
 if __name__ == "__main__":
-    force_recalc = False
-    data_hours = 24
+    force_recalc = True
+    data_hours = 1
 
     dt_end = datetime.datetime(2024, 6, 30, 10, 0, 0)
 
