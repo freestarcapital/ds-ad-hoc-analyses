@@ -28,28 +28,21 @@ def get_bq_data(query, replacement_dict={}):
         query = query.replace("{" + k + "}", str(v))
     return client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
 
-def main():
+def main(minimum_session_count = 100):
+
+    print(f'runnung with minimum_session_count = {minimum_session_count}')
+
     rep_dict = {'days_back_start': 8,
                 'days_back_end': 1,
-                'minimum_session_count': 100}
-
+                'minimum_session_count': minimum_session_count}
 
     dims_list = [
-        ["device_category", "country_code", "rtt_category"],
-        ["domain"],
-        # #       ["ad_product"],
-        # ["domain", "device_category"],
-        # #              ["ad_product", "device_category"],
-        # ["domain", "country_code"],
-        # #     ["ad_product", "country_code"],
-        ["domain", "device_category", "country_code"],
-        # #    ["ad_product",  "device_category", "country_code"],
-        ["domain", "device_category", "country_code", "rtt_category", "fsrefresh"]]  # ,
-        # #   ["ad_product", "device_category", "country_code", "rtt_category", "fsrefresh"],
-        # #   ["domain", "ad_product", "device_category", "country_code", "rtt_category", "fsrefresh"]]
+        ["device_category", "country_code", "rtt_category"]]#,
+        # ["domain"],
+        # ["domain", "device_category", "country_code"]]#,
+        # #["domain", "device_category", "country_code", "rtt_category", "fsrefresh"]]
 
     df_list = []
-
     for dims in dims_list:
         rep_dict['dims'] = ", ".join(dims)
         print(f'doing: {rep_dict["dims"]}')
@@ -63,11 +56,15 @@ def main():
         df_list.append(z)
 
     df = pd.concat(df_list)
-    fig, ax = plt.subplots(figsize=(16, 12))
-    df.plot(ax=ax, xlim=[df.index[0], 200], xlabel='optimised vs experiment percentage uplift in rps in each cohort',
-            ylabel='cumulative percentage of cohort', title='Cumulative percentage rps uplift bu cohort')
-    fig.savefig('plots/uplift.png')
+    fig, ax = plt.subplots(figsize=(12, 9))
+    df.plot(ax=ax, xlim=[-50, 200],
+            xlabel='optimised vs experiment percentage uplift in rps in each cohort',
+            ylabel='cumulative percentage of cohort',
+            title=f'Cumulative percentage rps uplift by cohort, minimum_session_count={minimum_session_count}')
+    fig.savefig(f'plots/uplift_{minimum_session_count}_{len(dims_list)}.png')
+
 
 if __name__ == "__main__":
-    main()
+    main(100)
+    main(500)
 
