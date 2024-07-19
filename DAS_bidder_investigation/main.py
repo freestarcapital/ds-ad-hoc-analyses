@@ -94,4 +94,4 @@ def main(last_date=datetime.date.today() - datetime.timedelta(days=1), days=30, 
 
 if __name__ == "__main__":
 
-    main(last_date=datetime.date(2024, 6, 30), days=90)
+    main(last_date=datetime.date(2024, 6, 30), days=90, force_recalc=True)

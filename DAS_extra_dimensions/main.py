@@ -22,6 +22,7 @@ project_id = "freestar-157323"
 client = bigquery.Client(project=project_id)
 bqstorageclient = bigquery_storage.BigQueryReadClient()
 
+
 def get_bq_data(query, replacement_dict={}):
     for k, v in replacement_dict.items():
         query = query.replace(f"<{k}>", v)
@@ -54,18 +55,18 @@ def plot_percentage_variation(df, extra_dim, filename):
 
 def main():
     s100 = '_100'
-    s100 = ''
+    #s100 = ''
 
     max_client_bidders = 8
     max_total_bidders = 13
 
-    plots_only = True
+    plots_only = False
 
     rep_dict = {"DAYS_BACK_START": "9",
                 "DAYS_BACK_END": "2"}
 
     df_list = []
-    for cc in ['_country_merge']:#, '']:
+    for cc in ['_no_country', '_country_merge']:#, '']:
         df_partial_improvement_list = []
         summary = {}
 
@@ -292,10 +293,10 @@ def main_expt_vs_opt_floors_hour():
 
 
 if __name__ == "__main__":
-    #main()
+    main()
 
     #main_bootstrap_rev()
 
-    main_expt_vs_opt()
+    #main_expt_vs_opt()
 
 #    main_expt_vs_opt_floors_hour()
