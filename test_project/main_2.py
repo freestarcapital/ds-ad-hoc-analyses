@@ -113,7 +113,7 @@ def X_print(X_all):
         print(X_['panel'])
 
 
-def main_solve_puzzle(X):
+def main_solve_puzzle(X, verbose=False):
 
     # 0 - wall
     # 1 - space
@@ -134,10 +134,14 @@ def main_solve_puzzle(X):
     X_all = [{'panel': X, 'seq': [0]}]
     p = 0
 
-    for i in range(10000):
+    for i in range(100000):
 
-        print(f'iteration: {i}, number of panels: {len(X_all)}, about to work on panel: {p}')
-    #    X_print(X_all)
+        if (i/1000) == np.round(i/1000):
+            print(i)
+
+        if verbose:
+            print(f'iteration: {i}, number of panels: {len(X_all)}, about to work on panel: {p}')
+        #    X_print(X_all)
 
         X = X_all[p]['panel']
         seq = X_all[p]['seq']
@@ -190,10 +194,11 @@ def main_solve_puzzle(X):
         if i1 < (N1 - 2):              
             if X[i0, i1 + 1] == 3:
                 X_all = X_move_into_box_or_box_and_jewel(X, seq, X_all, i0, i1, 0, 1)
-                
-        print(f'iteration: {i}, number of panels: {len(X_all)}, completed work on panel: {p}')
-        #X_print(X_all)
-        # 0, 1, 4, 7, 12, 20, 34,
+
+        if verbose:
+            print(f'iteration: {i}, number of panels: {len(X_all)}, completed work on panel: {p}')
+            #X_print(X_all)
+
         p = p + 1
         if p > len(X_all) - 1:
             print('done')
@@ -266,8 +271,85 @@ def main_level_2():
     main_solve_puzzle(X)
 
 
+def main_level_3():
+
+    # 0 - wall
+    # 1 - space
+    # 2 - jewel
+    # 3 - box
+    # 4 - man
+    # 5 - box and jewel
+    # 6 - man and jewel
+
+    X = np.array([[0, 0, 0, 2, 2, 2],
+                  [1, 4, 0, 0, 3, 1],
+                  [1, 3, 1, 1, 1, 1],
+                  [0, 1, 0, 0, 1, 1],
+                  [0, 1, 1, 1, 0, 3],
+                  [0, 0, 0, 1, 1, 1]])
+
+    main_solve_puzzle(X)
+
+
+def main_level_4():
+
+    # 0 - wall
+    # 1 - space
+    # 2 - jewel
+    # 3 - box
+    # 4 - man
+    # 5 - box and jewel
+    # 6 - man and jewel
+
+    X = np.array([[0, 0, 4, 1, 0],
+                  [0, 0, 1, 3, 0],
+                  [1, 3, 3, 2, 0],
+                  [1, 3, 2, 2, 1],
+                  [1, 3, 2, 2, 1],
+                  [1, 1, 1, 0, 0]])
+
+    X1 = np.array([[0, 0, 1, 1, 0],
+                   [0, 0, 1, 1, 0],
+                   [1, 3, 3, 2, 0],
+                   [1, 3, 2, 6, 1],
+                   [1, 3, 2, 5, 1],
+                   [1, 1, 1, 0, 0]])
+
+    X2 = np.array([[0, 0, 1, 1, 0],
+                   [0, 0, 3, 1, 0],
+                   [1, 3, 4, 2, 0],
+                   [1, 3, 2, 2, 1],
+                   [1, 3, 2, 5, 1],
+                   [1, 1, 1, 0, 0]])
+
+    X2 = np.array([[0, 0, 1, 1, 0],
+                   [0, 0, 3, 1, 0],
+                   [1, 3, 1, 2, 0],
+                   [1, 1, 6, 5, 1],
+                   [1, 3, 2, 5, 1],
+                   [1, 1, 1, 0, 0]])
+
+    X3 = np.array([[0, 0, 1, 1, 0],
+                   [0, 0, 1, 1, 0],
+                   [1, 3, 1, 2, 0],
+                   [1, 1, 6, 5, 1],
+                   [1, 3, 5, 5, 1],
+                   [1, 1, 1, 0, 0]])
+
+    X4 = np.array([[0, 0, 1, 1, 0],
+                   [0, 0, 1, 1, 0],
+                   [1, 1, 4, 5, 0],
+                   [1, 1, 2, 5, 1],
+                   [1, 3, 5, 5, 1],
+                   [1, 1, 1, 0, 0]])
+
+
+    main_solve_puzzle(X1)
+
 
 if __name__ == "__main__":
 #    main_test()
   #  main_level_1()
-    main_level_2()
+    #main_level_2()
+#    main_level_3()
+    main_level_4()
