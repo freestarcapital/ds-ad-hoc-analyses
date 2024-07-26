@@ -52,7 +52,8 @@ def X_print(X_all):
         print(f'panel: {i}, seq: {X_["seq"]}')
         print(X_['panel'])
 
-def main():
+
+def main_solve_puzzle(X):
 
     # 0 - wall
     # 1 - space
@@ -60,19 +61,10 @@ def main():
     # 3 - box
     # 4 - man
     # 5 - box and jewel
+    # 6 - man and jewel
 
     # i0 down/up
     # i1 right/left
-
-    X = np.array([[0, 0, 0, 0, 2, 0, 0, 0],
-                  [0, 0, 0, 0, 1, 0, 0, 0],
-                  [0, 0, 0, 0, 1, 0, 0, 0],
-                  [0, 0, 0, 0, 3, 0, 0, 0],
-                  [0, 0, 0, 0, 1, 0, 0, 0],
-                  [2, 3, 1, 1, 4, 3, 1, 2],
-                  [0, 0, 0, 0, 1, 0, 0, 0],
-                  [0, 0, 0, 0, 3, 0, 0, 0],
-                  [0, 0, 0, 0, 2, 0, 0, 0]])
 
     (N0, N1) = np.shape(X)
     assert (X==2).sum() == (X==3).sum()
@@ -96,6 +88,14 @@ def main():
         i0, i1 = np.where(X == 4)
         i0 = i0[0]
         i1 = i1[0]
+
+        # 0 - wall
+        # 1 - space
+        # 2 - jewel
+        # 3 - box
+        # 4 - man
+        # 5 - box and jewel
+        # 6 - man and jewel
 
         if i0 > 0:              # not on top row
             if X[i0 - 1, i1] == 1:       # empty space above
@@ -142,14 +142,75 @@ def main():
                     X_all = X_add_2(X, seq, X_all, i0, i1, 0, 1, 1, 4, 5)
 
         print(f'iteration: {i}, number of panels: {len(X_all)}, completed work on panel: {p}')
-        #X_print(X_all)
-
+        X_print(X_all)
+        # 0, 1, 4, 7, 12, 20,
         p = p + 1
         if p > len(X_all) - 1:
             print('done')
             break
 
+def main_test():
+
+    # 0 - wall
+    # 1 - space
+    # 2 - jewel
+    # 3 - box
+    # 4 - man
+    # 5 - box and jewel
+    # 6 - man and jewel
+
+    X = np.array([[0, 0, 0, 0, 2, 0, 0, 0],
+                  [0, 0, 0, 0, 1, 0, 0, 0],
+                  [0, 0, 0, 0, 1, 0, 0, 0],
+                  [0, 0, 0, 0, 3, 0, 0, 0],
+                  [0, 0, 0, 0, 1, 0, 0, 0],
+                  [2, 3, 1, 1, 4, 3, 1, 2],
+                  [0, 0, 0, 0, 1, 0, 0, 0],
+                  [0, 0, 0, 0, 3, 0, 0, 0],
+                  [0, 0, 0, 0, 2, 0, 0, 0]])
+
+    main_solve_puzzle(X)
+
+def main_level_1():
+
+    # 0 - wall
+    # 1 - space
+    # 2 - jewel
+    # 3 - box
+    # 4 - man
+    # 5 - box and jewel
+    # 6 - man and jewel
+
+    X = np.array([[0, 0, 0, 2, 0, 0],
+                  [0, 0, 0, 1, 0, 0],
+                  [2, 1, 3, 3, 0, 0],
+                  [0, 0, 1, 4, 3, 2],
+                  [0, 0, 3, 0, 0, 0],
+                  [0, 0, 2, 0, 1, 0]])
+
+    main_solve_puzzle(X)
+
+
+def main_level_2():
+
+    # 0 - wall
+    # 1 - space
+    # 2 - jewel
+    # 3 - box
+    # 4 - man
+    # 5 - box and jewel
+    # 6 - man and jewel
+
+    X = np.array([[0, 4, 0, 0, 2, 2],
+                  [1, 3, 3, 1, 3, 2],
+                  [1, 1, 1, 3, 1, 1],
+                  [0, 0, 0, 1, 1, 2]])
+
+    main_solve_puzzle(X)
+
+
 
 if __name__ == "__main__":
-    main()
-
+#    main_test()
+#    main_level_1()
+    main_level_2()
