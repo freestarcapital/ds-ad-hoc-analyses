@@ -18,29 +18,6 @@ config_path = '../config.ini'
 config = configparser.ConfigParser()
 config.read(config_path)
 
-def check_new_and_add(X_all, X_new, seq):
-    if len([1 for X_ in X_all if (X_['panel'] == X_new).all()]) == 0:
-        X_all.append({'panel': X_new, 'seq': seq + [len(X_all)]})
-
-        if ((X_new == 2).sum() + (X_new == 6).sum()) == 0:
-            print('puzzle solved')
-            print(X_new)
-            winning_seq = X_all[-1]['seq']
-            print(f'winning seq: {winning_seq}')
-            for seq_i, seq_n in enumerate(winning_seq):
-                print(f'step: {seq_i}, panel no: {seq_n}, seq: {X_all[seq_n]['seq']}')
-                print(X_all[seq_n]['panel'])
-            return []
-
-    return X_all
-
-
-def X_print(X_all):
-    for i, X_ in enumerate(X_all):
-        print(f'panel: {i}, seq: {X_["seq"]}')
-        print(X_['panel'])
-
-
 def find_where_man_can_touch(panel_walls, boxes, man):
 
     (N0, N1) = np.shape(panel_walls)
@@ -63,6 +40,33 @@ def find_where_man_can_touch(panel_walls, boxes, man):
                     panel_man[n0_i, n1_i - 1] = 1
     return panel_man
 
+def add_new_box_locations(boxes_all, boxes, b, box_move_0, box_move_1, panel_walls, jewels):
+
+    boxes_new = boxes.copy()
+    boxes_new[b, 0] = boxes[b, 0] + box_move_0
+    boxes_new[b, 1] = boxes[b, 1] + box_move_1
+
+    if len([1 for b in boxes if (b == boxes_new).all()]) == 0:
+        boxes_all.append(boxes_new)
+        print_boxes(boxes_new, panel_walls, jewels)
+
+    return boxes_all
+
+def print_boxes(boxes, panel_walls, jewels):
+    # 0 - space
+    # 1 - wall
+    # 2 - jewel
+    # 4 - box
+
+    B = len(boxes)
+    panel_print = panel_walls.copy()
+    for b in range(B):
+        panel_print[jewels[b, 0], jewels[b, 1]] += 2
+        panel_print[boxes[b, 0], boxes[b, 1]] += 4
+
+    print(panel_print)
+
+
 def main_solve_puzzle(panel_in, verbose=False):
 
     # 0 - wall
@@ -79,31 +83,38 @@ def main_solve_puzzle(panel_in, verbose=False):
     assert (panel_in==4).sum() == 1
     print('starting panel')
     print(panel_in)
-    #X_all = [{'panel': panel_in, 'seq': [0]}]
-    
+
     panel_walls = 1 * (panel_in == 0)
-    boxes = np.argwhere(panel_in == 3)
+    boxes_all = [np.argwhere(panel_in == 3)]
+    B = boxes_all[-1].shape[0]
     jewels = np.argwhere(panel_in == 2)
     man = np.argwhere(panel_in == 4)[0]
-    
+
     p = 0
     for i in range(10000):
 
-        if (i/1000) == np.round(i/1000):
-            print(i)
+        # if (i/1000) == np.round(i/1000):
+        #     print(i)
 
+        print(f'len(boxes_all): {len(boxes_all)}, doing boxes[{p}]')
+
+        boxes = boxes_all[p]
         panel_man = find_where_man_can_touch(panel_walls, boxes, man)
+        for b in range(B):
 
-        print(panel_man)
-        f=0
+            if (panel_man[boxes[b, 0] + 1, boxes[b, 1]] == 1) and (panel_walls[boxes[b, 0] - 1, boxes[b, 1]] == 0):
+                boxes_all = add_new_box_locations(boxes_all, boxes, b, -1, 0, panel_walls, jewels)
 
+            if (panel_man[boxes[b, 0] - 1, boxes[b, 1]] == 1) and (panel_walls[boxes[b, 0] + 1, boxes[b, 1]] == 0):
+                boxes_all = add_new_box_locations(boxes_all, boxes, b, +1, 0, panel_walls, jewels)
 
-        #
-        # and see if he's touching each box
+            if (panel_man[boxes[b, 0], boxes[b, 1] + 1] == 1) and (panel_walls[boxes[b, 0], boxes[b, 1] - 1] == 0):
+                boxes_all = add_new_box_locations(boxes_all, boxes, b, 0, -1, panel_walls, jewels)
 
-        possible_box_moves_list = []
+            if (panel_man[boxes[b, 0], boxes[b, 1] - 1] == 1) and (panel_walls[boxes[b, 0], boxes[b, 1] + 1] == 0):
+                boxes_all = add_new_box_locations(boxes_all, boxes, b, 0, +1, panel_walls, jewels)
 
-
+        p = p + 1
 def main_level_1():
 
     # 0 - wall
@@ -114,8 +125,8 @@ def main_level_1():
 
     panel_walls = np.array([[0, 0, 0, 0, 0, 0, 0, 0],
                             [0, 0, 0, 0, 2, 0, 0, 0],
-                            [0, 0, 0, 0, 3, 0, 0, 0],
-                            [0, 2, 1, 3, 1, 0, 0, 0],
+                            [0, 0, 0, 0, 1, 0, 0, 0],
+                            [0, 2, 1, 3, 3, 0, 0, 0],
                             [0, 0, 0, 4, 1, 3, 2, 0],
                             [0, 0, 0, 3, 0, 0, 0, 0],
                             [0, 0, 0, 1, 0, 0, 0, 0],
