@@ -22,32 +22,30 @@ def check_new_and_add(X_all, X_new, seq):
     if len([1 for X_ in X_all if (X_['panel'] == X_new).all()]) == 0:
         X_all.append({'panel': X_new, 'seq': seq + [len(X_all)]})
 
+        if (X_all[-1]['panel'] == 2).sum() == 0:
+            print('puzzle solved')
+            print(X_all[-1]['panel'])
+            winning_seq = X_all[-1]['seq']
+            print(f'winning seq: {winning_seq}')
+            for seq_i, seq_n in enumerate(winning_seq):
+                print(f'step: {seq_i}, panel no: {seq_n}, seq: {X_all[seq_n]['seq']}')
+                print(X_all[seq_n]['panel'])
+            return []
+
     return X_all
 
 def X_add(X, seq, X_all, i0, i1, d_i0, d_i1, v_old, v_new):
     X_new = X.copy()
     X_new[i0 + d_i0, i1 + d_i1] = v_new
     X_new[i0, i1] = v_old
-
     return check_new_and_add(X_all, X_new, seq)
-
-    # if len([1 for X_ in X_all if (X_ == X_new).all()]) == 0:
-    #     X_all.append({'panel': X_new, 'seq': seq + [len(X_all)]})
-    #
-    # return X_all
 
 def X_add_2(X, seq, X_all, i0, i1, d_i0, d_i1, v_old, v_new, v_new_2):
     X_new = X.copy()
     X_new[i0 + d_i0, i1 + d_i1] = v_new
     X_new[i0 + 2 * d_i0, i1 + 2 * d_i1] = v_new_2
     X_new[i0, i1] = v_old
-
     return check_new_and_add(X_all, X_new, seq)
-
-    # if len([1 for X_ in X_all if (X_ == X_new).all()]) == 0:
-    #     X_all.append({'panel': X_new, 'seq': seq + [len(X_all)]})
-    #
-    # return X_all
 
 def X_print(X_all):
     for i, X_ in enumerate(X_all):
@@ -144,16 +142,11 @@ def main():
                     X_all = X_add_2(X, seq, X_all, i0, i1, 0, 1, 1, 4, 5)
 
         print(f'iteration: {i}, number of panels: {len(X_all)}, completed work on panel: {p}')
-        X_print(X_all)
-
-        if (X == 2).sum() == 0:
-            print('puzzle solved')
-            print(X)
-            break
+        #X_print(X_all)
 
         p = p + 1
         if p > len(X_all) - 1:
-            print('done ... think we failed')
+            print('done')
             break
 
 
