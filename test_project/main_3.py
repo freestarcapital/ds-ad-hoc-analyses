@@ -18,13 +18,9 @@ config_path = '../config.ini'
 config = configparser.ConfigParser()
 config.read(config_path)
 
-#TODO : store man move panel not man loc, because of measuring sameness
 #TODO : make man move panel more efficient by cut off when no change
 
-def find_where_man_can_touch(panel_walls, stage):
-    boxes = stage['boxes']
-    man = stage['man']
-
+def find_where_man_can_touch(panel_walls, boxes, man):
     (N0, N1) = np.shape(panel_walls)
     panel_man = np.zeros([N0, N1], np.int8)
     panel_man[man[0], man[1]] = 1
@@ -52,35 +48,36 @@ def are_same(a, b, N=100):
     B.sort()
     return (A == B).all()
 
-def add_new_stage(stages_all, stage, b, box_move_0, box_move_1, move):
+def add_new_stage(stages_all, stage, b, box_move_0, box_move_1, move, panel_walls):
 
     boxes = stage['boxes']
     boxes_new = boxes.copy()
     boxes_new[b, 0] = boxes[b, 0] + box_move_0
     boxes_new[b, 1] = boxes[b, 1] + box_move_1
 
+    man_new = boxes[b, :]
+    panel_man_new = find_where_man_can_touch(panel_walls, boxes_new, man_new)
+
     already_in_list = False
     for st_ in stages_all:
-        if are_same(st_['boxes'], boxes_new) and (boxes[b, :] == st_['man']).all():
+        if are_same(st_['boxes'], boxes_new) and (st_['panel_man'] == panel_man_new).all():
             already_in_list = True
             break
     if not already_in_list:
-        stages_all.append({'boxes': boxes_new, 'man': boxes[b, :], 'seq': stage['seq'] + [len(stages_all)], 'moves': stage['moves'] + move})
+        stages_all.append({'boxes': boxes_new, 'panel_man': panel_man_new, 'seq': stage['seq'] + [len(stages_all)], 'moves': stage['moves'] + move})
 
     return stages_all
 
 def print_boxes(stage, panel_walls, jewels):
     # 0 - space
     # 2 - box
-    # 4 - man
+    # 4 - panel_man
     # +1 - jewel
     # 9 - wall
 
     boxes = stage['boxes']
     B = len(boxes)
-    man = stage['man']
-    panel_print = 9 * panel_walls.copy()
-    panel_print[man[0], man[1]] += 4
+    panel_print = 9 * panel_walls.copy() + 4 * stage['panel_man'].copy()
     for b in range(B):
         panel_print[boxes[b, 0], boxes[b, 1]] += 2
         panel_print[jewels[b, 0], jewels[b, 1]] += 1
@@ -104,7 +101,11 @@ def main_solve_puzzle(panel_in, verbose=False):
 
     panel_walls = 1 * (panel_in == 9)
     jewels = np.argwhere(panel_in == 1)
-    stages_all = [{'boxes': np.argwhere(panel_in == 2), 'man': np.argwhere(panel_in == 4)[0], 'seq': [0], 'moves': ''}]
+
+    boxes_start = np.argwhere(panel_in == 2)
+    man_start = np.argwhere(panel_in == 4)[0]
+    panel_man_start = find_where_man_can_touch(panel_walls, boxes_start, man_start)
+    stages_all = [{'boxes': boxes_start, 'panel_man': panel_man_start, 'seq': [0], 'moves': ''}]
 
     print('starting panel')
     print_boxes(stages_all[0], panel_walls, jewels)
@@ -118,21 +119,21 @@ def main_solve_puzzle(panel_in, verbose=False):
         len_stages_old = len(stages_all)
 
         stage = stages_all[p]
-        panel_man = find_where_man_can_touch(panel_walls, stage)
+        panel_man = stage['panel_man']
         boxes = stage['boxes']
         for b in range(len(boxes)):
 
             if (panel_man[boxes[b, 0] + 1, boxes[b, 1]] == 1) and (panel_walls[boxes[b, 0] - 1, boxes[b, 1]] == 0):
-                stages_all = add_new_stage(stages_all, stage, b, -1, 0, 'U')
+                stages_all = add_new_stage(stages_all, stage, b, -1, 0, 'U', panel_walls)
 
             if (panel_man[boxes[b, 0] - 1, boxes[b, 1]] == 1) and (panel_walls[boxes[b, 0] + 1, boxes[b, 1]] == 0):
-                stages_all = add_new_stage(stages_all, stage, b, +1, 0, 'D')
+                stages_all = add_new_stage(stages_all, stage, b, +1, 0, 'D', panel_walls)
 
             if (panel_man[boxes[b, 0], boxes[b, 1] + 1] == 1) and (panel_walls[boxes[b, 0], boxes[b, 1] - 1] == 0):
-                stages_all = add_new_stage(stages_all, stage, b, 0, -1, 'L')
+                stages_all = add_new_stage(stages_all, stage, b, 0, -1, 'L', panel_walls)
 
             if (panel_man[boxes[b, 0], boxes[b, 1] - 1] == 1) and (panel_walls[boxes[b, 0], boxes[b, 1] + 1] == 0):
-                stages_all = add_new_stage(stages_all, stage, b, 0, +1, 'R')
+                stages_all = add_new_stage(stages_all, stage, b, 0, +1, 'R', panel_walls)
 
 #        moves_str = ', '.join([f'{stages_all[p_c]["moves"]} ({stages_all[p_c]["seq"]})' for p_c in range(len_stages_old, len(stages_all))])
         moves_str = ', '.join([stages_all[p_c]["moves"] for p_c in range(len_stages_old, len(stages_all))])
@@ -141,6 +142,8 @@ def main_solve_puzzle(panel_in, verbose=False):
 
             if are_same(stages_all[p_c]['boxes'], jewels):
                 print('PUZZLE COMPLETE !!!')
+
+
             # print(f'FROM stage number: {p}')
             # print_boxes(stages_all[p], panel_walls, jewels)
             # print(f'TO stage number: {p_c}')
