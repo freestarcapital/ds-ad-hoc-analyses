@@ -18,7 +18,9 @@ config_path = '../config.ini'
 config = configparser.ConfigParser()
 config.read(config_path)
 
-def find_where_man_can_touch(panel_walls, boxes, man):
+def find_where_man_can_touch(panel_walls, stage):
+    boxes = stage['boxes']
+    man = stage['man']
 
     (N0, N1) = np.shape(panel_walls)
     panel_man = np.zeros([N0, N1], np.int8)
@@ -40,30 +42,35 @@ def find_where_man_can_touch(panel_walls, boxes, man):
                     panel_man[n0_i, n1_i - 1] = 1
     return panel_man
 
-def add_new_box_locations(boxes_all, boxes, b, box_move_0, box_move_1, panel_walls, jewels):
+def add_new_stage(stages_all, stage, b, box_move_0, box_move_1):
 
+    boxes = stage['boxes']
     boxes_new = boxes.copy()
     boxes_new[b, 0] = boxes[b, 0] + box_move_0
     boxes_new[b, 1] = boxes[b, 1] + box_move_1
 
     if len([1 for b in boxes if (b == boxes_new).all()]) == 0:
-        boxes_all.append(boxes_new)
-        print_boxes(boxes_new, panel_walls, jewels)
+        stages_all.append({'boxes': boxes_new, 'man': boxes[b, :], 'seq': stage['seq'] + [len(stages_all)]})
 
-    return boxes_all
+    return stages_all
 
-def print_boxes(boxes, panel_walls, jewels):
+def print_boxes(stage, panel_walls, jewels):
     # 0 - space
-    # 1 - wall
-    # 2 - jewel
-    # 4 - box
+    # 2 - box
+    # 4 - man
+    # +1 - jewel
+    # 9 - wall
 
+    boxes = stage['boxes']
     B = len(boxes)
-    panel_print = panel_walls.copy()
+    man = stage['man']
+    panel_print = 9 * panel_walls.copy()
+    panel_print[man[0], man[1]] += 4
     for b in range(B):
-        panel_print[jewels[b, 0], jewels[b, 1]] += 2
-        panel_print[boxes[b, 0], boxes[b, 1]] += 4
+        panel_print[boxes[b, 0], boxes[b, 1]] += 2
+        panel_print[jewels[b, 0], jewels[b, 1]] += 1
 
+    print(f'seq: {stage['seq']}')
     print(panel_print)
 
 
@@ -81,14 +88,13 @@ def main_solve_puzzle(panel_in, verbose=False):
 #    (N0, N1) = np.shape(panel_in)
     assert (panel_in==2).sum() == (panel_in==3).sum()
     assert (panel_in==4).sum() == 1
-    print('starting panel')
-    print(panel_in)
 
     panel_walls = 1 * (panel_in == 0)
-    boxes_all = [np.argwhere(panel_in == 3)]
-    B = boxes_all[-1].shape[0]
     jewels = np.argwhere(panel_in == 2)
-    man = np.argwhere(panel_in == 4)[0]
+    stages_all = [{'boxes': np.argwhere(panel_in == 3), 'man': np.argwhere(panel_in == 4)[0], 'seq': [0]}]
+
+    print('starting panel')
+    print_boxes(stages_all[0], panel_walls, jewels)
 
     p = 0
     for i in range(10000):
@@ -96,23 +102,35 @@ def main_solve_puzzle(panel_in, verbose=False):
         # if (i/1000) == np.round(i/1000):
         #     print(i)
 
-        print(f'len(boxes_all): {len(boxes_all)}, doing boxes[{p}]')
+        len_stages_old = len(stages_all)
 
-        boxes = boxes_all[p]
-        panel_man = find_where_man_can_touch(panel_walls, boxes, man)
-        for b in range(B):
+        stage = stages_all[p]
+        panel_man = find_where_man_can_touch(panel_walls, stage)
+        boxes = stage['boxes']
+        for b in range(len(boxes)):
 
             if (panel_man[boxes[b, 0] + 1, boxes[b, 1]] == 1) and (panel_walls[boxes[b, 0] - 1, boxes[b, 1]] == 0):
-                boxes_all = add_new_box_locations(boxes_all, boxes, b, -1, 0, panel_walls, jewels)
+                stages_all = add_new_stage(stages_all, stage, b, -1, 0)
 
             if (panel_man[boxes[b, 0] - 1, boxes[b, 1]] == 1) and (panel_walls[boxes[b, 0] + 1, boxes[b, 1]] == 0):
-                boxes_all = add_new_box_locations(boxes_all, boxes, b, +1, 0, panel_walls, jewels)
+                stages_all = add_new_stage(stages_all, stage, b, +1, 0)
 
             if (panel_man[boxes[b, 0], boxes[b, 1] + 1] == 1) and (panel_walls[boxes[b, 0], boxes[b, 1] - 1] == 0):
-                boxes_all = add_new_box_locations(boxes_all, boxes, b, 0, -1, panel_walls, jewels)
+                stages_all = add_new_stage(stages_all, stage, b, 0, -1)
 
             if (panel_man[boxes[b, 0], boxes[b, 1] - 1] == 1) and (panel_walls[boxes[b, 0], boxes[b, 1] + 1] == 0):
-                boxes_all = add_new_box_locations(boxes_all, boxes, b, 0, +1, panel_walls, jewels)
+                stages_all = add_new_stage(stages_all, stage, b, 0, +1)
+
+        print(f'len(stages_all): {len(stages_all)}, done stage[{p}], added {len(stages_all) - len_stages_old} stages, new stages add ...')
+        for p_c in range(len_stages_old, len(stages_all)):
+
+            if (stages_all[p_c]['boxes'] == jewels).all():
+                print('PUZZLE COMPLETE !!!')
+            print(f'FROM stage number: {p}')
+            print_boxes(stages_all[p], panel_walls, jewels)
+            print(f'TO stage number: {p_c}')
+            print_boxes(stages_all[p_c], panel_walls, jewels)
+
 
         p = p + 1
 def main_level_1():
