@@ -24,7 +24,7 @@ def find_where_man_can_touch(panel_walls, boxes, man):
     (N0, N1) = np.shape(panel_walls)
     panel_man = np.zeros([N0, N1], np.int8)
     panel_man[man[0], man[1]] = 1
-    for c in range(max(N0, N1)):
+    for c in range(2 * max(N0, N1)):
         sum_old = panel_man.sum()
         for [n0_i, n1_i] in np.argwhere(panel_man):
             if panel_man[n0_i, n1_i] > 0:
@@ -118,10 +118,14 @@ def main_solve_puzzle(panel_in, verbose=False):
     p = 0
     for i in range(10000):
 
-        # if (i/1000) == np.round(i/1000):
-        #     print(i)
+        if (i/1000) == np.round(i/1000):
+            print(i)
 
         len_stages_old = len(stages_all)
+
+        if p >= len(stages_all):
+            print('searched everything and failed')
+            break
 
         stage = stages_all[p]
         panel_man = stage['panel_man']
@@ -140,9 +144,9 @@ def main_solve_puzzle(panel_in, verbose=False):
             if (panel_man[boxes[b, 0], boxes[b, 1] - 1] == 1) and (panel_walls[boxes[b, 0], boxes[b, 1] + 1] == 0):
                 stages_all = add_new_stage(stages_all, stage, b, 0, +1, 'R', panel_walls)
 
-#        moves_str = ', '.join([f'{stages_all[p_c]["moves"]} ({stages_all[p_c]["seq"]})' for p_c in range(len_stages_old, len(stages_all))])
-        moves_str = ', '.join([stages_all[p_c]["moves"] for p_c in range(len_stages_old, len(stages_all))])
-        print(f'total stages stored: {len(stages_all)}, done stage {p}, {stages_all[p]["moves"]}, added {len(stages_all) - len_stages_old} stages: {moves_str}')
+# #        moves_str = ', '.join([f'{stages_all[p_c]["moves"]} ({stages_all[p_c]["seq"]})' for p_c in range(len_stages_old, len(stages_all))])
+#         moves_str = ', '.join([stages_all[p_c]["moves"] for p_c in range(len_stages_old, len(stages_all))])
+#         print(f'total stages stored: {len(stages_all)}, done stage {p}, {stages_all[p]["moves"]}, added {len(stages_all) - len_stages_old} stages: {moves_str}')
         for p_c in range(len_stages_old, len(stages_all)):
 
             if are_same(stages_all[p_c]['boxes'], jewels):
@@ -172,121 +176,113 @@ def main_level_1():
     # 1 - jewel
     # 9 - wall
 
-    panel_walls = np.array([[9, 9, 9, 9, 9, 9, 9, 9],
-                            [9, 9, 9, 9, 1, 9, 9, 9],
-                            [9, 9, 9, 9, 0, 9, 9, 9],
-                            [9, 1, 0, 2, 2, 9, 9, 9],
-                            [9, 9, 9, 0, 4, 2, 1, 9],
-                            [9, 9, 9, 2, 9, 9, 9, 9],
-                            [9, 9, 9, 1, 9, 9, 9, 9],
-                            [9, 9, 9, 9, 9, 9, 9, 9]])
+    X = np.array([[9, 9, 9, 9, 9, 9, 9, 9],
+                  [9, 9, 9, 9, 1, 9, 9, 9],
+                  [9, 9, 9, 9, 0, 9, 9, 9],
+                  [9, 1, 0, 2, 2, 9, 9, 9],
+                  [9, 9, 9, 0, 4, 2, 1, 9],
+                  [9, 9, 9, 2, 9, 9, 9, 9],
+                  [9, 9, 9, 1, 9, 9, 9, 9],
+                  [9, 9, 9, 9, 9, 9, 9, 9]])
 
-    main_solve_puzzle(panel_walls)
+    main_solve_puzzle(X)
 
 
 def main_level_2():
 
-    # 0 - wall
-    # 1 - space
-    # 2 - jewel
-    # 3 - box
+    # 0 - space
+    # 2 - box
     # 4 - man
-    # 5 - box and jewel
-    # 6 - man and jewel
+    # 1 - jewel
+    # 9 - wall
 
-    # panel_walls = np.array(
-    # [[0, 1, 0, 0, 2, 2],
-    #  [1, 1, 1, 3, 3, 2],
-    #  [1, 3, 1, 1, 1, 3],
-    #  [0, 0, 0, 1, 1, 6]]
-    # )
+    X = np.array([[9, 9, 9, 9, 9, 9, 9, 9],
+                  [9, 9, 4, 9, 9, 1, 1, 9],
+                  [9, 0, 2, 2, 0, 2, 1, 9],
+                  [9, 0, 0, 0, 2, 0, 0, 9],
+                  [9, 9, 9, 9, 0, 0, 1, 9],
+                  [9, 9, 9, 9, 9, 9, 9, 9]])
 
-    panel_walls = np.array([[0, 4, 0, 0, 2, 2],
-                  [1, 3, 3, 1, 3, 2],
-                  [1, 1, 1, 3, 1, 1],
-                  [0, 0, 0, 1, 1, 2]])
-
-    main_solve_puzzle(panel_walls)
-
+    main_solve_puzzle(X)
 
 def main_level_3():
 
-    # 0 - wall
-    # 1 - space
-    # 2 - jewel
-    # 3 - box
+    # 0 - space
+    # 2 - box
     # 4 - man
-    # 5 - box and jewel
-    # 6 - man and jewel
+    # 1 - jewel
+    # 9 - wall
 
-    panel_walls = np.array([[0, 0, 0, 2, 2, 2],
-                  [1, 4, 0, 0, 3, 1],
-                  [1, 3, 1, 1, 1, 1],
-                  [0, 1, 0, 0, 1, 1],
-                  [0, 1, 1, 1, 0, 3],
-                  [0, 0, 0, 1, 1, 1]])
+    X = np.array([[9, 9, 9, 9, 9, 9, 9, 9],
+                  [9, 9, 9, 0, 0, 0, 9, 9],
+                  [9, 0, 4, 9, 9, 2, 0, 9],
+                  [9, 0, 2, 0, 0, 0, 0, 9],
+                  [9, 9, 0, 9, 9, 0, 0, 9],
+                  [9, 9, 0, 0, 0, 9, 2, 9],
+                  [9, 9, 9, 9, 0, 0, 0, 9],
+                  [9, 9, 9, 9, 9, 9, 9, 9]])
 
-    main_solve_puzzle(panel_walls)
+    main_solve_puzzle(X)
 
 
 def main_level_4():
 
-    # 0 - wall
-    # 1 - space
-    # 2 - jewel
-    # 3 - box
+    # 0 - space
+    # 2 - box
     # 4 - man
-    # 5 - box and jewel
-    # 6 - man and jewel
+    # 1 - jewel
+    # 9 - wall
 
-    panel_walls = np.array([[0, 0, 4, 1, 0],
-                  [0, 0, 1, 3, 0],
-                  [1, 3, 3, 2, 0],
-                  [1, 3, 2, 2, 1],
-                  [1, 3, 2, 2, 1],
-                  [1, 1, 1, 0, 0]])
+    X = np.array([[9, 9, 9, 9, 9, 9, 9],
+                  [9, 9, 4, 0, 9, 9, 9],
+                  [9, 9, 9, 0, 2, 9, 9],
+                  [9, 0, 2, 2, 0, 9, 9],
+                  [9, 0, 2, 0, 0, 0, 9],
+                  [9, 0, 2, 0, 0, 0, 9],
+                  [9, 0, 0, 0, 9, 9, 9],
+                  [9, 9, 9, 9, 9, 9, 9, 9]])
 
-    X1 = np.array([[0, 0, 1, 1, 0],
-                   [0, 0, 1, 1, 0],
-                   [1, 3, 3, 2, 0],
-                   [1, 3, 2, 6, 1],
-                   [1, 3, 2, 5, 1],
-                   [1, 1, 1, 0, 0]])
+    # X1 = np.array([[9, 9, 0, 0, 9, 9],
+    #                [9, 9, 9, 0, 0, 9, 9],
+    #                [9, 0, 2, 2, 0, 9, 9],
+    #                [9, 0, 2, 0, 6, 0, 9],
+    #                [9, 0, 2, 0, 5, 0, 9],
+    #                [9, 0, 0, 0, 9, 9]])
+    #
+    # X2 = np.array([[9, 9, 0, 0, 9, 9],
+    #                [9, 9, 9, 2, 0, 9, 9],
+    #                [9, 0, 2, 4, 0, 9, 9],
+    #                [9, 0, 2, 0, 0, 0, 9],
+    #                [9, 0, 2, 0, 5, 0, 9],
+    #                [9, 0, 0, 0, 9, 9]])
+    #
+    # X2 = np.array([[9, 9, 0, 0, 9, 9],
+    #                [9, 9, 9, 2, 0, 9, 9],
+    #                [9, 0, 2, 0, 0, 9, 9],
+    #                [9, 0, 0, 6, 5, 0, 9],
+    #                [9, 0, 2, 0, 5, 0, 9],
+    #                [9, 0, 0, 0, 9, 9]])
+    #
+    # X3 = np.array([[9, 9, 0, 0, 9, 9],
+    #                [9, 9, 9, 0, 0, 9, 9],
+    #                [9, 0, 2, 0, 0, 9, 9],
+    #                [9, 0, 0, 6, 5, 0, 9],
+    #                [9, 0, 2, 5, 5, 0, 9],
+    #                [9, 0, 0, 0, 9, 9]])
+    #
+    # X4 = np.array([[9, 9, 0, 0, 9, 9],
+    #                [9, 9, 9, 0, 0, 9, 9],
+    #                [9, 0, 0, 4, 5, 9, 9],
+    #                [9, 0, 0, 0, 5, 0, 9],
+    #                [9, 0, 2, 5, 5, 0, 9],
+    #                [9, 0, 0, 0, 9, 9]])
+    #
 
-    X2 = np.array([[0, 0, 1, 1, 0],
-                   [0, 0, 3, 1, 0],
-                   [1, 3, 4, 2, 0],
-                   [1, 3, 2, 2, 1],
-                   [1, 3, 2, 5, 1],
-                   [1, 1, 1, 0, 0]])
-
-    X2 = np.array([[0, 0, 1, 1, 0],
-                   [0, 0, 3, 1, 0],
-                   [1, 3, 1, 2, 0],
-                   [1, 1, 6, 5, 1],
-                   [1, 3, 2, 5, 1],
-                   [1, 1, 1, 0, 0]])
-
-    X3 = np.array([[0, 0, 1, 1, 0],
-                   [0, 0, 1, 1, 0],
-                   [1, 3, 1, 2, 0],
-                   [1, 1, 6, 5, 1],
-                   [1, 3, 5, 5, 1],
-                   [1, 1, 1, 0, 0]])
-
-    X4 = np.array([[0, 0, 1, 1, 0],
-                   [0, 0, 1, 1, 0],
-                   [1, 1, 4, 5, 0],
-                   [1, 1, 2, 5, 1],
-                   [1, 3, 5, 5, 1],
-                   [1, 1, 1, 0, 0]])
-
-
-    main_solve_puzzle(X1)
+    main_solve_puzzle(X)
 
 
 if __name__ == "__main__":
-    main_level_1()
-    #main_level_2()
+    #main_level_1()
+    main_level_2()
 #    main_level_3()
 #    main_level_4()
