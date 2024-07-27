@@ -24,7 +24,8 @@ def find_where_man_can_touch(panel_walls, boxes, man):
     (N0, N1) = np.shape(panel_walls)
     panel_man = np.zeros([N0, N1], np.int8)
     panel_man[man[0], man[1]] = 1
-    for _ in range(max(N0, N1)):
+    for c in range(max(N0, N1)):
+        sum_old = panel_man.sum()
         for [n0_i, n1_i] in np.argwhere(panel_man):
             if panel_man[n0_i, n1_i] > 0:
                 if (n0_i < N0 - 1) and (panel_walls[n0_i + 1, n1_i] == 0) and (
@@ -39,8 +40,11 @@ def find_where_man_can_touch(panel_walls, boxes, man):
                 if (n1_i > 0) and (panel_walls[n0_i, n1_i - 1] == 0) and (
                         len([1 for b in boxes if (b == np.array([n0_i, n1_i - 1])).all()]) == 0):
                     panel_man[n0_i, n1_i - 1] = 1
-    return panel_man
+        if panel_man.sum() == sum_old:
+            #print(f'breaking: {c}, found: {sum_old}')
+            return panel_man
 
+    assert False, "incomplete panel_man"
 def are_same(a, b, N=100):
     A = a[:, 0] * N + a[:, 1]
     A.sort()
@@ -110,6 +114,7 @@ def main_solve_puzzle(panel_in, verbose=False):
     print('starting panel')
     print_boxes(stages_all[0], panel_walls, jewels)
 
+    solved = False
     p = 0
     for i in range(10000):
 
@@ -137,17 +142,24 @@ def main_solve_puzzle(panel_in, verbose=False):
 
 #        moves_str = ', '.join([f'{stages_all[p_c]["moves"]} ({stages_all[p_c]["seq"]})' for p_c in range(len_stages_old, len(stages_all))])
         moves_str = ', '.join([stages_all[p_c]["moves"] for p_c in range(len_stages_old, len(stages_all))])
-        print(f'len(stages_all): {len(stages_all)}, done stage {p}, {stages_all[p]["moves"]}, added {len(stages_all) - len_stages_old} stages: {moves_str}')
+        print(f'total stages stored: {len(stages_all)}, done stage {p}, {stages_all[p]["moves"]}, added {len(stages_all) - len_stages_old} stages: {moves_str}')
         for p_c in range(len_stages_old, len(stages_all)):
 
             if are_same(stages_all[p_c]['boxes'], jewels):
                 print('PUZZLE COMPLETE !!!')
-
+                winning_seq = stages_all[p_c]['seq']
+                for seq_c in winning_seq:
+                    print_boxes(stages_all[seq_c], panel_walls, jewels)
+                solved = True
+                break
 
             # print(f'FROM stage number: {p}')
             # print_boxes(stages_all[p], panel_walls, jewels)
             # print(f'TO stage number: {p_c}')
             # print_boxes(stages_all[p_c], panel_walls, jewels)
+
+        if solved:
+            break
 
         if len(stages_all[-1]['seq']) == 7:
             f = 0
