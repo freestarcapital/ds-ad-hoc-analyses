@@ -1,24 +1,10 @@
 import pandas as pd
-import matplotlib.pyplot as plt
-from google.cloud import bigquery
-import configparser
-from google.cloud import bigquery_storage
-import os, sys
 import numpy as np
-import datetime
-import pickle
-import plotly.express as px
-import kaleido
-from scipy.stats import linregress
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 1000)
 
-config_path = '../config.ini'
-config = configparser.ConfigParser()
-config.read(config_path)
-
-def find_where_man_can_touch_2(panel_walls, boxes, man, RL_list, DU_list):
+def find_where_man_can_touch(panel_walls, boxes, man, RL_list, DU_list):
 
     (N0, N1) = np.shape(panel_walls)
     panel_man = np.zeros([N0, N1], np.int8)
@@ -61,33 +47,6 @@ def find_where_man_can_touch_2(panel_walls, boxes, man, RL_list, DU_list):
 
     assert False, "incomplete panel_man"
 
-
-def find_where_man_can_touch(panel_walls, boxes, man):
-    (N0, N1) = np.shape(panel_walls)
-    panel_man = np.zeros([N0, N1], np.int8)
-    panel_man[man[0], man[1]] = 1
-    for c in range(3 * max(N0, N1)):
-        sum_old = panel_man.sum()
-        for [n0_i, n1_i] in np.argwhere(panel_man):
-            if panel_man[n0_i, n1_i] > 0:
-                if (n0_i < N0 - 1) and (panel_walls[n0_i + 1, n1_i] == 0) and (
-                        len([1 for b in boxes if (b == np.array([n0_i + 1, n1_i])).all()]) == 0):
-                    panel_man[n0_i + 1, n1_i] = 1
-                if (n0_i > 0) and (panel_walls[n0_i - 1, n1_i] == 0) and (
-                        len([1 for b in boxes if (b == np.array([n0_i - 1, n1_i])).all()]) == 0):
-                    panel_man[n0_i - 1, n1_i] = 1
-                if (n1_i < N1 - 1) and (panel_walls[n0_i, n1_i + 1] == 0) and (
-                        len([1 for b in boxes if (b == np.array([n0_i, n1_i + 1])).all()]) == 0):
-                    panel_man[n0_i, n1_i + 1] = 1
-                if (n1_i > 0) and (panel_walls[n0_i, n1_i - 1] == 0) and (
-                        len([1 for b in boxes if (b == np.array([n0_i, n1_i - 1])).all()]) == 0):
-                    panel_man[n0_i, n1_i - 1] = 1
-        if panel_man.sum() == sum_old:
-            #print(f'breaking: {c}, found: {sum_old}')
-            return panel_man
-
-    assert False, "incomplete panel_man"
-
 def are_same(a, b, N=100):
     assert len(a) == len(b)
     A = a[:, 0] * N + a[:, 1]
@@ -124,8 +83,7 @@ def find_and_add_new_stage(stages_all, stage, b, box_move_0, box_move_1, move, p
         return stages_all
 
     man_new = boxes[b, :]
-#    panel_man_new = find_where_man_can_touch(panel_walls, boxes_new, man_new)
-    panel_man_new = find_where_man_can_touch_2(panel_walls, boxes_new, man_new, RL_list, DU_list)
+    panel_man_new = find_where_man_can_touch(panel_walls, boxes_new, man_new, RL_list, DU_list)
     seq_new = stage['seq'] + [len(stages_all)]
     moves_new = f"{stage['moves']},{move}{b}"
 
@@ -151,13 +109,7 @@ def print_boxes(stage, panel_walls, jewels):
     B = len(boxes)
     panel_print = 9 * panel_walls.copy() + 4 * stage['panel_man'].copy()
 
-    # for b in range(B):
-    #     panel_print[boxes[b, 0], boxes[b, 1]] += 2
-    #     panel_print[jewels[b, 0], jewels[b, 1]] += 1
-
     print(f'seq: {stage['seq']}, moves: {stage["moves"]}')
-    #print(panel_print)
-
     pp = [['XX' if c == 9 else '..' if c == 4 else '  ' for c in r] for r in panel_print]
     for b in range(B):
         pp[jewels[b, 0]][jewels[b, 1]] = 'oo'
@@ -167,91 +119,6 @@ def print_boxes(stage, panel_walls, jewels):
         print(' '.join(p))
 
 
-    f=0
-
-def main_solve_puzzle_2(panel_in, verbose=False):
-    # 0 - space
-    # 2 - box
-    # 4 - man
-    # 1 - jewel
-    # 9 - wall
-
-    # i0 down/up
-    # i1 right/left
-
-    assert (panel_in == 1).sum() == (panel_in == 2).sum()
-    assert (panel_in == 4).sum() == 1
-
-    panel_walls = 1 * (panel_in == 9)
-    jewels = np.argwhere(panel_in == 1)
-
-    boxes_start = np.argwhere(panel_in == 2)
-    B = len(boxes_start)
-    man_start = np.argwhere(panel_in == 4)[0]
-    man = man_start
-
-    RL_list = []
-    for row_i, row in enumerate(panel_walls):
-        inds = np.where(row == 0)[0]
-        if len(inds) >= 2:
-            RL_list.append((row_i,
-                            inds[np.where((inds[1:] - inds[:-1]) == 1)[0]],
-                            (inds[np.where((inds[1:] - inds[:-1]) == 1)[0] + 1])[::-1]))
-
-    DU_list = []
-    for col_i, col in enumerate(panel_walls.transpose()):
-        inds = np.where(col == 0)[0]
-        if len(inds) >= 2:
-            DU_list.append((col_i,
-                            inds[np.where((inds[1:] - inds[:-1]) == 1)[0]],
-                            (inds[np.where((inds[1:] - inds[:-1]) == 1)[0] + 1])[::-1]))
-
-    panel_man_start = find_where_man_can_touch(panel_walls, boxes_start, man_start)
-    stage = {'boxes': boxes_start, 'panel_man': panel_man_start, 'seq': [0], 'moves': 'S'}
-    print_boxes(stage, panel_walls, jewels)
-
-    boxes = stage['boxes']
-    (N0, N1) = np.shape(panel_walls)
-    panel_man = np.zeros([N0, N1], np.int8)
-    panel_man[man[0], man[1]] = 1
-
-    for c in range(3 * max(N0, N1)):
-        sum_old = panel_man.sum()
-
-        # look left and right
-        for (row_i, R_inds, L_inds) in RL_list:
-            if panel_man[row_i, :].sum() > 0:
-                # looking right
-                for i in R_inds:
-                    if panel_man[row_i, i] == 1:
-                        if not is_in(np.array([row_i, i + 1]), boxes):
-                            panel_man[row_i, i + 1] = 1
-                # looking left
-                for i in L_inds:
-                    if panel_man[row_i, i] == 1:
-                        if not is_in(np.array([row_i, i - 1]), boxes):
-                            panel_man[row_i, i - 1] = 1
-
-        # look up and down
-        for (col_i, D_inds, U_inds) in DU_list:
-            if panel_man[:, col_i].sum() > 0:
-                # looking down
-                for i in D_inds:
-                    if panel_man[i, col_i] == 1:
-                        if not is_in(np.array([i + 1, col_i]), boxes):
-                            panel_man[i + 1, col_i] = 1
-                # looking up
-                for i in U_inds:
-                    if panel_man[i, col_i] == 1:
-                        if not is_in(np.array([i - 1, col_i]), boxes):
-                            panel_man[i - 1, col_i] = 1
-
-        print(f'sum_old: {sum_old}; sum: {panel_man.sum()}')
-        if sum_old == panel_man.sum():
-            break
-
-    a = 0
-
 def main_solve_puzzle(panel_in, verbose=False):
     # 0 - space
     # 2 - box
@@ -259,19 +126,13 @@ def main_solve_puzzle(panel_in, verbose=False):
     # 1 - jewel
     # 9 - wall
 
-    V_lines = 100
+    V_lines = 10000
 
     assert (panel_in == 1).sum() == (panel_in == 2).sum()
     assert (panel_in == 4).sum() == 1
 
     panel_walls = 1 * (panel_in == 9)
     jewels = np.argwhere(panel_in == 1)
-
-    boxes_start = np.argwhere(panel_in == 2)
-    B = len(boxes_start)
-    man_start = np.argwhere(panel_in == 4)[0]
-    panel_man_start = find_where_man_can_touch(panel_walls, boxes_start, man_start)
-    stages_all = [{'boxes': boxes_start, 'panel_man': panel_man_start, 'seq': [0], 'moves': 'S'}]
 
     RL_list = []
     for row_i, row in enumerate(panel_walls):
@@ -289,14 +150,20 @@ def main_solve_puzzle(panel_in, verbose=False):
                             inds[np.where((inds[1:] - inds[:-1]) == 1)[0]],
                             (inds[np.where((inds[1:] - inds[:-1]) == 1)[0] + 1])[::-1]))
 
-    most_left = np.where(panel_walls == 0)[0].min()
-    most_right = np.where(panel_walls == 0)[0].max()
-    most_top = np.where(panel_walls == 0)[1].min()
-    most_bottom = np.where(panel_walls == 0)[1].max()
-    jewels_most_left = (jewels[:, 0] == most_left).sum()
-    jewels_most_right = (jewels[:, 0] == most_right).sum()
-    jewels_most_top = (jewels[:, 1] == most_top).sum()
-    jewels_most_bottom = (jewels[:, 1] == most_bottom).sum()
+    boxes_start = np.argwhere(panel_in == 2)
+    B = len(boxes_start)
+    man_start = np.argwhere(panel_in == 4)[0]
+    panel_man_start = find_where_man_can_touch(panel_walls, boxes_start, man_start, RL_list, DU_list)
+    stages_all = [{'boxes': boxes_start, 'panel_man': panel_man_start, 'seq': [0], 'moves': 'S'}]
+
+    most_left = np.where(panel_walls == 0)[1].min()
+    most_right = np.where(panel_walls == 0)[1].max()
+    most_top = np.where(panel_walls == 0)[0].min()
+    most_bottom = np.where(panel_walls == 0)[0].max()
+    jewels_most_left = (jewels[:, 1] == most_left).sum()
+    jewels_most_right = (jewels[:, 1] == most_right).sum()
+    jewels_most_top = (jewels[:, 0] == most_top).sum()
+    jewels_most_bottom = (jewels[:, 0] == most_bottom).sum()
 
     print('starting panel')
     print_boxes(stages_all[0], panel_walls, jewels)
@@ -312,13 +179,13 @@ def main_solve_puzzle(panel_in, verbose=False):
         boxes = stage['boxes']
 
         stuck_wall = ''
-        if (boxes[:, 0] == most_left).sum() > jewels_most_left:
+        if (boxes[:, 1] == most_left).sum() > jewels_most_left:
             stuck_wall = 'L'
-        elif (boxes[:, 0] == most_right).sum() > jewels_most_right:
+        elif (boxes[:, 1] == most_right).sum() > jewels_most_right:
             stuck_wall = 'R'
-        elif (boxes[:, 1] == most_top).sum() > jewels_most_top:
+        elif (boxes[:, 0] == most_top).sum() > jewels_most_top:
             stuck_wall = 'T'
-        elif (boxes[:, 1] == most_bottom).sum() > jewels_most_bottom:
+        elif (boxes[:, 0] == most_bottom).sum() > jewels_most_bottom:
             stuck_wall = 'B'
 
         if len(stuck_wall) > 0:
@@ -346,6 +213,16 @@ def main_solve_puzzle(panel_in, verbose=False):
             if verbose or ((p / V_lines) == np.round(p / V_lines)):
                 print(f'total stages: {len(stages_all)}; done stage: {p}; stages left: {len(stages_all) - p}; moves: {stages_all[p]["moves"]}; stuck box {stuck_box} so killing stage')
             continue
+
+        # panel_man = stage['panel_man']
+        # isolated_wall_1 = ''
+        # if (panel_man[:, :most_left + 2].sum() == 0) and (panel_man[:, most_left + 2].sum() > 0) and (jewels_most_left < (panel_walls[:, most_left] == 0).sum()):
+        #     isolated_wall_1 = 'L'
+        #
+        # if len(isolated_wall_1) > 0:
+        #     if verbose or ((p / V_lines) == np.round(p / V_lines)):
+        #         print(f'total stages: {len(stages_all)}; done stage: {p}; stages left: {len(stages_all) - p}; moves: {stages_all[p]["moves"]}; isolated wall 1 {isolated_wall_1} so killing stage')
+        #     continue
 
         for b in range(B):
             stages_all = find_and_add_new_stage(stages_all, stage, b, -1, +0, 'U', panel_walls, RL_list, DU_list)
@@ -545,6 +422,33 @@ def main_level_9(verbose):
 
     return main_solve_puzzle(X, verbose)
 
+def main_level_0(verbose):
+
+    # 0 - space
+    # 2 - box
+    # 4 - man
+    # 1 - jewel
+    # 9 - wall
+
+    X = np.array([[9, 9, 9, 9, 9, 9, 9, 9],
+                  [9, 0, 2, 0, 0, 0, 1, 9],
+                  [9, 0, 2, 0, 0, 4, 1, 9],
+                  [9, 0, 9, 0, 0, 0, 9, 9],
+                  [9, 0, 2, 0, 0, 0, 1, 9],
+                  [9, 0, 2, 0, 0, 0, 1, 9],
+                  [9, 9, 9, 9, 9, 9, 9, 9]])
+
+    X = np.array([[9, 9, 9, 9, 9, 9, 9, 9],
+                  [9, 0, 2, 0, 0, 0, 1, 9],
+                  [9, 1, 2, 0, 0, 4, 0, 9],
+                  [9, 0, 9, 0, 0, 0, 9, 9],
+                  [9, 0, 2, 0, 0, 0, 1, 9],
+                  [9, 2, 0, 0, 0, 0, 1, 9],
+                  [9, 9, 9, 9, 9, 9, 9, 9]])
+
+    return main_solve_puzzle(X, verbose)
+
+
 def main_test():
     assert main_level_1(verbose=False) == 'S,U1,L0,L0,U1,R2,D3'
     assert main_level_2(verbose=False) == 'S,D0,R1,R3,R3,R0,R0,R0,U3,U3,R0,U2,D0,R1,R1'
@@ -560,7 +464,8 @@ def main_test():
 
 if __name__ == "__main__":
 
-    main_level_9(False)
+#    main_level_0(True)
+    main_level_0(False)
 
 #    main_test()
 
