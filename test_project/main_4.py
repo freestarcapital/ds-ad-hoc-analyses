@@ -102,27 +102,18 @@ class Puzzle:
         if ((panel_man[:, self.most_left].sum() == 0)
                 and ((self.panel_walls[:, self.most_left + 1] == 0).sum() == (boxes_new[:, 1] == self.most_left + 1).sum())
                 and (self.jewels_most_left < (self.panel_walls[:, self.most_left] == 0).sum() - (boxes_new[:, 1] == self.most_left).sum())):
-            if moves_new in 'S,U2,U2,L6,L0,L0,L1,D3,D3,L3,L1,D4,U1,L1,L3,U4,U4,L4,L6,L7,U5,D7,L7,L7':
-                f = 0
             return
         if ((panel_man[:, self.most_right].sum() == 0)
                 and ((self.panel_walls[:, self.most_right - 1] == 0).sum() == (boxes_new[:, 1] == self.most_right - 1).sum())
                 and (self.jewels_most_right < (self.panel_walls[:, self.most_right] == 0).sum() - (boxes_new[:, 1] == self.most_right).sum())):
-            if moves_new in 'S,U2,U2,L6,L0,L0,L1,D3,D3,L3,L1,D4,U1,L1,L3,U4,U4,L4,L6,L7,U5,D7,L7,L7':
-                f = 0
             return
         if ((panel_man[self.most_top, :].sum() == 0)
                 and ((self.panel_walls[self.most_top + 1, :] == 0).sum() == (boxes_new[:, 0] == self.most_top + 1).sum())
                 and (self.jewels_most_top < (self.panel_walls[self.most_top, :] == 0).sum() - (boxes_new[:, 0] == self.most_top).sum())):
-            if moves_new in 'S,U2,U2,L6,L0,L0,L1,D3,D3,L3,L1,D4,U1,L1,L3,U4,U4,L4,L6,L7,U5,D7,L7,L7':
-                f = 0
             return
         if ((panel_man[self.most_bottom, :].sum() == 0)
                 and ((self.panel_walls[self.most_bottom - 1, :] == 0).sum() == (boxes_new[:, 0] == self.most_bottom - 1).sum())
                 and (self.jewels_most_bottom < (self.panel_walls[self.most_bottom, :] == 0).sum() - (boxes_new[:, 0] == self.most_bottom).sum())):
-            print('isolated wall B')
-            if moves_new in 'S,U2,U2,L6,L0,L0,L1,D3,D3,L3,L1,D4,U1,L1,L3,U4,U4,L4,L6,L7,U5,D7,L7,L7':
-                f = 0
             return
 
         man_new = boxes[b, :]
@@ -463,6 +454,43 @@ def main_level_9(verbose):
 
     return main_solve_puzzle(X, verbose)
 
+def main_level_10(verbose):
+
+    # 0 - space
+    # 2 - box
+    # 4 - man
+    # 1 - jewel
+    # 9 - wall
+
+    X = np.array([[9, 9, 9, 9, 9, 9, 9, 9],
+                  [9, 9, 9, 9, 0, 0, 0, 9],
+                  [9, 1, 1, 9, 2, 9, 0, 9],
+                  [9, 0, 0, 0, 0, 2, 0, 9],
+                  [9, 1, 2, 0, 0, 9, 4, 9],
+                  [9, 1, 1, 2, 2, 9, 0, 9],
+                  [9, 9, 9, 9, 0, 0, 0, 9],
+                  [9, 9, 9, 9, 9, 9, 9, 9]])
+
+    return main_solve_puzzle(X, verbose)
+
+def main_level_11(verbose):
+
+    # 0 - space
+    # 2 - box
+    # 4 - man
+    # 1 - jewel
+    # 9 - wall
+
+    X = np.array([[9, 9, 9, 9, 9, 9, 9],
+                  [9, 1, 0, 1, 0, 1, 9],
+                  [9, 0, 2, 2, 2, 0, 9],
+                  [9, 1, 2, 4, 2, 1, 9],
+                  [9, 0, 2, 2, 2, 0, 9],
+                  [9, 1, 0, 1, 0, 1, 9],
+                  [9, 9, 9, 9, 9, 9, 9]])
+
+    return main_solve_puzzle(X, verbose)
+
 def main_level_test_isolated(verbose):
 
     # 0 - space
@@ -504,11 +532,12 @@ def main_test():
     assert main_level_7(verbose=False) == 'S,D0,D2,R1,U3,U4,L1,D1'
     assert main_level_8(verbose=False) == 'S,R0,R4,U3,L2,D1,D1,L1,L1,U5,U5,D4,R1,D3,D5,L2,U0,U1,U1,L5,R2,D3,R3'
     assert main_level_9(verbose=False) == 'S,U2,U2,L6,L0,L0,L1,D3,D3,L3,L1,D4,U1,L1,L3,U4,U4,L4,L6,L7,U5,D7,L7,L7'
+    assert main_level_10(verbose=False) == 'S,L1,L1,L1,L1,D1,D1,R2,D0,L0,L0,L0,U0,L2,L2,U4,L3,U4,L4,L4,U4'
 
 if __name__ == "__main__":
 
 #    main_level_test_isolated(True)#
-    main_level_9(False)
+    main_level_11(False)
 
     #main_test()
 
