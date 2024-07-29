@@ -1,3 +1,12 @@
+with normal python list for stages_compact_all:
+total puzzle solve time: 224.0s
+
+with:
+from sortedcontainers import SortedList
+self.stages_compact_all = SortedList([self.stage_to_stage_compact(stage)]):
+total puzzle solve time: 133.0s
+
+
 time taken: 3.0s; total stages: 71838; done stage: 71000; stages left: 837; moves: S,U2,U2,L6,L0,L0,L1,D3,D3,L3,L1,D4,U1,L1,L3,U4,U4,L4,L6,L7,U5,D7,L7,L7; added 0 stages:
 PUZZLE COMPLETE !!!
 seq: [0], moves: S

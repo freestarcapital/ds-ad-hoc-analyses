@@ -136,8 +136,8 @@ class Puzzle:
             return
 
         self.stages_all.append(stage_new)
-        self.stages_compact_all.append(stage_compact_new)
-#        self.stages_compact_all.add(stage_compact_new)
+#        self.stages_compact_all.append(stage_compact_new)
+        self.stages_compact_all.add(stage_compact_new)
 
         if self.boxes_to_boxes_compact_code(boxes_new) == self.jewels_compact_code:
             print('PUZZLE COMPLETE !!!')
@@ -226,10 +226,10 @@ class Puzzle:
         panel_man_start = self.find_where_man_can_touch(boxes_start, man_start)
         stage = {'boxes': boxes_start, 'panel_man': panel_man_start, 'seq': [0], 'moves': 'S'}
         self.stages_all = [stage]
-        self.stages_compact_all = [self.stage_to_stage_compact(stage)]
+#        self.stages_compact_all = [self.stage_to_stage_compact(stage)]
 
-        # from sortedcontainers import SortedList
-        # self.stages_compact_all = SortedList([self.stage_to_stage_compact(stage)])
+        from sortedcontainers import SortedList
+        self.stages_compact_all = SortedList([self.stage_to_stage_compact(stage)])
 
         self.most_left = np.where(self.panel_walls == 0)[1].min()
         self.most_right = np.where(self.panel_walls == 0)[1].max()
