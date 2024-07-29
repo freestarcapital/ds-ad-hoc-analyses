@@ -214,15 +214,21 @@ def main_solve_puzzle(panel_in, verbose=False):
                 print(f'total stages: {len(stages_all)}; done stage: {p}; stages left: {len(stages_all) - p}; moves: {stages_all[p]["moves"]}; stuck box {stuck_box} so killing stage')
             continue
 
-        # panel_man = stage['panel_man']
-        # isolated_wall_1 = ''
-        # if (panel_man[:, :most_left + 2].sum() == 0) and (panel_man[:, most_left + 2].sum() > 0) and (jewels_most_left < (panel_walls[:, most_left] == 0).sum()):
-        #     isolated_wall_1 = 'L'
-        #
-        # if len(isolated_wall_1) > 0:
-        #     if verbose or ((p / V_lines) == np.round(p / V_lines)):
-        #         print(f'total stages: {len(stages_all)}; done stage: {p}; stages left: {len(stages_all) - p}; moves: {stages_all[p]["moves"]}; isolated wall 1 {isolated_wall_1} so killing stage')
-        #     continue
+        panel_man = stage['panel_man']
+        isolated_wall_1 = ''
+        if ((panel_man[:, most_left].sum() == 0)
+                and ((panel_walls[:, most_left + 1] == 0).sum() == (boxes[:, 1] == most_left + 1).sum())
+                and (jewels_most_left < (panel_walls[:, most_left] == 0).sum())):
+            isolated_wall_1 = 'L'
+        if ((panel_man[:, most_right].sum() == 0)
+                and ((panel_walls[:, most_right - 1] == 0).sum() == (boxes[:, 1] == most_right - 1).sum())
+                and (jewels_most_right < (panel_walls[:, most_right] == 0).sum())):
+            isolated_wall_1 = 'R'
+
+        if len(isolated_wall_1) > 0:
+            if True or ((p / V_lines) == np.round(p / V_lines)):
+                print(f'total stages: {len(stages_all)}; done stage: {p}; stages left: {len(stages_all) - p}; moves: {stages_all[p]["moves"]}; isolated wall 1 {isolated_wall_1} so killing stage')
+            continue
 
         for b in range(B):
             stages_all = find_and_add_new_stage(stages_all, stage, b, -1, +0, 'U', panel_walls, RL_list, DU_list)
@@ -439,12 +445,13 @@ def main_level_0(verbose):
                   [9, 9, 9, 9, 9, 9, 9, 9]])
 
     X = np.array([[9, 9, 9, 9, 9, 9, 9, 9],
-                  [9, 0, 2, 0, 0, 0, 1, 9],
-                  [9, 1, 2, 0, 0, 4, 0, 9],
-                  [9, 0, 9, 0, 0, 0, 9, 9],
-                  [9, 0, 2, 0, 0, 0, 1, 9],
-                  [9, 2, 0, 0, 0, 0, 1, 9],
+                  [9, 0, 1, 0, 0, 2, 0, 9],
+                  [9, 4, 1, 0, 0, 2, 0, 9],
+                  [9, 0, 9, 9, 0, 9, 9, 9],
+                  [9, 0, 1, 0, 0, 2, 0, 9],
+                  [9, 0, 1, 0, 0, 2, 0, 9],
                   [9, 9, 9, 9, 9, 9, 9, 9]])
+
 
     return main_solve_puzzle(X, verbose)
 
@@ -464,8 +471,8 @@ def main_test():
 
 if __name__ == "__main__":
 
-#    main_level_0(True)
-    main_level_0(False)
+   # main_level_0(True)
+    main_level_9(False)
 
-#    main_test()
+   # main_test()
 
