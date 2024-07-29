@@ -247,7 +247,7 @@ class Puzzle:
 
         time_puzzle_start = dt.datetime.now()
         time_old = time_puzzle_start
-        for p in range(100000):
+        for p in range(1000000):
             len_stages_old = len(self.stages_all)
 
             if p >= len(self.stages_all):

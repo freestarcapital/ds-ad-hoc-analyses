@@ -1,0 +1,171 @@
+time taken: 2.0s; total stages: 407348; done stage: 396000; stages left: 11347; moves: S,U1,L0,D0,D0,D0,R2,L1,L1,D2,D2,D2,D6,L5,U3,R3,L7,U4,L6,R7; added 0 stages:
+PUZZLE COMPLETE !!!
+seq: [0], moves: S
+XX XX XX XX XX XX XX
+XX oo    oo    oo XX
+XX    B0 B1 B2    XX
+XX oo B3 .. B4 oo XX
+XX    B5 B6 B7    XX
+XX oo    oo    oo XX
+XX XX XX XX XX XX XX
+seq: [0, 1], moves: S,U1
+XX XX XX XX XX XX XX
+XX oo    B1    oo XX
+XX    B0 .. B2    XX
+XX oo B3 .. B4 oo XX
+XX    B5 B6 B7    XX
+XX oo    oo    oo XX
+XX XX XX XX XX XX XX
+seq: [0, 1, 5], moves: S,U1,L0
+XX XX XX XX XX XX XX
+XX oo .. B1    oo XX
+XX B0 .. .. B2    XX
+XX oo B3 .. B4 oo XX
+XX    B5 B6 B7    XX
+XX oo    oo    oo XX
+XX XX XX XX XX XX XX
+seq: [0, 1, 5, 19], moves: S,U1,L0,D0
+XX XX XX XX XX XX XX
+XX oo .. B1    oo XX
+XX .. .. .. B2    XX
+XX B0 B3 .. B4 oo XX
+XX    B5 B6 B7    XX
+XX oo    oo    oo XX
+XX XX XX XX XX XX XX
+seq: [0, 1, 5, 19, 67], moves: S,U1,L0,D0,D0
+XX XX XX XX XX XX XX
+XX oo .. B1    oo XX
+XX .. .. .. B2    XX
+XX oo B3 .. B4 oo XX
+XX B0 B5 B6 B7    XX
+XX oo    oo    oo XX
+XX XX XX XX XX XX XX
+seq: [0, 1, 5, 19, 67, 204], moves: S,U1,L0,D0,D0,D0
+XX XX XX XX XX XX XX
+XX oo .. B1    oo XX
+XX .. .. .. B2    XX
+XX oo B3 .. B4 oo XX
+XX .. B5 B6 B7    XX
+XX B0    oo    oo XX
+XX XX XX XX XX XX XX
+seq: [0, 1, 5, 19, 67, 204, 557], moves: S,U1,L0,D0,D0,D0,R2
+XX XX XX XX XX XX XX
+XX oo .. B1 .. oo XX
+XX .. .. .. .. B2 XX
+XX oo B3 .. B4 oo XX
+XX .. B5 B6 B7    XX
+XX B0    oo    oo XX
+XX XX XX XX XX XX XX
+seq: [0, 1, 5, 19, 67, 204, 557, 1380], moves: S,U1,L0,D0,D0,D0,R2,L1
+XX XX XX XX XX XX XX
+XX oo B1 oo .. oo XX
+XX .. .. .. .. B2 XX
+XX oo B3 .. B4 oo XX
+XX .. B5 B6 B7    XX
+XX B0    oo    oo XX
+XX XX XX XX XX XX XX
+seq: [0, 1, 5, 19, 67, 204, 557, 1380, 3215], moves: S,U1,L0,D0,D0,D0,R2,L1,L1
+XX XX XX XX XX XX XX
+XX B1 .. oo .. oo XX
+XX .. .. .. .. B2 XX
+XX oo B3 .. B4 oo XX
+XX .. B5 B6 B7    XX
+XX B0    oo    oo XX
+XX XX XX XX XX XX XX
+seq: [0, 1, 5, 19, 67, 204, 557, 1380, 3215, 7152], moves: S,U1,L0,D0,D0,D0,R2,L1,L1,D6
+XX XX XX XX XX XX XX
+XX B1 .. oo .. oo XX
+XX .. .. .. .. B2 XX
+XX oo B3 .. B4 oo XX
+XX .. B5 .. B7    XX
+XX B0    B6    oo XX
+XX XX XX XX XX XX XX
+seq: [0, 1, 5, 19, 67, 204, 557, 1380, 3215, 7152, 15070], moves: S,U1,L0,D0,D0,D0,R2,L1,L1,D6,R7
+XX XX XX XX XX XX XX
+XX B1 .. oo .. oo XX
+XX .. .. .. .. B2 XX
+XX oo B3 .. B4 oo XX
+XX .. B5 .. .. B7 XX
+XX B0    B6 .. oo XX
+XX XX XX XX XX XX XX
+seq: [0, 1, 5, 19, 67, 204, 557, 1380, 3215, 7152, 15070, 29956], moves: S,U1,L0,D0,D0,D0,R2,L1,L1,D6,R7,U4
+XX XX XX XX XX XX XX
+XX B1 .. oo .. oo XX
+XX .. .. .. B4 B2 XX
+XX oo B3 .. .. oo XX
+XX .. B5 .. .. B7 XX
+XX B0    B6 .. oo XX
+XX XX XX XX XX XX XX
+seq: [0, 1, 5, 19, 67, 204, 557, 1380, 3215, 7152, 15070, 29956, 55681], moves: S,U1,L0,D0,D0,D0,R2,L1,L1,D6,R7,U4,U2
+XX XX XX XX XX XX XX
+XX B1 .. oo .. B2 XX
+XX .. .. .. B4 .. XX
+XX oo B3 .. .. oo XX
+XX .. B5 .. .. B7 XX
+XX B0    B6 .. oo XX
+XX XX XX XX XX XX XX
+seq: [0, 1, 5, 19, 67, 204, 557, 1380, 3215, 7152, 15070, 29956, 55681, 95700], moves: S,U1,L0,D0,D0,D0,R2,L1,L1,D6,R7,U4,U2,L4
+XX XX XX XX XX XX XX
+XX B1 .. oo .. B2 XX
+XX .. .. B4 .. .. XX
+XX oo B3 .. .. oo XX
+XX .. B5 .. .. B7 XX
+XX B0    B6 .. oo XX
+XX XX XX XX XX XX XX
+seq: [0, 1, 5, 19, 67, 204, 557, 1380, 3215, 7152, 15070, 29956, 55681, 95700, 150218], moves: S,U1,L0,D0,D0,D0,R2,L1,L1,D6,R7,U4,U2,L4,U4
+XX XX XX XX XX XX XX
+XX B1 .. B4 .. B2 XX
+XX .. .. .. .. .. XX
+XX oo B3 .. .. oo XX
+XX .. B5 .. .. B7 XX
+XX B0    B6 .. oo XX
+XX XX XX XX XX XX XX
+seq: [0, 1, 5, 19, 67, 204, 557, 1380, 3215, 7152, 15070, 29956, 55681, 95700, 150218, 214121], moves: S,U1,L0,D0,D0,D0,R2,L1,L1,D6,R7,U4,U2,L4,U4,R5
+XX XX XX XX XX XX XX
+XX B1 .. B4 .. B2 XX
+XX .. .. .. .. .. XX
+XX oo B3 .. .. oo XX
+XX .. .. B5 .. B7 XX
+XX B0 .. B6 .. oo XX
+XX XX XX XX XX XX XX
+seq: [0, 1, 5, 19, 67, 204, 557, 1380, 3215, 7152, 15070, 29956, 55681, 95700, 150218, 214121, 278642], moves: S,U1,L0,D0,D0,D0,R2,L1,L1,D6,R7,U4,U2,L4,U4,R5,L3
+XX XX XX XX XX XX XX
+XX B1 .. B4 .. B2 XX
+XX .. .. .. .. .. XX
+XX B3 .. .. .. oo XX
+XX .. .. B5 .. B7 XX
+XX B0 .. B6 .. oo XX
+XX XX XX XX XX XX XX
+seq: [0, 1, 5, 19, 67, 204, 557, 1380, 3215, 7152, 15070, 29956, 55681, 95700, 150218, 214121, 278642, 334125], moves: S,U1,L0,D0,D0,D0,R2,L1,L1,D6,R7,U4,U2,L4,U4,R5,L3,U7
+XX XX XX XX XX XX XX
+XX B1 .. B4 .. B2 XX
+XX .. .. .. .. .. XX
+XX B3 .. .. .. B7 XX
+XX .. .. B5 .. .. XX
+XX B0 .. B6 .. oo XX
+XX XX XX XX XX XX XX
+seq: [0, 1, 5, 19, 67, 204, 557, 1380, 3215, 7152, 15070, 29956, 55681, 95700, 150218, 214121, 278642, 334125, 373302], moves: S,U1,L0,D0,D0,D0,R2,L1,L1,D6,R7,U4,U2,L4,U4,R5,L3,U7,R6
+XX XX XX XX XX XX XX
+XX B1 .. B4 .. B2 XX
+XX .. .. .. .. .. XX
+XX B3 .. .. .. B7 XX
+XX .. .. B5 .. .. XX
+XX B0 .. oo B6 oo XX
+XX XX XX XX XX XX XX
+seq: [0, 1, 5, 19, 67, 204, 557, 1380, 3215, 7152, 15070, 29956, 55681, 95700, 150218, 214121, 278642, 334125, 373302, 396091], moves: S,U1,L0,D0,D0,D0,R2,L1,L1,D6,R7,U4,U2,L4,U4,R5,L3,U7,R6,R6
+XX XX XX XX XX XX XX
+XX B1 .. B4 .. B2 XX
+XX .. .. .. .. .. XX
+XX B3 .. .. .. B7 XX
+XX .. .. B5 .. .. XX
+XX B0 .. oo .. B6 XX
+XX XX XX XX XX XX XX
+seq: [0, 1, 5, 19, 67, 204, 557, 1380, 3215, 7152, 15070, 29956, 55681, 95700, 150218, 214121, 278642, 334125, 373302, 396091, 407389], moves: S,U1,L0,D0,D0,D0,R2,L1,L1,D6,R7,U4,U2,L4,U4,R5,L3,U7,R6,R6,D5
+XX XX XX XX XX XX XX
+XX B1 .. B4 .. B2 XX
+XX .. .. .. .. .. XX
+XX B3 .. .. .. B7 XX
+XX .. .. .. .. .. XX
+XX B0 .. B5 .. B6 XX
+XX XX XX XX XX XX XX
+total puzzle solve time: 1062.0s
