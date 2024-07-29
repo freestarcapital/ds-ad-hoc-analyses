@@ -474,5 +474,5 @@ if __name__ == "__main__":
    # main_level_0(True)
     main_level_9(False)
 
-   # main_test()
+    main_test()
 
