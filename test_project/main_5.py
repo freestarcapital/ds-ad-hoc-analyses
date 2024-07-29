@@ -104,22 +104,40 @@ class Puzzle:
         # if a line adjacent to a wall has fewer jewels than spaces, and that line cannot be reached (man on other side) and
         # when testing visualise using: self.print_boxes({'boxes': boxes_new, 'panel_man': panel_man, 'seq': '', 'moves': ''})
         panel_man = stage['panel_man']
-        if ((panel_man[:, self.most_left].sum() == 0)
-                and ((self.panel_walls[:, self.most_left + 1] == 0).sum() == (boxes_new[:, 1] == self.most_left + 1).sum())
-                and (self.jewels_most_left < (self.panel_walls[:, self.most_left] == 0).sum() - (boxes_new[:, 1] == self.most_left).sum())):
+        if ((~panel_man[:, self.most_left].all())
+                and ((~self.panel_walls[:, self.most_left + 1]).sum() == (boxes_new[:, 1] == self.most_left + 1).sum())
+                and (self.jewels_most_left < (~self.panel_walls[:, self.most_left]).sum() - (boxes_new[:, 1] == self.most_left).sum())):
             return
-        if ((panel_man[:, self.most_right].sum() == 0)
-                and ((self.panel_walls[:, self.most_right - 1] == 0).sum() == (boxes_new[:, 1] == self.most_right - 1).sum())
-                and (self.jewels_most_right < (self.panel_walls[:, self.most_right] == 0).sum() - (boxes_new[:, 1] == self.most_right).sum())):
+        if ((~panel_man[:, self.most_right].all())
+                and ((~self.panel_walls[:, self.most_right - 1]).sum() == (boxes_new[:, 1] == self.most_right - 1).sum())
+                and (self.jewels_most_right < (~self.panel_walls[:, self.most_right]).sum() - (boxes_new[:, 1] == self.most_right).sum())):
             return
-        if ((panel_man[self.most_top, :].sum() == 0)
-                and ((self.panel_walls[self.most_top + 1, :] == 0).sum() == (boxes_new[:, 0] == self.most_top + 1).sum())
-                and (self.jewels_most_top < (self.panel_walls[self.most_top, :] == 0).sum() - (boxes_new[:, 0] == self.most_top).sum())):
+        if ((~panel_man[self.most_top, :].all())
+                and ((~self.panel_walls[self.most_top + 1, :]).sum() == (boxes_new[:, 0] == self.most_top + 1).sum())
+                and (self.jewels_most_top < (~self.panel_walls[self.most_top, :]).sum() - (boxes_new[:, 0] == self.most_top).sum())):
             return
-        if ((panel_man[self.most_bottom, :].sum() == 0)
-                and ((self.panel_walls[self.most_bottom - 1, :] == 0).sum() == (boxes_new[:, 0] == self.most_bottom - 1).sum())
-                and (self.jewels_most_bottom < (self.panel_walls[self.most_bottom, :] == 0).sum() - (boxes_new[:, 0] == self.most_bottom).sum())):
+        if ((~panel_man[self.most_bottom, :].all())
+                and ((~self.panel_walls[self.most_bottom - 1, :]).sum() == (boxes_new[:, 0] == self.most_bottom - 1).sum())
+                and (self.jewels_most_bottom < (~self.panel_walls[self.most_bottom, :]).sum() - (boxes_new[:, 0] == self.most_bottom).sum())):
             return
+
+        # if ((panel_man[:, self.most_left].sum() == 0)
+        #         and ((self.panel_walls[:, self.most_left + 1] == 0).sum() == (boxes_new[:, 1] == self.most_left + 1).sum())
+        #         and (self.jewels_most_left < (self.panel_walls[:, self.most_left] == 0).sum() - (boxes_new[:, 1] == self.most_left).sum())):
+        #     return
+        # if ((panel_man[:, self.most_right].sum() == 0)
+        #         and ((self.panel_walls[:, self.most_right - 1] == 0).sum() == (boxes_new[:, 1] == self.most_right - 1).sum())
+        #         and (self.jewels_most_right < (self.panel_walls[:, self.most_right] == 0).sum() - (boxes_new[:, 1] == self.most_right).sum())):
+        #     return
+        # if ((panel_man[self.most_top, :].sum() == 0)
+        #         and ((self.panel_walls[self.most_top + 1, :] == 0).sum() == (boxes_new[:, 0] == self.most_top + 1).sum())
+        #         and (self.jewels_most_top < (self.panel_walls[self.most_top, :] == 0).sum() - (boxes_new[:, 0] == self.most_top).sum())):
+        #     return
+        # if ((panel_man[self.most_bottom, :].sum() == 0)
+        #         and ((self.panel_walls[self.most_bottom - 1, :] == 0).sum() == (boxes_new[:, 0] == self.most_bottom - 1).sum())
+        #         and (self.jewels_most_bottom < (self.panel_walls[self.most_bottom, :] == 0).sum() - (boxes_new[:, 0] == self.most_bottom).sum())):
+        #     return
+
 
         man_new = boxes[b, :]
         panel_man_new = self.find_where_man_can_touch(boxes_new, man_new)
@@ -537,12 +555,12 @@ def main_test():
     assert main_level_8(verbose=False) == 'S,R0,R4,U3,L2,D1,D1,L1,L1,U5,U5,D4,R1,D3,D5,L2,U0,U1,U1,L5,R2,D3,R3'
     assert main_level_9(verbose=False) == 'S,U2,U2,L6,L0,L0,L1,L1,L1,D3,D3,L3,L3,U4,U4,L4,L4,L6,L7,D5,D5,L5,L5,L5,L7,L7'
     assert main_level_10(verbose=False) == 'S,L1,L1,L1,L1,D1,D1,R2,D0,L0,L0,L0,U0,L2,L2,U4,L3,U4,L4,L4,U4'
-    assert main_level_10(verbose=False) == 'S,U1,L0,D0,D0,D0,R2,L1,L1,D6,R7,U4,U2,L4,U4,R5,L3,U7,R6,R6,D5'
+    assert main_level_11(verbose=False) == 'S,U1,L0,D0,D0,D0,R2,L1,L1,D6,R7,U4,U2,L4,U4,R5,L3,U7,R6,R6,D5'
 
 if __name__ == "__main__":
 
 #    main_level_test_isolated(True)#
-    main_level_11(False)
+#    main_level_9(False)
 
-  #  main_test()
+    main_test()
 
