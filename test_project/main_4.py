@@ -73,7 +73,7 @@ class Puzzle:
         if box_compact_new in boxes_compact:
             return
 
-        # if box stuck in corner return
+        # if box in is a corner, and it's not over a jewel impossible, so return
         if box_compact_new not in self.jewels_compact:
             if self.panel_walls[box_new[0] - 1, box_new[1]] + self.panel_walls[box_new[0], box_new[1] - 1] == 2:
                 return
@@ -84,6 +84,7 @@ class Puzzle:
             elif self.panel_walls[box_new[0] + 1, box_new[1]] + self.panel_walls[box_new[0], box_new[1] + 1] == 2:
                 return
 
+        # in a lines adjacent to a wall, if there are more boxes than jewels impossible, so return
         if (boxes_new[:, 1] == self.most_left).sum() > self.jewels_most_left:
             return
         elif (boxes_new[:, 1] == self.most_right).sum() > self.jewels_most_right:
@@ -93,24 +94,35 @@ class Puzzle:
         elif (boxes_new[:, 0] == self.most_bottom).sum() > self.jewels_most_bottom:
             return
 
+        moves_new = f"{stage['moves']},{move}{b}"
+
+        # if a line adjacent to a wall has fewer jewels than spaces, and that line cannot be reached (man on other side) and
         # when testing visualise using: self.print_boxes({'boxes': boxes_new, 'panel_man': panel_man, 'seq': '', 'moves': ''})
         panel_man = stage['panel_man']
         if ((panel_man[:, self.most_left].sum() == 0)
                 and ((self.panel_walls[:, self.most_left + 1] == 0).sum() == (boxes_new[:, 1] == self.most_left + 1).sum())
-                and (self.jewels_most_left < (self.panel_walls[:, self.most_left] == 0).sum())):
+                and (self.jewels_most_left < (self.panel_walls[:, self.most_left] == 0).sum() - (boxes_new[:, 1] == self.most_left).sum())):
+            if moves_new in 'S,U2,U2,L6,L0,L0,L1,D3,D3,L3,L1,D4,U1,L1,L3,U4,U4,L4,L6,L7,U5,D7,L7,L7':
+                f = 0
             return
         if ((panel_man[:, self.most_right].sum() == 0)
                 and ((self.panel_walls[:, self.most_right - 1] == 0).sum() == (boxes_new[:, 1] == self.most_right - 1).sum())
-                and (self.jewels_most_right < (self.panel_walls[:, self.most_right] == 0).sum())):
+                and (self.jewels_most_right < (self.panel_walls[:, self.most_right] == 0).sum() - (boxes_new[:, 1] == self.most_right).sum())):
+            if moves_new in 'S,U2,U2,L6,L0,L0,L1,D3,D3,L3,L1,D4,U1,L1,L3,U4,U4,L4,L6,L7,U5,D7,L7,L7':
+                f = 0
             return
         if ((panel_man[self.most_top, :].sum() == 0)
                 and ((self.panel_walls[self.most_top + 1, :] == 0).sum() == (boxes_new[:, 0] == self.most_top + 1).sum())
-                and (self.jewels_most_top < (self.panel_walls[self.most_top, :] == 0).sum())):
+                and (self.jewels_most_top < (self.panel_walls[self.most_top, :] == 0).sum() - (boxes_new[:, 0] == self.most_top).sum())):
+            if moves_new in 'S,U2,U2,L6,L0,L0,L1,D3,D3,L3,L1,D4,U1,L1,L3,U4,U4,L4,L6,L7,U5,D7,L7,L7':
+                f = 0
             return
         if ((panel_man[self.most_bottom, :].sum() == 0)
                 and ((self.panel_walls[self.most_bottom - 1, :] == 0).sum() == (boxes_new[:, 0] == self.most_bottom - 1).sum())
-                and (self.jewels_most_bottom < (self.panel_walls[self.most_bottom, :] == 0).sum())):
+                and (self.jewels_most_bottom < (self.panel_walls[self.most_bottom, :] == 0).sum() - (boxes_new[:, 0] == self.most_bottom).sum())):
             print('isolated wall B')
+            if moves_new in 'S,U2,U2,L6,L0,L0,L1,D3,D3,L3,L1,D4,U1,L1,L3,U4,U4,L4,L6,L7,U5,D7,L7,L7':
+                f = 0
             return
 
         man_new = boxes[b, :]
@@ -485,14 +497,12 @@ def main_test():
     assert main_level_6(verbose=False) == 'S,D0,D0,L1,L1,L2,L2,L2,U3,R0,L3,L3,U3,L0,L0,L3,L3'
     assert main_level_7(verbose=False) == 'S,D0,D2,R1,U3,U4,L1,D1'
     assert main_level_8(verbose=False) == 'S,R0,R4,U3,L2,D1,D1,L1,L1,U5,U5,D4,R1,D3,D5,L2,U0,U1,U1,L5,R2,D3,R3'
-    #assert main_level_9(verbose=False) == ''
-
-    
+    assert main_level_9(verbose=False) == 'S,U2,U2,L6,L0,L0,L1,D3,D3,L3,L1,D4,U1,L1,L3,U4,U4,L4,L6,L7,U5,D7,L7,L7'
 
 if __name__ == "__main__":
 
 #    main_level_test_isolated(True)#
-    #main_level_9(False)
+    main_level_9(False)
 
-    main_test()
+    #main_test()
 
