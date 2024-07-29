@@ -6,6 +6,12 @@ from sortedcontainers import SortedList
 self.stages_compact_all = SortedList([self.stage_to_stage_compact(stage)]):
 total puzzle solve time: 133.0s
 
+with bool arrays and:
+from sortedcontainers import SortedList
+self.stages_compact_all = SortedList([self.stage_to_stage_compact(stage)]):
+total puzzle solve time: 91.0s
+
+
 
 time taken: 3.0s; total stages: 71838; done stage: 71000; stages left: 837; moves: S,U2,U2,L6,L0,L0,L1,D3,D3,L3,L1,D4,U1,L1,L3,U4,U4,L4,L6,L7,U5,D7,L7,L7; added 0 stages:
 PUZZLE COMPLETE !!!
@@ -219,3 +225,216 @@ XX B3 B5 .. .. .. .. XX
 XX XX XX XX XX XX XX XX
 
 Process finished with exit code 0
+
+
+time taken: 1.0s; total stages: 71641; done stage: 71000; stages left: 640; moves: S,U2,U2,L6,L0,L1,D3,D3,L6,U6,L3,L1,D4,U1,U4,U6,L7,U5,R3,R3,L5,L4,D5,L7; added 1 stages: 71640:S,U2,U2,L6,L0,L1,D3,D3,L6,U6,L3,L1,D4,U1,U4,U6,L7,U5,R3,R3,L5,L4,D5,L7,L7
+PUZZLE COMPLETE !!!
+seq: [0], moves: S
+XX XX XX XX XX XX XX XX
+XX oo oo             XX
+XX oo oo B0    B1    XX
+XX B2 XX B3 B4 B5 XX XX
+XX oo oo B6 .. B7 .. XX
+XX oo oo .. .. .. .. XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1], moves: S,U2
+XX XX XX XX XX XX XX XX
+XX oo oo             XX
+XX B2 oo B0    B1    XX
+XX .. XX B3 B4 B5 XX XX
+XX oo oo B6 .. B7 .. XX
+XX oo oo .. .. .. .. XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6], moves: S,U2,U2
+XX XX XX XX XX XX XX XX
+XX B2 oo .. .. .. .. XX
+XX oo oo B0 .. B1 .. XX
+XX .. XX B3 B4 B5 XX XX
+XX oo oo B6 .. B7 .. XX
+XX oo oo .. .. .. .. XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23], moves: S,U2,U2,L6
+XX XX XX XX XX XX XX XX
+XX B2 oo .. .. .. .. XX
+XX oo oo B0 .. B1 .. XX
+XX .. XX B3 B4 B5 XX XX
+XX oo B6 .. .. B7 .. XX
+XX oo oo .. .. .. .. XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23, 58], moves: S,U2,U2,L6,L0
+XX XX XX XX XX XX XX XX
+XX B2 oo .. .. .. .. XX
+XX oo B0 .. .. B1 .. XX
+XX    XX B3 B4 B5 XX XX
+XX oo B6       B7    XX
+XX oo oo             XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23, 58, 125], moves: S,U2,U2,L6,L0,L0
+XX XX XX XX XX XX XX XX
+XX B2 oo .. .. .. .. XX
+XX B0 oo .. .. B1 .. XX
+XX    XX B3 B4 B5 XX XX
+XX oo B6       B7    XX
+XX oo oo             XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23, 58, 125, 251], moves: S,U2,U2,L6,L0,L0,L1
+XX XX XX XX XX XX XX XX
+XX B2 oo .. .. .. .. XX
+XX B0 oo .. B1 .. .. XX
+XX    XX B3 B4 B5 XX XX
+XX oo B6       B7    XX
+XX oo oo             XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23, 58, 125, 251, 501], moves: S,U2,U2,L6,L0,L0,L1,L1
+XX XX XX XX XX XX XX XX
+XX B2 oo .. .. .. .. XX
+XX B0 oo B1 .. .. .. XX
+XX    XX B3 B4 B5 XX XX
+XX oo B6       B7    XX
+XX oo oo             XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23, 58, 125, 251, 501, 1003], moves: S,U2,U2,L6,L0,L0,L1,L1,L1
+XX XX XX XX XX XX XX XX
+XX B2 oo .. .. .. .. XX
+XX B0 B1 .. .. .. .. XX
+XX    XX B3 B4 B5 XX XX
+XX oo B6       B7    XX
+XX oo oo             XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23, 58, 125, 251, 501, 1003, 1932], moves: S,U2,U2,L6,L0,L0,L1,L1,L1,D3
+XX XX XX XX XX XX XX XX
+XX B2 oo .. .. .. .. XX
+XX B0 B1 .. .. .. .. XX
+XX    XX .. B4 B5 XX XX
+XX oo B6 B3    B7    XX
+XX oo oo             XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23, 58, 125, 251, 501, 1003, 1932, 3537], moves: S,U2,U2,L6,L0,L0,L1,L1,L1,D3,D3
+XX XX XX XX XX XX XX XX
+XX B2 oo .. .. .. .. XX
+XX B0 B1 .. .. .. .. XX
+XX    XX .. B4 B5 XX XX
+XX oo B6 .. .. B7 .. XX
+XX oo oo B3 .. .. .. XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23, 58, 125, 251, 501, 1003, 1932, 3537, 6044], moves: S,U2,U2,L6,L0,L0,L1,L1,L1,D3,D3,L3
+XX XX XX XX XX XX XX XX
+XX B2 oo .. .. .. .. XX
+XX B0 B1 .. .. .. .. XX
+XX    XX .. B4 B5 XX XX
+XX oo B6 .. .. B7 .. XX
+XX oo B3 .. .. .. .. XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23, 58, 125, 251, 501, 1003, 1932, 3537, 6044, 9556], moves: S,U2,U2,L6,L0,L0,L1,L1,L1,D3,D3,L3,L3
+XX XX XX XX XX XX XX XX
+XX B2 oo .. .. .. .. XX
+XX B0 B1 .. .. .. .. XX
+XX    XX .. B4 B5 XX XX
+XX oo B6 .. .. B7 .. XX
+XX B3 oo .. .. .. .. XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23, 58, 125, 251, 501, 1003, 1932, 3537, 6044, 9556, 13903], moves: S,U2,U2,L6,L0,L0,L1,L1,L1,D3,D3,L3,L3,U4
+XX XX XX XX XX XX XX XX
+XX B2 oo .. .. .. .. XX
+XX B0 B1 .. B4 .. .. XX
+XX    XX .. .. B5 XX XX
+XX oo B6 .. .. B7 .. XX
+XX B3 oo .. .. .. .. XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23, 58, 125, 251, 501, 1003, 1932, 3537, 6044, 9556, 13903, 18696], moves: S,U2,U2,L6,L0,L0,L1,L1,L1,D3,D3,L3,L3,U4,U4
+XX XX XX XX XX XX XX XX
+XX B2 oo .. B4 .. .. XX
+XX B0 B1 .. .. .. .. XX
+XX    XX .. .. B5 XX XX
+XX oo B6 .. .. B7 .. XX
+XX B3 oo .. .. .. .. XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23, 58, 125, 251, 501, 1003, 1932, 3537, 6044, 9556, 13903, 18696, 23692], moves: S,U2,U2,L6,L0,L0,L1,L1,L1,D3,D3,L3,L3,U4,U4,L4
+XX XX XX XX XX XX XX XX
+XX B2 oo B4 .. .. .. XX
+XX B0 B1 .. .. .. .. XX
+XX    XX .. .. B5 XX XX
+XX oo B6 .. .. B7 .. XX
+XX B3 oo .. .. .. .. XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23, 58, 125, 251, 501, 1003, 1932, 3537, 6044, 9556, 13903, 18696, 23692, 29085], moves: S,U2,U2,L6,L0,L0,L1,L1,L1,D3,D3,L3,L3,U4,U4,L4,L4
+XX XX XX XX XX XX XX XX
+XX B2 B4 .. .. .. .. XX
+XX B0 B1 .. .. .. .. XX
+XX    XX .. .. B5 XX XX
+XX oo B6 .. .. B7 .. XX
+XX B3 oo .. .. .. .. XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23, 58, 125, 251, 501, 1003, 1932, 3537, 6044, 9556, 13903, 18696, 23692, 29085, 35407], moves: S,U2,U2,L6,L0,L0,L1,L1,L1,D3,D3,L3,L3,U4,U4,L4,L4,L6
+XX XX XX XX XX XX XX XX
+XX B2 B4 .. .. .. .. XX
+XX B0 B1 .. .. .. .. XX
+XX    XX .. .. B5 XX XX
+XX B6 oo .. .. B7 .. XX
+XX B3 oo .. .. .. .. XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23, 58, 125, 251, 501, 1003, 1932, 3537, 6044, 9556, 13903, 18696, 23692, 29085, 35407, 42892], moves: S,U2,U2,L6,L0,L0,L1,L1,L1,D3,D3,L3,L3,U4,U4,L4,L4,L6,L7
+XX XX XX XX XX XX XX XX
+XX B2 B4 .. .. .. .. XX
+XX B0 B1 .. .. .. .. XX
+XX    XX .. .. B5 XX XX
+XX B6 oo .. B7 .. .. XX
+XX B3 oo .. .. .. .. XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23, 58, 125, 251, 501, 1003, 1932, 3537, 6044, 9556, 13903, 18696, 23692, 29085, 35407, 42892, 50988], moves: S,U2,U2,L6,L0,L0,L1,L1,L1,D3,D3,L3,L3,U4,U4,L4,L4,L6,L7,D5
+XX XX XX XX XX XX XX XX
+XX B2 B4 .. .. .. .. XX
+XX B0 B1 .. .. .. .. XX
+XX    XX .. .. .. XX XX
+XX B6 oo .. B7 B5 .. XX
+XX B3 oo .. .. .. .. XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23, 58, 125, 251, 501, 1003, 1932, 3537, 6044, 9556, 13903, 18696, 23692, 29085, 35407, 42892, 50988, 58595], moves: S,U2,U2,L6,L0,L0,L1,L1,L1,D3,D3,L3,L3,U4,U4,L4,L4,L6,L7,D5,D5
+XX XX XX XX XX XX XX XX
+XX B2 B4 .. .. .. .. XX
+XX B0 B1 .. .. .. .. XX
+XX    XX .. .. .. XX XX
+XX B6 oo .. B7 .. .. XX
+XX B3 oo .. .. B5 .. XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23, 58, 125, 251, 501, 1003, 1932, 3537, 6044, 9556, 13903, 18696, 23692, 29085, 35407, 42892, 50988, 58595, 64543], moves: S,U2,U2,L6,L0,L0,L1,L1,L1,D3,D3,L3,L3,U4,U4,L4,L4,L6,L7,D5,D5,L5
+XX XX XX XX XX XX XX XX
+XX B2 B4 .. .. .. .. XX
+XX B0 B1 .. .. .. .. XX
+XX    XX .. .. .. XX XX
+XX B6 oo .. B7 .. .. XX
+XX B3 oo .. B5 .. .. XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23, 58, 125, 251, 501, 1003, 1932, 3537, 6044, 9556, 13903, 18696, 23692, 29085, 35407, 42892, 50988, 58595, 64543, 68332], moves: S,U2,U2,L6,L0,L0,L1,L1,L1,D3,D3,L3,L3,U4,U4,L4,L4,L6,L7,D5,D5,L5,L5
+XX XX XX XX XX XX XX XX
+XX B2 B4 .. .. .. .. XX
+XX B0 B1 .. .. .. .. XX
+XX    XX .. .. .. XX XX
+XX B6 oo .. B7 .. .. XX
+XX B3 oo B5 .. .. .. XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23, 58, 125, 251, 501, 1003, 1932, 3537, 6044, 9556, 13903, 18696, 23692, 29085, 35407, 42892, 50988, 58595, 64543, 68332, 70320], moves: S,U2,U2,L6,L0,L0,L1,L1,L1,D3,D3,L3,L3,U4,U4,L4,L4,L6,L7,D5,D5,L5,L5,L5
+XX XX XX XX XX XX XX XX
+XX B2 B4 .. .. .. .. XX
+XX B0 B1 .. .. .. .. XX
+XX    XX .. .. .. XX XX
+XX B6 oo .. B7 .. .. XX
+XX B3 B5 .. .. .. .. XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23, 58, 125, 251, 501, 1003, 1932, 3537, 6044, 9556, 13903, 18696, 23692, 29085, 35407, 42892, 50988, 58595, 64543, 68332, 70320, 71273], moves: S,U2,U2,L6,L0,L0,L1,L1,L1,D3,D3,L3,L3,U4,U4,L4,L4,L6,L7,D5,D5,L5,L5,L5,L7
+XX XX XX XX XX XX XX XX
+XX B2 B4 .. .. .. .. XX
+XX B0 B1 .. .. .. .. XX
+XX    XX .. .. .. XX XX
+XX B6 oo B7 .. .. .. XX
+XX B3 B5 .. .. .. .. XX
+XX XX XX XX XX XX XX XX
+seq: [0, 1, 6, 23, 58, 125, 251, 501, 1003, 1932, 3537, 6044, 9556, 13903, 18696, 23692, 29085, 35407, 42892, 50988, 58595, 64543, 68332, 70320, 71273, 71762], moves: S,U2,U2,L6,L0,L0,L1,L1,L1,D3,D3,L3,L3,U4,U4,L4,L4,L6,L7,D5,D5,L5,L5,L5,L7,L7
+XX XX XX XX XX XX XX XX
+XX B2 B4 .. .. .. .. XX
+XX B0 B1 .. .. .. .. XX
+XX    XX .. .. .. XX XX
+XX B6 B7 .. .. .. .. XX
+XX B3 B5 .. .. .. .. XX
+XX XX XX XX XX XX XX XX
+total puzzle solve time: 91.0s
