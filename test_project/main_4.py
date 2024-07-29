@@ -49,14 +49,6 @@ class Puzzle:
 
         assert False, "incomplete panel_man"
 
-    def are_same(self, a, b):
-        assert len(a) == len(b)
-        A = a[:, 0] * self.N_RL + a[:, 1]
-        A.sort()
-        B = b[:, 0] * self.N_RL + b[:, 1]
-        B.sort()
-        return (A == B).all()
-
     def find_and_add_new_stage(self, stage, b, box_move_0, box_move_1, move):
 
         panel_man = stage['panel_man']
@@ -134,6 +126,11 @@ class Puzzle:
         self.stages_all.append(stage_new)
         self.stages_compact_all.append(stage_compact_new)
 
+        if self.boxes_to_boxes_compact_code(boxes_new) == self.jewels_compact_code:
+            print('PUZZLE COMPLETE !!!')
+            for seq_c in seq_new:
+                self.print_boxes(self.stages_all[seq_c])
+            self.stage_winning = stage_new
 
     def print_boxes(self, stage):
         # 0 - space
@@ -161,9 +158,8 @@ class Puzzle:
     def boxes_to_boxes_compact(self, boxes):
         return boxes[:, 0] * self.N_RL + boxes[:, 1]
 
-    def stage_to_stage_compact(self, stage):
-
-        boxes_flatten = self.boxes_to_boxes_compact(stage['boxes'])
+    def boxes_to_boxes_compact_code(self, boxes, return_M=False):
+        boxes_flatten = self.boxes_to_boxes_compact(boxes)
         boxes_flatten.sort()
         Z = 0
         M = 1
@@ -171,6 +167,12 @@ class Puzzle:
             Z += (M * b)
             M *= (self.N_RL * self.N_DU)
 
+        if return_M:
+            return M, Z
+        else:
+            return Z
+    def stage_to_stage_compact(self, stage):
+        M, Z = self.boxes_to_boxes_compact_code(stage['boxes'], True)
         panel_man_first = np.argwhere(stage['panel_man'])[0]
         Z += (M * (panel_man_first[0] * self.N_RL + panel_man_first[1]))
         return Z
@@ -181,10 +183,13 @@ class Puzzle:
         assert (self.panel_in == 1).sum() == (self.panel_in == 2).sum()
         assert (self.panel_in == 4).sum() == 1
 
+        self.stage_winning = None
+
         self.panel_walls = 1 * (self.panel_in == 9)
         (self.N_DU, self.N_RL) = np.shape(self.panel_walls)
         self.jewels = np.argwhere(self.panel_in == 1)
         self.jewels_compact = self.boxes_to_boxes_compact(self.jewels)
+        self.jewels_compact_code = self.boxes_to_boxes_compact_code(self.jewels)
 
         self.RL_list = []
         for row_i, row in enumerate(self.panel_walls):
@@ -253,13 +258,8 @@ class Puzzle:
                 print(f'time taken: {(time_new - time_old).seconds:0.1f}s; total stages: {len(self.stages_all)}; done stage: {p}; stages left: {len(self.stages_all) - p - 1}; moves: {self.stages_all[p]["moves"]}; added {len(self.stages_all) - len_stages_old} stages: {moves_str}')
                 time_old = time_new
 
-            for p_c in range(len_stages_old, len(self.stages_all)):
-                if self.are_same(self.stages_all[p_c]['boxes'], self.jewels):
-                    print('PUZZLE COMPLETE !!!')
-                    winning_seq = self.stages_all[p_c]['seq']
-                    for seq_c in winning_seq:
-                        self.print_boxes(self.stages_all[seq_c])
-                    return self.stages_all[p_c]['moves']
+            if self.stage_winning is not None:
+                return self.stage_winning['moves']
 
 
 def main_solve_puzzle(panel_in, verbose):
