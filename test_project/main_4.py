@@ -87,6 +87,7 @@ class Puzzle:
         if self.is_in(boxes_new[b, :], boxes):
             return
 
+        # if box stuck in corner return
         if not self.is_in(box_new, self.jewels):
             if self.panel_walls[box_new[0] - 1, box_new[1]] + self.panel_walls[box_new[0], box_new[1] - 1] == 2:
                 return
@@ -106,19 +107,25 @@ class Puzzle:
         elif (boxes_new[:, 0] == self.most_bottom).sum() > self.jewels_most_bottom:
             return
 
+        # when testing visualise using: self.print_boxes({'boxes': boxes_new, 'panel_man': panel_man, 'seq': '', 'moves': ''})
         panel_man = stage['panel_man']
-        isolated_wall_1 = ''
         if ((panel_man[:, self.most_left].sum() == 0)
                 and ((self.panel_walls[:, self.most_left + 1] == 0).sum() == (boxes_new[:, 1] == self.most_left + 1).sum())
                 and (self.jewels_most_left < (self.panel_walls[:, self.most_left] == 0).sum())):
-            isolated_wall_1 = 'L'
+            return
         if ((panel_man[:, self.most_right].sum() == 0)
                 and ((self.panel_walls[:, self.most_right - 1] == 0).sum() == (boxes_new[:, 1] == self.most_right - 1).sum())
                 and (self.jewels_most_right < (self.panel_walls[:, self.most_right] == 0).sum())):
-            isolated_wall_1 = 'R'
-
-        if len(isolated_wall_1) > 0:
-            print(f'isolated wall 1 {isolated_wall_1} so killing stage')
+            return
+        if ((panel_man[self.most_top, :].sum() == 0)
+                and ((self.panel_walls[self.most_top + 1, :] == 0).sum() == (boxes_new[:, 0] == self.most_top + 1).sum())
+                and (self.jewels_most_top < (self.panel_walls[self.most_top, :] == 0).sum())):
+            print('isolated wall T')
+            return
+        if ((panel_man[self.most_bottom, :].sum() == 0)
+                and ((self.panel_walls[self.most_bottom - 1, :] == 0).sum() == (boxes_new[:, 0] == self.most_bottom - 1).sum())
+                and (self.jewels_most_bottom < (self.panel_walls[self.most_bottom, :] == 0).sum())):
+            print('isolated wall B')
             return
 
         man_new = boxes[b, :]
@@ -158,7 +165,7 @@ class Puzzle:
 
 
     def puzzle_init(self):
-        self.V_lines = 100
+        self.V_lines = 1000
 
         assert (self.panel_in == 1).sum() == (self.panel_in == 2).sum()
         assert (self.panel_in == 4).sum() == 1
@@ -420,7 +427,7 @@ def main_level_9(verbose):
 
     return main_solve_puzzle(X, verbose)
 
-def main_level_0(verbose):
+def main_level_test_isolated(verbose):
 
     # 0 - space
     # 2 - box
@@ -428,16 +435,16 @@ def main_level_0(verbose):
     # 1 - jewel
     # 9 - wall
 
-    X = np.array([[9, 9, 9, 9, 9, 9, 9, 9],
-                  [9, 0, 2, 0, 0, 0, 1, 9],
+    X1 = np.array([[9, 9, 9, 9, 9, 9, 9, 9],
+                  [9, 0, 0, 2, 0, 0, 1, 9],
                   [9, 0, 2, 0, 0, 4, 1, 9],
                   [9, 0, 9, 0, 0, 0, 9, 9],
                   [9, 0, 2, 0, 0, 0, 1, 9],
                   [9, 0, 2, 0, 0, 0, 1, 9],
                   [9, 9, 9, 9, 9, 9, 9, 9]])
 
-    X = np.array([[9, 9, 9, 9, 9, 9, 9, 9],
-                  [9, 0, 1, 0, 0, 2, 0, 9],
+    X2 = np.array([[9, 9, 9, 9, 9, 9, 9, 9],
+                  [9, 0, 1, 0, 2, 0, 0, 9],
                   [9, 4, 1, 0, 0, 2, 0, 9],
                   [9, 0, 9, 9, 0, 9, 9, 9],
                   [9, 0, 1, 0, 0, 2, 0, 9],
@@ -445,7 +452,10 @@ def main_level_0(verbose):
                   [9, 9, 9, 9, 9, 9, 9, 9]])
 
 
-    return main_solve_puzzle(X, verbose)
+    # main_solve_puzzle(X1, verbose)
+    # main_solve_puzzle(X2, verbose)
+    main_solve_puzzle(X1.transpose(), verbose)
+    main_solve_puzzle(X2.transpose(), verbose)
 
 
 def main_test():
@@ -463,8 +473,8 @@ def main_test():
 
 if __name__ == "__main__":
 
-   # main_level_0(True)#
-    main_level_9(True)
+    main_level_test_isolated(True)#
+    #main_level_9(False)
 
 #    main_test()
 
