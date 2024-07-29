@@ -81,9 +81,44 @@ class Puzzle:
         boxes_new = boxes.copy()
         boxes_new[b, 0] = boxes[b, 0] + box_move_0
         boxes_new[b, 1] = boxes[b, 1] + box_move_1
+        box_new = boxes_new[b, :]
 
         # already a box in space ahead, so cannot move this box there
         if self.is_in(boxes_new[b, :], boxes):
+            return
+
+        if not self.is_in(box_new, self.jewels):
+            if self.panel_walls[box_new[0] - 1, box_new[1]] + self.panel_walls[box_new[0], box_new[1] - 1] == 2:
+                return
+            elif self.panel_walls[box_new[0] - 1, box_new[1]] + self.panel_walls[box_new[0], box_new[1] + 1] == 2:
+                return
+            elif self.panel_walls[box_new[0] + 1, box_new[1]] + self.panel_walls[box_new[0], box_new[1] - 1] == 2:
+                return
+            elif self.panel_walls[box_new[0] + 1, box_new[1]] + self.panel_walls[box_new[0], box_new[1] + 1] == 2:
+                return
+
+        if (boxes_new[:, 1] == self.most_left).sum() > self.jewels_most_left:
+            return
+        elif (boxes_new[:, 1] == self.most_right).sum() > self.jewels_most_right:
+            return
+        elif (boxes_new[:, 0] == self.most_top).sum() > self.jewels_most_top:
+            return
+        elif (boxes_new[:, 0] == self.most_bottom).sum() > self.jewels_most_bottom:
+            return
+
+        panel_man = stage['panel_man']
+        isolated_wall_1 = ''
+        if ((panel_man[:, self.most_left].sum() == 0)
+                and ((self.panel_walls[:, self.most_left + 1] == 0).sum() == (boxes_new[:, 1] == self.most_left + 1).sum())
+                and (self.jewels_most_left < (self.panel_walls[:, self.most_left] == 0).sum())):
+            isolated_wall_1 = 'L'
+        if ((panel_man[:, self.most_right].sum() == 0)
+                and ((self.panel_walls[:, self.most_right - 1] == 0).sum() == (boxes_new[:, 1] == self.most_right - 1).sum())
+                and (self.jewels_most_right < (self.panel_walls[:, self.most_right] == 0).sum())):
+            isolated_wall_1 = 'R'
+
+        if len(isolated_wall_1) > 0:
+            print(f'isolated wall 1 {isolated_wall_1} so killing stage')
             return
 
         man_new = boxes[b, :]
@@ -123,7 +158,7 @@ class Puzzle:
 
 
     def puzzle_init(self):
-        self.V_lines = 10000
+        self.V_lines = 100
 
         assert (self.panel_in == 1).sum() == (self.panel_in == 2).sum()
         assert (self.panel_in == 4).sum() == 1
@@ -165,7 +200,6 @@ class Puzzle:
         print('starting panel')
         self.print_boxes(self.stages_all[0])
 
-
     def main_solve_puzzle(self, panel_in, verbose=False):
         # 0 - space
         # 2 - box
@@ -184,70 +218,15 @@ class Puzzle:
                 print('searched everything and failed')
                 return
 
-            stage = self.stages_all[p]
-            boxes = stage['boxes']
-
-            stuck_wall = ''
-            if (boxes[:, 1] == self.most_left).sum() > self.jewels_most_left:
-                stuck_wall = 'L'
-            elif (boxes[:, 1] == self.most_right).sum() > self.jewels_most_right:
-                stuck_wall = 'R'
-            elif (boxes[:, 0] == self.most_top).sum() > self.jewels_most_top:
-                stuck_wall = 'T'
-            elif (boxes[:, 0] == self.most_bottom).sum() > self.jewels_most_bottom:
-                stuck_wall = 'B'
-
-            if len(stuck_wall) > 0:
-                if verbose or ((p / self.V_lines) == np.round(p / self.V_lines)):
-                    print(f'total stages: {len(self.stages_all)}; done stage: {p}; stages left: {len(self.stages_all) - p}; moves: {self.stages_all[p]["moves"]}; stuck wall {stuck_wall} so killing stage')
-                continue
-
-            stuck_box = ''
-            for box in boxes:
-                if not self.is_in(box, self.jewels):
-                    if self.panel_walls[box[0] - 1, box[1]] + self.panel_walls[box[0], box[1] - 1] == 2:
-                        stuck_box = 'TL'
-                        break
-                    elif self.panel_walls[box[0] - 1, box[1]] + self.panel_walls[box[0], box[1] + 1] == 2:
-                        stuck_box = 'TR'
-                        break
-                    elif self.panel_walls[box[0] + 1, box[1]] + self.panel_walls[box[0], box[1] - 1] == 2:
-                        stuck_box = 'BL'
-                        break
-                    elif self.panel_walls[box[0] + 1, box[1]] + self.panel_walls[box[0], box[1] + 1] == 2:
-                        stuck_box = 'BR'
-                        break
-
-            if len(stuck_box) > 0:
-                if verbose or ((p / self.V_lines) == np.round(p / self.V_lines)):
-                    print(f'total stages: {len(self.stages_all)}; done stage: {p}; stages left: {len(self.stages_all) - p}; moves: {self.stages_all[p]["moves"]}; stuck box {stuck_box} so killing stage')
-                continue
-
-            panel_man = stage['panel_man']
-            isolated_wall_1 = ''
-            if ((panel_man[:, self.most_left].sum() == 0)
-                    and ((self.panel_walls[:, self.most_left + 1] == 0).sum() == (boxes[:, 1] == self.most_left + 1).sum())
-                    and (self.jewels_most_left < (self.panel_walls[:, self.most_left] == 0).sum())):
-                isolated_wall_1 = 'L'
-            if ((panel_man[:, self.most_right].sum() == 0)
-                    and ((self.panel_walls[:, self.most_right - 1] == 0).sum() == (boxes[:, 1] == self.most_right - 1).sum())
-                    and (self.jewels_most_right < (self.panel_walls[:, self.most_right] == 0).sum())):
-                isolated_wall_1 = 'R'
-
-            if len(isolated_wall_1) > 0:
-                if True or ((p / self.V_lines) == np.round(p / self.V_lines)):
-                    print(f'total stages: {len(self.stages_all)}; done stage: {p}; stages left: {len(self.stages_all) - p}; moves: {self.stages_all[p]["moves"]}; isolated wall 1 {isolated_wall_1} so killing stage')
-                continue
-
             for b in range(self.B):
-                self.find_and_add_new_stage(stage, b, -1, +0, 'U')
-                self.find_and_add_new_stage(stage, b, +0, +1, 'R')
-                self.find_and_add_new_stage(stage, b, +1, +0, 'D')
-                self.find_and_add_new_stage(stage, b, +0, -1, 'L')
+                self.find_and_add_new_stage(self.stages_all[p], b, -1, +0, 'U')
+                self.find_and_add_new_stage(self.stages_all[p], b, +0, +1, 'R')
+                self.find_and_add_new_stage(self.stages_all[p], b, +1, +0, 'D')
+                self.find_and_add_new_stage(self.stages_all[p], b, +0, -1, 'L')
 
             if verbose or ((p / self.V_lines) == np.round(p / self.V_lines)):
                 moves_str = '; '.join([f'{p_c}:{self.stages_all[p_c]["moves"]}' for p_c in range(len_stages_old, len(self.stages_all))])
-                print(f'total stages: {len(self.stages_all)}; done stage: {p}; stages left: {len(self.stages_all) - p}; moves: {self.stages_all[p]["moves"]}; added {len(self.stages_all) - len_stages_old} stages: {moves_str}')
+                print(f'total stages: {len(self.stages_all)}; done stage: {p}; stages left: {len(self.stages_all) - p - 1}; moves: {self.stages_all[p]["moves"]}; added {len(self.stages_all) - len_stages_old} stages: {moves_str}')
 
             for p_c in range(len_stages_old, len(self.stages_all)):
                 if self.are_same(self.stages_all[p_c]['boxes'], self.jewels):
@@ -477,15 +456,15 @@ def main_test():
     assert main_level_5(verbose=False) == 'S,U0,D0,D0,U1,L2'
     assert main_level_6(verbose=False) == 'S,D0,D0,L1,L1,L2,L2,L2,U3,R0,L3,L3,U3,L0,L0,L3,L3'
     assert main_level_7(verbose=False) == 'S,D0,D2,R1,U3,U4,L1,D1'
-    #assert main_level_8(verbose=False) == 'S,R0,R4,U3,L2,D1,D1,L1,L1,U5,U5,D4,R1,D3,D5,L2,U0,U1,U1,L5,R2,D3,R3'
+    assert main_level_8(verbose=False) == 'S,R0,R4,U3,L2,D1,D1,L1,L1,U5,U5,D4,R1,D3,D5,L2,U0,U1,U1,L5,R2,D3,R3'
     #assert main_level_9(verbose=False) == ''
 
     
 
 if __name__ == "__main__":
 
-   # main_level_0(True)
-    #main_level_9(False)
+   # main_level_0(True)#
+    main_level_9(True)
 
-    main_test()
+#    main_test()
 
