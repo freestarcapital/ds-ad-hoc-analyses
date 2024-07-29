@@ -1,20 +1,16 @@
-import pandas as pd
 import numpy as np
-
-pd.set_option('display.max_columns', None)
-pd.set_option('display.width', 1000)
-
+import datetime as dt
 
 class Puzzle:
     def __init__(self):
         pass
     def find_where_man_can_touch(self, boxes, man):
 
-        (N0, N1) = np.shape(self.panel_walls)
-        panel_man = np.zeros([N0, N1], np.int8)
+        (self.N_DU, self.N_RL) = np.shape(self.panel_walls)
+        panel_man = np.zeros([self.N_DU, self.N_RL], np.int8)
         panel_man[man[0], man[1]] = 1
 
-        for c in range(3 * max(N0, N1)):
+        for c in range(3 * max(self.N_DU, self.N_RL)):
             sum_old = panel_man.sum()
 
             # look left and right
@@ -51,18 +47,18 @@ class Puzzle:
 
         assert False, "incomplete panel_man"
 
-    def are_same(self, a, b, N=100):
+    def are_same(self, a, b):
         assert len(a) == len(b)
-        A = a[:, 0] * N + a[:, 1]
+        A = a[:, 0] * self.N_RL + a[:, 1]
         A.sort()
-        B = b[:, 0] * N + b[:, 1]
+        B = b[:, 0] * self.N_RL + b[:, 1]
         B.sort()
         return (A == B).all()
 
-    def is_in(self, a, b, N=100):
+    def is_in(self, a, b):
         assert len(a) == 2
-        A = a[0] * N + a[1]
-        B = b[:, 0] * N + b[:, 1]
+        A = a[0] * self.N_RL + a[1]
+        B = b[:, 0] * self.N_RL + b[:, 1]
         return A in B
 
     def find_and_add_new_stage(self, stage, b, box_move_0, box_move_1, move):
@@ -120,7 +116,6 @@ class Puzzle:
         if ((panel_man[self.most_top, :].sum() == 0)
                 and ((self.panel_walls[self.most_top + 1, :] == 0).sum() == (boxes_new[:, 0] == self.most_top + 1).sum())
                 and (self.jewels_most_top < (self.panel_walls[self.most_top, :] == 0).sum())):
-            print('isolated wall T')
             return
         if ((panel_man[self.most_bottom, :].sum() == 0)
                 and ((self.panel_walls[self.most_bottom - 1, :] == 0).sum() == (boxes_new[:, 0] == self.most_bottom - 1).sum())
@@ -132,15 +127,34 @@ class Puzzle:
         panel_man_new = self.find_where_man_can_touch(boxes_new, man_new)
         seq_new = stage['seq'] + [len(self.stages_all)]
         moves_new = f"{stage['moves']},{move}{b}"
+        stage_new = {'boxes': boxes_new, 'panel_man': panel_man_new, 'seq': seq_new, 'moves': moves_new}
+        stage_compact_new = self.stage_to_stage_compact(stage_new)
 
-        already_in_list = False
-        for st_ in self.stages_all:
-            if self.are_same(st_['boxes'], boxes_new) and (st_['panel_man'] == panel_man_new).all():
-                already_in_list = True
-                #print(f'already found, rejecting: {moves_new}')
-                break
-        if not already_in_list:
-            self.stages_all.append({'boxes': boxes_new, 'panel_man': panel_man_new, 'seq': seq_new,'moves': moves_new})
+        if stage_compact_new in self.stages_compact_all:
+            return
+
+        self.stages_all.append(stage_new)
+        self.stages_compact_all.append(stage_compact_new)
+
+        # stage_alredy_exists_c = stage_compact_new in self.stages_compact_all
+        #
+        #
+        # stage_alredy_exists = False
+        # for iii, st_ in enumerate(self.stages_all):
+        #     if self.are_same(st_['boxes'], boxes_new) and (st_['panel_man'] == panel_man_new).all():
+        #         #print(f'already found, rejecting: {moves_new}')
+        #         stage_alredy_exists = True
+        #         break
+        #
+        # assert stage_alredy_exists == stage_alredy_exists
+        #
+        # if stage_alredy_exists:
+        #     return
+        #
+        # self.stages_all.append(stage_new)
+        # self.stages_compact_all.append(stage_compact_new)
+        #
+        # assert len(self.stages_compact_all) == len(self.stages_all)
 
 
     def print_boxes(self, stage):
@@ -163,6 +177,20 @@ class Puzzle:
         for p in pp:
             print(' '.join(p))
 
+    def stage_to_stage_compact(self, stage):
+
+        boxes_flatten = stage['boxes'][:, 0] * self.N_RL + stage['boxes'][:, 1]
+        boxes_flatten.sort()
+        Z = 0
+        M = 1
+        for b in boxes_flatten:
+            Z += (M * b)
+            M *= (self.N_RL * self.N_DU)
+
+        panel_man_first = np.argwhere(stage['panel_man'])[0]
+        Z += (M * (panel_man_first[0] * self.N_RL + panel_man_first[1]))
+
+        return Z
 
     def puzzle_init(self):
         self.V_lines = 1000
@@ -193,7 +221,9 @@ class Puzzle:
         self.B = len(boxes_start)
         man_start = np.argwhere(self.panel_in == 4)[0]
         panel_man_start = self.find_where_man_can_touch(boxes_start, man_start)
-        self.stages_all = [{'boxes': boxes_start, 'panel_man': panel_man_start, 'seq': [0], 'moves': 'S'}]
+        stage = {'boxes': boxes_start, 'panel_man': panel_man_start, 'seq': [0], 'moves': 'S'}
+        self.stages_all = [stage]
+        self.stages_compact_all = [self.stage_to_stage_compact(stage)]
 
         self.most_left = np.where(self.panel_walls == 0)[1].min()
         self.most_right = np.where(self.panel_walls == 0)[1].max()
@@ -218,6 +248,7 @@ class Puzzle:
         self.verbose = verbose
         self.puzzle_init()
 
+        time_old = dt.datetime.now()
         for p in range(100000):
             len_stages_old = len(self.stages_all)
 
@@ -232,8 +263,10 @@ class Puzzle:
                 self.find_and_add_new_stage(self.stages_all[p], b, +0, -1, 'L')
 
             if verbose or ((p / self.V_lines) == np.round(p / self.V_lines)):
+                time_new = dt.datetime.now()
                 moves_str = '; '.join([f'{p_c}:{self.stages_all[p_c]["moves"]}' for p_c in range(len_stages_old, len(self.stages_all))])
-                print(f'total stages: {len(self.stages_all)}; done stage: {p}; stages left: {len(self.stages_all) - p - 1}; moves: {self.stages_all[p]["moves"]}; added {len(self.stages_all) - len_stages_old} stages: {moves_str}')
+                print(f'time taken: {(time_new - time_old).seconds:0.1f}s; total stages: {len(self.stages_all)}; done stage: {p}; stages left: {len(self.stages_all) - p - 1}; moves: {self.stages_all[p]["moves"]}; added {len(self.stages_all) - len_stages_old} stages: {moves_str}')
+                time_old = time_new
 
             for p_c in range(len_stages_old, len(self.stages_all)):
                 if self.are_same(self.stages_all[p_c]['boxes'], self.jewels):
@@ -474,7 +507,7 @@ def main_test():
 if __name__ == "__main__":
 
 #    main_level_test_isolated(True)#
-    main_level_9(False)
+    #main_level_9(False)
 
-#    main_test()
+    main_test()
 
