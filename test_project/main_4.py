@@ -6,7 +6,8 @@ class Puzzle:
         pass
     def find_where_man_can_touch(self, boxes, man):
 
-        (self.N_DU, self.N_RL) = np.shape(self.panel_walls)
+        boxes_compact = self.boxes_to_boxes_compact(boxes)
+
         panel_man = np.zeros([self.N_DU, self.N_RL], np.int8)
         panel_man[man[0], man[1]] = 1
 
@@ -19,12 +20,16 @@ class Puzzle:
                     # looking right
                     for i in R_inds:
                         if panel_man[row_i, i] == 1:
-                            if not self.is_in(np.array([row_i, i + 1]), boxes):
+                            assert (self.box_to_box_compact(np.array([row_i, i + 1])) not in boxes_compact) == (not self.is_in(np.array([row_i, i + 1]), boxes))
+#                            if not self.is_in(np.array([row_i, i + 1]), boxes):
+                            if self.box_to_box_compact(np.array([row_i, i + 1])) not in boxes_compact:
                                 panel_man[row_i, i + 1] = 1
                     # looking left
                     for i in L_inds:
                         if panel_man[row_i, i] == 1:
-                            if not self.is_in(np.array([row_i, i - 1]), boxes):
+                            assert (self.box_to_box_compact(np.array([row_i, i - 1])) not in boxes_compact) == (not self.is_in(np.array([row_i, i - 1]), boxes))
+#                            if not self.is_in(np.array([row_i, i - 1]), boxes):
+                            if self.box_to_box_compact(np.array([row_i, i - 1])) not in boxes_compact:
                                 panel_man[row_i, i - 1] = 1
 
             # look up and down
@@ -33,12 +38,17 @@ class Puzzle:
                     # looking down
                     for i in D_inds:
                         if panel_man[i, col_i] == 1:
-                            if not self.is_in(np.array([i + 1, col_i]), boxes):
+                            assert (self.box_to_box_compact(np.array([i + 1, col_i])) not in boxes_compact) == (not self.is_in(np.array([i + 1, col_i]), boxes))
+                            #if not self.is_in(np.array([i + 1, col_i]), boxes):
+                            if self.box_to_box_compact(np.array([i + 1, col_i])) not in boxes_compact:
                                 panel_man[i + 1, col_i] = 1
                     # looking up
                     for i in U_inds:
                         if panel_man[i, col_i] == 1:
-                            if not self.is_in(np.array([i - 1, col_i]), boxes):
+                            assert (self.box_to_box_compact(np.array([i - 1, col_i])) not in boxes_compact) == (not self.is_in(np.array([i - 1, col_i]), boxes))
+                            #if not self.is_in(np.array([i - 1, col_i]), boxes):
+                            if self.box_to_box_compact(np.array([i - 1, col_i])) not in boxes_compact:
+
                                 panel_man[i - 1, col_i] = 1
 
             #print(f'sum_old: {sum_old}; sum: {panel_man.sum()}')
@@ -65,6 +75,7 @@ class Puzzle:
 
         panel_man = stage['panel_man']
         boxes = stage['boxes']
+        boxes_compact = self.boxes_to_boxes_compact(boxes)
 
         # man cannot access box from behind, so cannot move box
         if panel_man[boxes[b, 0] - box_move_0, boxes[b, 1] - box_move_1] == 0:
@@ -78,13 +89,23 @@ class Puzzle:
         boxes_new[b, 0] = boxes[b, 0] + box_move_0
         boxes_new[b, 1] = boxes[b, 1] + box_move_1
         box_new = boxes_new[b, :]
+        box_compact_new = self.box_to_box_compact(box_new)
 
         # already a box in space ahead, so cannot move this box there
-        if self.is_in(boxes_new[b, :], boxes):
+
+        assert (box_compact_new in boxes_compact) == self.is_in(boxes_new[b, :], boxes)
+
+        # if self.is_in(boxes_new[b, :], boxes):
+        #     return
+        if box_compact_new in boxes_compact:
             return
 
         # if box stuck in corner return
-        if not self.is_in(box_new, self.jewels):
+
+        assert (box_compact_new not in self.jewels_compact) == (not self.is_in(box_new, self.jewels))
+
+        # if not self.is_in(box_new, self.jewels):
+        if box_compact_new not in self.jewels_compact:
             if self.panel_walls[box_new[0] - 1, box_new[1]] + self.panel_walls[box_new[0], box_new[1] - 1] == 2:
                 return
             elif self.panel_walls[box_new[0] - 1, box_new[1]] + self.panel_walls[box_new[0], box_new[1] + 1] == 2:
@@ -136,26 +157,6 @@ class Puzzle:
         self.stages_all.append(stage_new)
         self.stages_compact_all.append(stage_compact_new)
 
-        # stage_alredy_exists_c = stage_compact_new in self.stages_compact_all
-        #
-        #
-        # stage_alredy_exists = False
-        # for iii, st_ in enumerate(self.stages_all):
-        #     if self.are_same(st_['boxes'], boxes_new) and (st_['panel_man'] == panel_man_new).all():
-        #         #print(f'already found, rejecting: {moves_new}')
-        #         stage_alredy_exists = True
-        #         break
-        #
-        # assert stage_alredy_exists == stage_alredy_exists
-        #
-        # if stage_alredy_exists:
-        #     return
-        #
-        # self.stages_all.append(stage_new)
-        # self.stages_compact_all.append(stage_compact_new)
-        #
-        # assert len(self.stages_compact_all) == len(self.stages_all)
-
 
     def print_boxes(self, stage):
         # 0 - space
@@ -177,9 +178,15 @@ class Puzzle:
         for p in pp:
             print(' '.join(p))
 
+    def box_to_box_compact(self, boxes):
+        return boxes[0] * self.N_RL + boxes[1]
+
+    def boxes_to_boxes_compact(self, boxes):
+        return boxes[:, 0] * self.N_RL + boxes[:, 1]
+
     def stage_to_stage_compact(self, stage):
 
-        boxes_flatten = stage['boxes'][:, 0] * self.N_RL + stage['boxes'][:, 1]
+        boxes_flatten = self.boxes_to_boxes_compact(stage['boxes'])
         boxes_flatten.sort()
         Z = 0
         M = 1
@@ -189,7 +196,6 @@ class Puzzle:
 
         panel_man_first = np.argwhere(stage['panel_man'])[0]
         Z += (M * (panel_man_first[0] * self.N_RL + panel_man_first[1]))
-
         return Z
 
     def puzzle_init(self):
@@ -199,7 +205,9 @@ class Puzzle:
         assert (self.panel_in == 4).sum() == 1
 
         self.panel_walls = 1 * (self.panel_in == 9)
+        (self.N_DU, self.N_RL) = np.shape(self.panel_walls)
         self.jewels = np.argwhere(self.panel_in == 1)
+        self.jewels_compact = self.boxes_to_boxes_compact(self.jewels)
 
         self.RL_list = []
         for row_i, row in enumerate(self.panel_walls):
