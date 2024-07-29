@@ -137,6 +137,7 @@ class Puzzle:
 
         self.stages_all.append(stage_new)
         self.stages_compact_all.append(stage_compact_new)
+#        self.stages_compact_all.add(stage_compact_new)
 
         if self.boxes_to_boxes_compact_code(boxes_new) == self.jewels_compact_code:
             print('PUZZLE COMPLETE !!!')
@@ -227,6 +228,9 @@ class Puzzle:
         self.stages_all = [stage]
         self.stages_compact_all = [self.stage_to_stage_compact(stage)]
 
+        # from sortedcontainers import SortedList
+        # self.stages_compact_all = SortedList([self.stage_to_stage_compact(stage)])
+
         self.most_left = np.where(self.panel_walls == 0)[1].min()
         self.most_right = np.where(self.panel_walls == 0)[1].max()
         self.most_top = np.where(self.panel_walls == 0)[0].min()
@@ -250,7 +254,8 @@ class Puzzle:
         self.verbose = verbose
         self.puzzle_init()
 
-        time_old = dt.datetime.now()
+        time_puzzle_start = dt.datetime.now()
+        time_old = time_puzzle_start
         for p in range(100000):
             len_stages_old = len(self.stages_all)
 
@@ -271,6 +276,7 @@ class Puzzle:
                 time_old = time_new
 
             if self.stage_winning is not None:
+                print(f'total puzzle solve time: {(dt.datetime.now() - time_puzzle_start).seconds:0.1f}s')
                 return self.stage_winning['moves']
 
 
