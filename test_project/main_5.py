@@ -104,19 +104,19 @@ class Puzzle:
         # if a line adjacent to a wall has fewer jewels than spaces, and that line cannot be reached (man on other side) and
         # when testing visualise using: self.print_boxes({'boxes': boxes_new, 'panel_man': panel_man, 'seq': '', 'moves': ''})
         panel_man = stage['panel_man']
-        if ((~panel_man[:, self.most_left].all())
+        if ((~panel_man[:, self.most_left].any())
                 and ((~self.panel_walls[:, self.most_left + 1]).sum() == (boxes_new[:, 1] == self.most_left + 1).sum())
                 and (self.jewels_most_left < (~self.panel_walls[:, self.most_left]).sum() - (boxes_new[:, 1] == self.most_left).sum())):
             return
-        if ((~panel_man[:, self.most_right].all())
+        if ((~panel_man[:, self.most_right].any())
                 and ((~self.panel_walls[:, self.most_right - 1]).sum() == (boxes_new[:, 1] == self.most_right - 1).sum())
                 and (self.jewels_most_right < (~self.panel_walls[:, self.most_right]).sum() - (boxes_new[:, 1] == self.most_right).sum())):
             return
-        if ((~panel_man[self.most_top, :].all())
+        if ((~panel_man[self.most_top, :].any())
                 and ((~self.panel_walls[self.most_top + 1, :]).sum() == (boxes_new[:, 0] == self.most_top + 1).sum())
                 and (self.jewels_most_top < (~self.panel_walls[self.most_top, :]).sum() - (boxes_new[:, 0] == self.most_top).sum())):
             return
-        if ((~panel_man[self.most_bottom, :].all())
+        if ((~panel_man[self.most_bottom, :].any())
                 and ((~self.panel_walls[self.most_bottom - 1, :]).sum() == (boxes_new[:, 0] == self.most_bottom - 1).sum())
                 and (self.jewels_most_bottom < (~self.panel_walls[self.most_bottom, :]).sum() - (boxes_new[:, 0] == self.most_bottom).sum())):
             return

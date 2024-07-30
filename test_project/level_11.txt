@@ -5,6 +5,8 @@ total puzzle solve time: 1062.0s
 bool
 total puzzle solve time: 715.0s
 
+bool and all logic bool
+total puzzle solve time: 711.0s
 
 time taken: 2.0s; total stages: 407348; done stage: 396000; stages left: 11347; moves: S,U1,L0,D0,D0,D0,R2,L1,L1,D2,D2,D2,D6,L5,U3,R3,L7,U4,L6,R7; added 0 stages:
 PUZZLE COMPLETE !!!
