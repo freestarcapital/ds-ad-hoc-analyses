@@ -70,11 +70,6 @@ class Puzzle:
         box_compact_new = self.box_to_box_compact(box_new)
 
         moves_new = f"{stage['moves']},{move}{b}"
-#        if moves_new == 'S,U2,U2,L6,L0,L0,L1,D3,D3,L3,L1,D4,U1,L1,L3,U4,U4,L4,L6,L7':#,U5,D7,L7,L7': stops
-#        if moves_new == 'S,U2,U2,L6,L0,L0,L1,D3,D3,L3,L1,D4,U1,L1,L3,U4,U4,L4,L6,L7,U5,D7':#,L7,L7': stops
-        if moves_new == 'S,U2,U2,L6,L0,L0,L1,D3,D3,L3,L1,D4,U1,L1,L3,U4,U4,L4,L6,L7,U5,D7,L7,L7':
-
-            g = 0
 
         # already a box in space ahead, so cannot move this box there
         if box_compact_new in boxes_compact:
@@ -121,24 +116,6 @@ class Puzzle:
                 and (self.jewels_most_bottom < (~self.panel_walls[self.most_bottom, :]).sum() - (boxes_new[:, 0] == self.most_bottom).sum())):
             return
 
-        # if ((panel_man[:, self.most_left].sum() == 0)
-        #         and ((self.panel_walls[:, self.most_left + 1] == 0).sum() == (boxes_new[:, 1] == self.most_left + 1).sum())
-        #         and (self.jewels_most_left < (self.panel_walls[:, self.most_left] == 0).sum() - (boxes_new[:, 1] == self.most_left).sum())):
-        #     return
-        # if ((panel_man[:, self.most_right].sum() == 0)
-        #         and ((self.panel_walls[:, self.most_right - 1] == 0).sum() == (boxes_new[:, 1] == self.most_right - 1).sum())
-        #         and (self.jewels_most_right < (self.panel_walls[:, self.most_right] == 0).sum() - (boxes_new[:, 1] == self.most_right).sum())):
-        #     return
-        # if ((panel_man[self.most_top, :].sum() == 0)
-        #         and ((self.panel_walls[self.most_top + 1, :] == 0).sum() == (boxes_new[:, 0] == self.most_top + 1).sum())
-        #         and (self.jewels_most_top < (self.panel_walls[self.most_top, :] == 0).sum() - (boxes_new[:, 0] == self.most_top).sum())):
-        #     return
-        # if ((panel_man[self.most_bottom, :].sum() == 0)
-        #         and ((self.panel_walls[self.most_bottom - 1, :] == 0).sum() == (boxes_new[:, 0] == self.most_bottom - 1).sum())
-        #         and (self.jewels_most_bottom < (self.panel_walls[self.most_bottom, :] == 0).sum() - (boxes_new[:, 0] == self.most_bottom).sum())):
-        #     return
-
-
         man_new = boxes[b, :]
         panel_man_new = self.find_where_man_can_touch(boxes_new, man_new)
         seq_new = stage['seq'] + [len(self.stages_all)]
@@ -149,7 +126,6 @@ class Puzzle:
             return
 
         self.stages_all.append(stage_new)
-#        self.stages_compact_all.append(stage_compact_new)
         self.stages_compact_all.add(stage_compact_new)
 
         if self.boxes_to_boxes_compact_code(boxes_new) == self.jewels_compact_code:
@@ -204,7 +180,7 @@ class Puzzle:
         return Z
 
     def puzzle_init(self):
-        self.V_lines = 1000
+        self.V_lines = 10000
 
         assert (self.panel_in == 1).sum() == (self.panel_in == 2).sum()
         assert (self.panel_in == 4).sum() == 1

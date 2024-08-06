@@ -1,4 +1,6 @@
 
+total puzzle solve time: 4.0s
+
 total stages: 2802; done stage: 2758; stages left: 44; moves: S,R0,R4,U3,L2,D1,D1,L1,L1,U5,U5,D4,R1,D3,D5,L2,U0,U1,U1,L5,R2,D3; added 1 stages: 2801:S,R0,R4,U3,L2,D1,D1,L1,L1,U5,U5,D4,R1,D3,D5,L2,U0,U1,U1,L5,R2,D3,R3
 PUZZLE COMPLETE !!!
 seq: [0], moves: S
