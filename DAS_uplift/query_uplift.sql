@@ -1,9 +1,11 @@
+CREATE OR REPLACE TABLE `sublime-elixir-273810.ds_experiments_us.das_uplift_{tablename}_{processing_date}_{days_back_start}_{days_back_end}_{minimum_session_count}` AS
+
 with base as (
     SELECT country_code, rtt_category, domain, ad_product,
         `freestar-157323.ad_manager_dtf`.device_category(device_category) device_category, fsrefresh, fs_testgroup,
         session_count, revenue,
     FROM `freestar-157323.ad_manager_dtf.daily_client_server_mask_reporting_refresh_w_domain_expanded`
-    WHERE DATE_SUB(CURRENT_DATE(), INTERVAL {days_back_start} DAY) <= date AND date <= DATE_SUB(CURRENT_DATE(), INTERVAL {days_back_end} DAY)
+    WHERE DATE_SUB('{processing_date}', INTERVAL {days_back_start} DAY) <= date AND date <= DATE_SUB('{processing_date}', INTERVAL {days_back_end} DAY)
         and fs_testgroup in ('experiment', 'optimised')
         and country_code is not null
         and status != 'disabled'
@@ -45,5 +47,8 @@ results as (
     where agg_expt.rps > 0
 )
 
-select * from results
+select * from results;
+
+select *
+from `sublime-elixir-273810.ds_experiments_us.das_uplift_{tablename}_{processing_date}_{days_back_start}_{days_back_end}_{minimum_session_count}`
 order by rps_uplift_ratio_perc

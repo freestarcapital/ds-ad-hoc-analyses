@@ -62,8 +62,8 @@ def main():
 
     plots_only = False
 
-    rep_dict = {"DAYS_BACK_START": "9",
-                "DAYS_BACK_END": "2"}
+    rep_dict = {"DAYS_BACK_START": "8",
+                "DAYS_BACK_END": "1"}
 
     df_list = []
     for cc in ['_no_country', '_country_merge']:#, '']:
