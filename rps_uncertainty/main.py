@@ -7,9 +7,7 @@ from google.cloud import bigquery_storage
 import os, sys
 import datetime
 import pickle
-import plotly.express as px
-import kaleido
-from scipy import stats
+from matplotlib.backends.backend_pdf import PdfPages
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 1000)
@@ -68,14 +66,14 @@ def get_mask_values(force_calc=False):
     query = 'select status, mask_value from `freestar-157323.ad_manager_dtf.lookup_mask` order by 2'
     return get_data_using_query(query, 'bidder_mask_values', 'status', force_calc=force_calc)
 
-def main(last_date, days, force_calc_rps_uncertainty=False, force_recalc_eventstream_data=False):
+def get_df_stats_and_df_hist_dict(last_date, days, force_calc_rps_uncertainty=False, force_recalc_eventstream_data=False):
 
     eventstream_session_data_tablename = get_eventstream_session_data(last_date, days, force_recalc_eventstream_data)
     repl_dict = {'number_of_buckets': 5000,
                  'eventstream_session_data_tablename':  eventstream_session_data_tablename}
 
-    df_bidders = get_bidders()[:2]
-    df_mask_values = get_mask_values()
+    df_bidders = get_bidders(force_calc=force_calc_rps_uncertainty)[:8]
+    df_mask_values = get_mask_values(force_calc=force_calc_rps_uncertainty)
 
     df_hist_dict = {}
     stats_list = []
@@ -91,14 +89,14 @@ def main(last_date, days, force_calc_rps_uncertainty=False, force_recalc_eventst
                 force_calc=force_calc_rps_uncertainty, repl_dict=repl_dict).values[0, 0]
 
             df_list = []
-            for sessions_per_bucket in [20, 100]:#, 500, 2500, 12500]:
+            for sessions_per_bucket in [20, 100, 500, 2500, 12500]:
                 if session_count < sessions_per_bucket * repl_dict['number_of_buckets']:
                     continue
 
                 repl_dict['sessions_per_bucket'] = sessions_per_bucket
                 df = get_data_using_query(
                     open(os.path.join(sys.path[0], "query_get_bidder_status_rps.sql"), "r").read(),
-                    f'rps_uncertainty_{bidder}_{status}_{sessions_per_bucket}',
+                    f'rps_uncertainty_{bidder}_{status}_{sessions_per_bucket}',#_{repl_dict["number_of_buckets"]}',
                     force_calc=force_calc_rps_uncertainty, repl_dict=repl_dict)
 
                 stats_list.append({'bidder': bidder, 'status': status, 'session_count': session_count, 'sessions': sessions_per_bucket,
@@ -112,14 +110,13 @@ def main(last_date, days, force_calc_rps_uncertainty=False, force_recalc_eventst
             df = pd.concat(df_list, axis=1)
             df_hist_dict[f'{bidder}-{status}'] = {'session_count': session_count, 'df': df}
 
+    df_stats = pd.DataFrame(stats_list)
+    return df_stats, df_hist_dict
 
-    # filename = 'bucket_rps'
-    # do_plots(df, filename)
-    # do_plots(df, filename, True)
-
-def do_plots(df_in, filename, log=False):
+def do_hist_plots(df_in, bidder_status, session_count=0, log=False, pdf=None):
     df = df_in.copy()
 
+    filename = bidder_status
     if log:
         df = np.log(df)
         xlabel = 'log(rps)'
@@ -141,14 +138,30 @@ def do_plots(df_in, filename, log=False):
     df_hist_cdf = pd.DataFrame(y_cdf.transpose(), index=pd.Index(x_cdf[:-1]), columns=col_names)
     df_hist_cdf['mean'] = (df_hist_cdf.index >= df_mean.iloc[-1]) * y_cdf.max()
     fig, ax = plt.subplots(figsize=(12, 9), nrows=2)
-    df_hist_pdf.plot(ax=ax[0], title='Histogram of rps measured over different session lengths (shown in legend)', xlabel=xlabel, ylabel='pdf')
+    df_hist_pdf.plot(ax=ax[0], title=f'Histogram of rps for {bidder_status}, session count: {session_count/1e6:0.2f}M', xlabel=xlabel, ylabel='pdf')
     df_hist_cdf.plot(ax=ax[1], xlabel=xlabel, ylabel='cdf')
 
-    fig.savefig(f'plots/{filename}.png')
+    fig.savefig(f'plots/bidder_status_rps_uncertainty_pngs/{filename}.png')
+    if pdf is not None:
+        pdf.savefig()
 
-    h = 0
+def main(last_date, days, force_calc_rps_uncertainty=False, force_recalc_eventstream_data=False):
 
+    df_stats, df_hist_dict = get_df_stats_and_df_hist_dict(last_date, days, force_calc_rps_uncertainty, force_recalc_eventstream_data)
+    df_stats['std_over_mean'] = df_stats['std'] / df_stats['mean']
+    df_stats['std_over_mean_times_sqrt_sessions'] = df_stats['std_over_mean'] * np.sqrt(df_stats['sessions'])
+    df_stats.to_csv('plots/bidder_status_rps_uncertainty_stats.csv')
+
+    with PdfPages(f'plots/bidder_status_rps_uncertainty.pdf') as pdf:
+        for bidder_status, data in df_hist_dict.items():
+            do_hist_plots(data['df'], bidder_status, data['session_count'], pdf=pdf)
+
+    f = 0
+    # filename = 'bucket_rps'
+    # do_plots(df, filename)
+    # do_plots(df, filename, True)
 
 if __name__ == "__main__":
 
-    main(last_date=datetime.date(2024, 8, 20), days=30, force_recalc_eventstream_data=False)
+
+    main(last_date=datetime.date(2024, 8, 20), days=30)
