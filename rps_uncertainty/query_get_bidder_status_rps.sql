@@ -1,7 +1,7 @@
 
 with t1 as (
-  select bucket_number, bucket_number * {samples_per_bucket} + sample_number + 1 rn
-  from (select * from unnest(GENERATE_ARRAY(0, {samples_per_bucket} - 1)) as sample_number)
+  select bucket_number, bucket_number * {sessions_per_bucket} + sample_number + 1 rn
+  from (select * from unnest(GENERATE_ARRAY(0, {sessions_per_bucket} - 1)) as sample_number)
   cross join (select * from unnest(GENERATE_ARRAY(0, {number_of_buckets} - 1)) as bucket_number )
 ), t2 as (
   select revenue, row_number() over(order by rand()) rn

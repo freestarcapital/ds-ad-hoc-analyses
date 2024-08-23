@@ -87,4 +87,4 @@ session_agg AS (
         1, 2, 3, 4, 5, 6, 7
 )
 
-select * rn from session_agg
+select * from session_agg
