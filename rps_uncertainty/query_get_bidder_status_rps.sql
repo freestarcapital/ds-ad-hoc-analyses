@@ -7,6 +7,7 @@ with t1 as (
   select revenue, row_number() over(order by rand()) rn
   from `streamamp-qa-239417.DAS_eventstream_session_data.{eventstream_session_data_tablename}`
   where REGEXP_CONTAINS(fs_clientservermask, '{bidder_mask}')
+  {and_filter_string}
 ), t3 as (
   select bucket_number, avg(revenue) * 1000 bucket_rps
   from t1 join t2 using (rn)

@@ -66,13 +66,22 @@ def get_mask_values(force_calc=False):
     query = 'select status, mask_value from `freestar-157323.ad_manager_dtf.lookup_mask` order by 2'
     return get_data_using_query(query, 'bidder_mask_values', 'status', force_calc=force_calc)
 
-def get_df_stats_and_df_hist_dict(last_date, days, force_calc_rps_uncertainty=False, force_recalc_eventstream_data=False):
+def get_df_stats_and_df_hist_dict(last_date, days, number_of_buckets=1000, filter_dict={},
+                                  force_calc_rps_uncertainty=False, force_recalc_eventstream_data=False):
+
+    and_filter_string = ''
+    filename_filter_string = ''
+    for filter_name, filter_value in filter_dict.items():
+        if filter_value != 'all':
+            and_filter_string += f' and {filter_name} = "{filter_value}"'
+            filename_filter_string += f'_{filter_value}'
 
     eventstream_session_data_tablename = get_eventstream_session_data(last_date, days, force_recalc_eventstream_data)
-    repl_dict = {'number_of_buckets': 5000,
-                 'eventstream_session_data_tablename':  eventstream_session_data_tablename}
+    repl_dict = {'number_of_buckets': number_of_buckets,
+                 'eventstream_session_data_tablename':  eventstream_session_data_tablename,
+                 'and_filter_string': and_filter_string}
 
-    df_bidders = get_bidders(force_calc=force_calc_rps_uncertainty)[:8]
+    df_bidders = get_bidders(force_calc=force_calc_rps_uncertainty)
     df_mask_values = get_mask_values(force_calc=force_calc_rps_uncertainty)
 
     df_hist_dict = {}
@@ -85,7 +94,7 @@ def get_df_stats_and_df_hist_dict(last_date, days, force_calc_rps_uncertainty=Fa
 
             session_count = get_data_using_query(
                 open(os.path.join(sys.path[0], "query_get_bidder_status_session_count.sql"), "r").read(),
-                f'bidder_status_session_count_{bidder}_{status}',
+                f'bidder_status_session_count_{bidder}_{status}{filename_filter_string}',
                 force_calc=force_calc_rps_uncertainty, repl_dict=repl_dict).values[0, 0]
 
             df_list = []
@@ -96,11 +105,13 @@ def get_df_stats_and_df_hist_dict(last_date, days, force_calc_rps_uncertainty=Fa
                 repl_dict['sessions_per_bucket'] = sessions_per_bucket
                 df = get_data_using_query(
                     open(os.path.join(sys.path[0], "query_get_bidder_status_rps.sql"), "r").read(),
-                    f'rps_uncertainty_{bidder}_{status}_{sessions_per_bucket}',#_{repl_dict["number_of_buckets"]}',
+                    f'rps_uncertainty_{bidder}_{status}_{sessions_per_bucket}_{repl_dict["number_of_buckets"]}{filename_filter_string}',
                     force_calc=force_calc_rps_uncertainty, repl_dict=repl_dict)
 
-                stats_list.append({'bidder': bidder, 'status': status, 'session_count': session_count, 'sessions': sessions_per_bucket,
-                 'mean': df['bucket_rps'].mean(), 'std': df['bucket_rps'].std()})
+                stats = {'bidder': bidder, 'status': status, 'session_count': session_count, 'sessions': sessions_per_bucket,
+                         'mean': df['bucket_rps'].mean(), 'std': df['bucket_rps'].std()}
+                stats.update(filter_dict)
+                stats_list.append(stats)
 
                 df_list.append(df[['bucket_rps']].rename(columns={'bucket_rps': sessions_per_bucket}))
 
@@ -108,10 +119,10 @@ def get_df_stats_and_df_hist_dict(last_date, days, force_calc_rps_uncertainty=Fa
                 continue
 
             df = pd.concat(df_list, axis=1)
-            df_hist_dict[f'{bidder}-{status}'] = {'session_count': session_count, 'df': df}
+            df_hist_dict[f'{bidder}-{status}'] = {'session_count': session_count, 'filter_dict': filter_dict, 'df': df}
 
     df_stats = pd.DataFrame(stats_list)
-    return df_stats, df_hist_dict
+    return df_stats, df_hist_dict, filename_filter_string
 
 def do_hist_plots(df_in, bidder_status, session_count=0, log=False, pdf=None):
     df = df_in.copy()
@@ -146,13 +157,17 @@ def do_hist_plots(df_in, bidder_status, session_count=0, log=False, pdf=None):
         pdf.savefig()
 
 def main(last_date, days, force_calc_rps_uncertainty=False, force_recalc_eventstream_data=False):
+    number_of_buckets = 1000
 
-    df_stats, df_hist_dict = get_df_stats_and_df_hist_dict(last_date, days, force_calc_rps_uncertainty, force_recalc_eventstream_data)
+    filter_dict = {}#{'country_code': 'US', 'device_category': 'desktop'}
+
+    df_stats, df_hist_dict, filename_filter_string = get_df_stats_and_df_hist_dict(last_date, days, number_of_buckets, filter_dict,
+                                                           force_calc_rps_uncertainty, force_recalc_eventstream_data)
     df_stats['std_over_mean'] = df_stats['std'] / df_stats['mean']
     df_stats['std_over_mean_times_sqrt_sessions'] = df_stats['std_over_mean'] * np.sqrt(df_stats['sessions'])
-    df_stats.to_csv('plots/bidder_status_rps_uncertainty_stats.csv')
+    df_stats.to_csv(f'plots/bidder_status_rps_uncertainty_stats_{number_of_buckets}{filename_filter_string}.csv')
 
-    with PdfPages(f'plots/bidder_status_rps_uncertainty.pdf') as pdf:
+    with PdfPages(f'plots/bidder_status_rps_uncertainty_{number_of_buckets}{filename_filter_string}.pdf') as pdf:
         for bidder_status, data in df_hist_dict.items():
             do_hist_plots(data['df'], bidder_status, data['session_count'], pdf=pdf)
 
