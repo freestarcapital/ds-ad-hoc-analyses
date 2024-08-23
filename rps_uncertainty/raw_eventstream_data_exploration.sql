@@ -23,6 +23,7 @@ select
         ) >= 4
 )
 select count(distinct(fs_session_id))
+where
 from t1
 
 -- 24,500,301

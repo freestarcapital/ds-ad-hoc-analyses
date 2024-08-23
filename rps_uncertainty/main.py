@@ -186,10 +186,10 @@ def main(last_date, days, force_calc_rps_uncertainty=False, force_recalc_eventst
     US_desktop = "and country_code='US' and device_category='desktop'"
 
     for modifications in [
-        # ("", "", False),
-        # ("_US_desktop", "and country_code='US' and device_category='desktop'", False),
-        # ("_amazon_preGAMAuction_client", "", True),
-        #("_US_desktop_amazon_preGAMAuction_client", US_desktop, True),
+        ("", "", False),
+        ("_US_desktop", "and country_code='US' and device_category='desktop'", False),
+        ("_amazon_preGAMAuction_client", "", True),
+        ("_US_desktop_amazon_preGAMAuction_client", US_desktop, True),
         ("_US_desktop_8_5_US_desktop_apGc", US_desktop + client_server_count_and_modification(0, 0), True),
         ("_US_desktop_789_456_US_desktop_apGc", US_desktop + client_server_count_and_modification(1, 1), True),
         ("_US_desktop_678910_34567_US_desktop_apGc", US_desktop + client_server_count_and_modification(2, 2), True)]:
@@ -209,8 +209,10 @@ def main(last_date, days, force_calc_rps_uncertainty=False, force_recalc_eventst
     df_stats['std_over_mean_times_sqrt_sessions'] = df_stats['std_over_mean'] * np.sqrt(df_stats['sessions'])
     df_stats.to_csv(f'plots/bidder_status_rps_uncertainty_stats_{number_of_buckets}.csv')
 
+    df_stats_no_disables = df_stats[df_stats['status'] != 'disabled']
+    for analysis_columns in [['sessions', 'modification'], ['sessions', 'status', 'modification']]:
+        results = df_stats_no_disables[['mean', 'std', 'std_over_mean_times_sqrt_sessions'] + analysis_columns].groupby(analysis_columns).mean()
+        results.to_csv(f'plots/bidder_status_analysis_{number_of_buckets}_{'_'.join(analysis_columns)}.csv')
 
 if __name__ == "__main__":
-
-
     main(last_date=datetime.date(2024, 8, 20), days=30)
