@@ -15,3 +15,6 @@ WHERE '2024-06-01' <= date
         and country_code is not null
         and domain is not null
         and `freestar-157323.ad_manager_dtf`.device_category(device_category) is not null
+
+
+-- SELECT array_length(REGEXP_EXTRACT_ALL('12345678123123', '1')) AS example

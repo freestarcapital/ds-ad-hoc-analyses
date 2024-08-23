@@ -66,15 +66,17 @@ def get_mask_values(force_calc=False):
     query = 'select status, mask_value from `freestar-157323.ad_manager_dtf.lookup_mask` order by 2'
     return get_data_using_query(query, 'bidder_mask_values', 'status', force_calc=force_calc)
 
-def get_df_stats_and_df_hist_dict(last_date, days, number_of_buckets=1000, filter_dict={},
+def get_df_stats_and_df_hist_dict(last_date, days, number_of_buckets=1000, modifications=(""),
                                   force_calc_rps_uncertainty=False, force_recalc_eventstream_data=False):
+    amazon_and_preGAM = ['amazon', 'preGAMAuction']
+    amazon_and_preGAM_client = False
 
-    and_filter_string = ''
-    filename_filter_string = ''
-    for filter_name, filter_value in filter_dict.items():
-        if filter_value != 'all':
-            and_filter_string += f' and {filter_name} = "{filter_value}"'
-            filename_filter_string += f'_{filter_value}'
+    and_filter_string = ""
+    filename_filter_string = ""
+    if len(modifications[0]) > 0:
+        filename_filter_string = modifications[0]
+        and_filter_string = modifications[1]
+        amazon_and_preGAM_client = modifications[2]
 
     eventstream_session_data_tablename = get_eventstream_session_data(last_date, days, force_recalc_eventstream_data)
     repl_dict = {'number_of_buckets': number_of_buckets,
@@ -89,6 +91,13 @@ def get_df_stats_and_df_hist_dict(last_date, days, number_of_buckets=1000, filte
     for bidder, bidder_row in df_bidders.iterrows():
         for status, status_row in df_mask_values.iterrows():
             bidder_mask_list = list('.......................')
+            if amazon_and_preGAM_client:
+                if bidder in amazon_and_preGAM:
+                    f'doing amazon_and_preGAM_client, so skipping {bidder}'
+                    continue
+                for bidder_to_set_to_client in amazon_and_preGAM:
+                    bidder_mask_list[df_bidders.loc[bidder_to_set_to_client]['position']-1] = str(df_mask_values.loc['client']['mask_value'])
+
             bidder_mask_list[bidder_row.position - 1] = str(status_row.mask_value)
             repl_dict['bidder_mask'] = ''.join(bidder_mask_list)
 
@@ -108,10 +117,8 @@ def get_df_stats_and_df_hist_dict(last_date, days, number_of_buckets=1000, filte
                     f'rps_uncertainty_{bidder}_{status}_{sessions_per_bucket}_{repl_dict["number_of_buckets"]}{filename_filter_string}',
                     force_calc=force_calc_rps_uncertainty, repl_dict=repl_dict)
 
-                stats = {'bidder': bidder, 'status': status, 'session_count': session_count, 'sessions': sessions_per_bucket,
-                         'mean': df['bucket_rps'].mean(), 'std': df['bucket_rps'].std()}
-                stats.update(filter_dict)
-                stats_list.append(stats)
+                stats_list.append({'bidder': bidder, 'status': status, 'modification': filename_filter_string, 'session_count': session_count, 'sessions': sessions_per_bucket,
+                         'mean': df['bucket_rps'].mean(), 'std': df['bucket_rps'].std()})
 
                 df_list.append(df[['bucket_rps']].rename(columns={'bucket_rps': sessions_per_bucket}))
 
@@ -119,7 +126,7 @@ def get_df_stats_and_df_hist_dict(last_date, days, number_of_buckets=1000, filte
                 continue
 
             df = pd.concat(df_list, axis=1)
-            df_hist_dict[f'{bidder}-{status}'] = {'session_count': session_count, 'filter_dict': filter_dict, 'df': df}
+            df_hist_dict[f'{bidder}-{status}'] = {'session_count': session_count, 'modification': filename_filter_string, 'df': df}
 
     df_stats = pd.DataFrame(stats_list)
     return df_stats, df_hist_dict, filename_filter_string
@@ -156,25 +163,52 @@ def do_hist_plots(df_in, bidder_status, session_count=0, log=False, pdf=None):
     if pdf is not None:
         pdf.savefig()
 
+def client_server_count_and_modification(max_client_count_from_8, max_server_count_from_5):
+
+    if max_client_count_from_8 == 0:
+        str = f" and array_length(REGEXP_EXTRACT_ALL(fs_clientservermask, '2')) = 8"
+    else:
+        str = f" and abs(array_length(REGEXP_EXTRACT_ALL(fs_clientservermask, '2')) - 8) <= {max_client_count_from_8}"
+
+    if max_server_count_from_5 == 0:
+        str += f" and array_length(REGEXP_EXTRACT_ALL(fs_clientservermask, '3')) = 5"
+    else:
+        str += f" and abs(array_length(REGEXP_EXTRACT_ALL(fs_clientservermask, '3')) - 5) <= {max_server_count_from_5}"
+
+    return str
+
 def main(last_date, days, force_calc_rps_uncertainty=False, force_recalc_eventstream_data=False):
-    number_of_buckets = 1000
+    number_of_buckets = 200
+    do_plots = False
 
-    filter_dict = {}#{'country_code': 'US', 'device_category': 'desktop'}
+    df_stats_list = []
+    #(name, additional and in where clause, amazon_and_preGAM_client)
+    US_desktop = "and country_code='US' and device_category='desktop'"
 
-    df_stats, df_hist_dict, filename_filter_string = get_df_stats_and_df_hist_dict(last_date, days, number_of_buckets, filter_dict,
-                                                           force_calc_rps_uncertainty, force_recalc_eventstream_data)
+    for modifications in [
+        # ("", "", False),
+        # ("_US_desktop", "and country_code='US' and device_category='desktop'", False),
+        # ("_amazon_preGAMAuction_client", "", True),
+        #("_US_desktop_amazon_preGAMAuction_client", US_desktop, True),
+        ("_US_desktop_8_5_US_desktop_apGc", US_desktop + client_server_count_and_modification(0, 0), True),
+        ("_US_desktop_789_456_US_desktop_apGc", US_desktop + client_server_count_and_modification(1, 1), True),
+        ("_US_desktop_678910_34567_US_desktop_apGc", US_desktop + client_server_count_and_modification(2, 2), True)]:
+
+        df_stats, df_hist_dict, filename_filter_string = get_df_stats_and_df_hist_dict(last_date, days, number_of_buckets,
+            modifications, force_calc_rps_uncertainty, force_recalc_eventstream_data)
+
+        if do_plots:
+            with PdfPages(f'plots/bidder_status_rps_uncertainty_{number_of_buckets}{filename_filter_string}.pdf') as pdf:
+                for bidder_status, data in df_hist_dict.items():
+                    do_hist_plots(data['df'], bidder_status, data['session_count'], pdf=pdf)
+
+        df_stats_list.append(df_stats)
+
+    df_stats = pd.concat(df_stats_list)
     df_stats['std_over_mean'] = df_stats['std'] / df_stats['mean']
     df_stats['std_over_mean_times_sqrt_sessions'] = df_stats['std_over_mean'] * np.sqrt(df_stats['sessions'])
-    df_stats.to_csv(f'plots/bidder_status_rps_uncertainty_stats_{number_of_buckets}{filename_filter_string}.csv')
+    df_stats.to_csv(f'plots/bidder_status_rps_uncertainty_stats_{number_of_buckets}.csv')
 
-    with PdfPages(f'plots/bidder_status_rps_uncertainty_{number_of_buckets}{filename_filter_string}.pdf') as pdf:
-        for bidder_status, data in df_hist_dict.items():
-            do_hist_plots(data['df'], bidder_status, data['session_count'], pdf=pdf)
-
-    f = 0
-    # filename = 'bucket_rps'
-    # do_plots(df, filename)
-    # do_plots(df, filename, True)
 
 if __name__ == "__main__":
 
