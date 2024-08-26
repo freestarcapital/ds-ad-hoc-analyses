@@ -25,21 +25,48 @@ def get_bq_data(query, replacement_dict={}):
         query = query.replace("{"+k+"}", f'{v}')
     return client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
 
-def get_eventstream_session_data(last_date, days, force_recalc=False):
+def get_eventstream_session_data(last_date, days, force_recalc=False, session_data_type=''):
 
     repl_dict = {'project_id': project_id,
                  'processing_date': last_date,
                  'days_back_start': days,
                  'days_back_end': 1}
 
-    tablename = f'eventstream_DAS_expt_stats_{repl_dict["processing_date"]}_{repl_dict["days_back_start"]}_{repl_dict["days_back_end"]}'
+
+    if 'split_revenue' in session_data_type:
+        tablename = f'eventstream_DAS_expt_stats_split_revenue_{repl_dict["processing_date"]}_{repl_dict["days_back_start"]}_{repl_dict["days_back_end"]}'
+        query_file = "query_eventstream_DAS_expt_stats_split_revenue.sql"
+    else:
+        tablename = f'eventstream_DAS_expt_stats_{repl_dict["processing_date"]}_{repl_dict["days_back_start"]}_{repl_dict["days_back_end"]}'
+        query_file = "query_eventstream_DAS_expt_stats.sql"
 
     if force_recalc:
         print(f'creating table: {tablename}')
-        query = open(os.path.join(sys.path[0], "query_eventstream_DAS_expt_stats.sql"), "r").read()
+        query = open(os.path.join(sys.path[0], query_file), "r").read()
         get_bq_data(query, repl_dict)
 
     return tablename
+
+def get_dtf_session_data(last_date, days, force_recalc=True, session_data_type=''):
+    repl_dict = {'project_id': project_id,
+                 'processing_date': last_date,
+                 'days_back_start': days,
+                 'days_back_end': 1}
+
+    if 'split_revenue' in session_data_type:
+        query_file = "query_create_DTF_DAS_expt_stats_split_revenue.sql"
+        tablename = f'DTF_DAS_expt_stats_split_revenue_{repl_dict["processing_date"]}_{repl_dict["days_back_start"]}_{repl_dict["days_back_end"]}'
+    else:
+        query_file = "query_create_DTF_DAS_expt_stats.sql"
+        tablename = f'DTF_DAS_expt_stats_{repl_dict["processing_date"]}_{repl_dict["days_back_start"]}_{repl_dict["days_back_end"]}'
+
+    if force_recalc:
+        print(f'creating table: {tablename}')
+        query = open(os.path.join(sys.path[0], query_file), "r").read()
+        get_bq_data(query, repl_dict)
+
+    return tablename
+
 
 def get_data_using_query(query, filename, index=None, force_calc=False, repl_dict={}):
     data_cache_filename = f'data_cache/{filename}.pkl'
@@ -67,7 +94,9 @@ def get_mask_values(force_calc=False):
     return get_data_using_query(query, 'bidder_mask_values', 'status', force_calc=force_calc)
 
 def get_df_stats_and_df_hist_dict(last_date, days, number_of_buckets=1000, modifications=(""),
-                                  force_calc_rps_uncertainty=False, force_recalc_eventstream_data=False):
+                                  force_calc_rps_uncertainty=False, force_recalc_session_data=False,
+                                  session_data_type='_dtf_split'):
+    
     amazon_and_preGAM = ['amazon', 'preGAMAuction']
     amazon_and_preGAM_client = False
 
@@ -78,8 +107,14 @@ def get_df_stats_and_df_hist_dict(last_date, days, number_of_buckets=1000, modif
         and_filter_string = modifications[1]
         amazon_and_preGAM_client = modifications[2]
 
-    #session_data_tablename = get_eventstream_session_data(last_date, days, force_recalc_eventstream_data)
-    session_data_tablename = get_dtf_session_data(last_date, days, force_recalc_eventstream_data)
+    if 'dtf' in session_data_type:
+        session_data_tablename = get_dtf_session_data(last_date, days, force_recalc_session_data, session_data_type)
+        filename_filter_string += session_data_type
+    elif 'evt' in session_data_type:
+        session_data_tablename = get_eventstream_session_data(last_date, days, force_recalc_session_data, session_data_type)
+        filename_filter_string += session_data_type
+    else:
+        assert False
     
     repl_dict = {'number_of_buckets': number_of_buckets,
                  'session_data_tablename':  session_data_tablename,
@@ -151,7 +186,7 @@ def do_hist_plots(df_in, bidder_status, session_count=0, log=False, pdf=None):
 
     col_names = [f'{c} sessions, mean: {df_mean[c]:0.2f}, std: {df_std[c]:0.2f}, std/mean: {df_std[c]/df_mean[c]:0.2f}, std/mean*sqrt({c}): {df_std[c] / df_mean[c] * np.sqrt(c):0.2f}'
                  for c in df.columns]
-    df_max = 15
+    df_max = 25
     df[df > df_max] = df_max
     y_pdf, x_pdf, _ = plt.hist(df, 100, density=True)
     df_hist_pdf = pd.DataFrame(y_pdf.transpose(), index=pd.Index(x_pdf[:-1]), columns=col_names)
@@ -181,9 +216,12 @@ def client_server_count_and_modification(max_client_count_from_8, max_server_cou
 
     return str
 
-def main(last_date, days, force_calc_rps_uncertainty=False, force_recalc_eventstream_data=False):
-    number_of_buckets = 200
-    do_plots = False
+def main(last_date, days,
+         force_calc_rps_uncertainty=False,
+         force_recalc_session_data=False,
+         number_of_buckets=1000,
+         do_plots=True,
+         session_data_type='dtf'):
 
     df_stats_list = []
     #(name, additional and in where clause, amazon_and_preGAM_client)
@@ -191,16 +229,16 @@ def main(last_date, days, force_calc_rps_uncertainty=False, force_recalc_eventst
 
     for modifications in [
         #("", "", False)
-#         ("_US_desktop", "and country_code='US' and device_category='desktop'", False)
+#        ("_US_desktop", "and country_code='US' and device_category='desktop'", False)
         #("_amazon_preGAMAuction_client", "", True)
         # ("_US_desktop_amazon_preGAMAuction_client", US_desktop, True),
-        # ("_US_desktop_8_5_US_desktop_apGc", US_desktop + client_server_count_and_modification(0, 0), True),
+         ("_US_desktop_8_5_US_desktop_apGc", US_desktop + client_server_count_and_modification(0, 0), True),
        #  ("_US_desktop_789_456_US_desktop_apGc", US_desktop + client_server_count_and_modification(1, 1), True),
-         ("_US_desktop_678910_34567_US_desktop_apGc", US_desktop + client_server_count_and_modification(2, 2), True)#]:
+        # ("_US_desktop_678910_34567_US_desktop_apGc", US_desktop + client_server_count_and_modification(2, 2), True)#]:
         ]:
 
         df_stats, df_hist_dict, filename_filter_string = get_df_stats_and_df_hist_dict(last_date, days, number_of_buckets,
-            modifications, force_calc_rps_uncertainty, force_recalc_eventstream_data)
+            modifications, force_calc_rps_uncertainty, force_recalc_session_data, session_data_type)
 
         if do_plots:
             with PdfPages(f'plots/bidder_status_rps_uncertainty_{number_of_buckets}{filename_filter_string}.pdf') as pdf:
@@ -219,21 +257,10 @@ def main(last_date, days, force_calc_rps_uncertainty=False, force_recalc_eventst
         results = df_stats_no_disables[['mean', 'std', 'std_over_mean_times_sqrt_sessions'] + analysis_columns].groupby(analysis_columns).mean()
         results.to_csv(f'plots/bidder_status_analysis_{number_of_buckets}_{'_'.join(analysis_columns)}.csv')
 
-def get_dtf_session_data(last_date, days, force_recalc=True):
-    repl_dict = {'project_id': project_id,
-                 'processing_date': last_date,
-                 'days_back_start': days,
-                 'days_back_end': 1}
-
-    tablename = f'DTF_DAS_expt_stats_{repl_dict["processing_date"]}_{repl_dict["days_back_start"]}_{repl_dict["days_back_end"]}'
-
-    if force_recalc:
-        print(f'creating table: {tablename}')
-        query = open(os.path.join(sys.path[0], "query_create_DTF_DAS_expt_stats.sql"), "r").read()
-        get_bq_data(query, repl_dict)
-
-    return tablename
-
 
 if __name__ == "__main__":
-    main(last_date=datetime.date(2024, 8, 20), days=30)
+#    main(last_date=datetime.date(2024, 8, 20), days=30)
+
+    #main(last_date=datetime.date(2024, 8, 20), days=30, session_data_type='_dtf_split_revenue', force_recalc_session_data=True)
+
+    main(last_date=datetime.date(2024, 8, 20), days=30, session_data_type='_evt_split_revenue', force_recalc_session_data=True)

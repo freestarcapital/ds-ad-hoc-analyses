@@ -3,7 +3,7 @@
 DECLARE start_date DATE DEFAULT DATE_SUB('{processing_date}', INTERVAL {days_back_start} DAY);
 DECLARE end_date DATE DEFAULT DATE_SUB('{processing_date}', INTERVAL {days_back_end} DAY);
 
-CREATE OR REPLACE TABLE `{project_id}.DAS_eventstream_session_data.DTF_DAS_expt_stats_{processing_date}_{days_back_start}_{days_back_end}`
+CREATE OR REPLACE TABLE `{project_id}.DAS_eventstream_session_data.DTF_DAS_expt_stats_split_revenue_{processing_date}_{days_back_start}_{days_back_end}`
     OPTIONS (expiration_timestamp = TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL 365 DAY))
     AS
 
@@ -63,6 +63,6 @@ agg as
     group by 1, 2, 3, 4
 )
 
-select fs_session_id, fs_clientservermask, country_code, device_category, date --, revenue
-    sum(revenue) over(partition by fs_session_id) revenue
+select fs_session_id, fs_clientservermask, country_code, device_category, date, revenue
+    --sum(revenue) over(partition by fs_session_id) revenue
 from agg

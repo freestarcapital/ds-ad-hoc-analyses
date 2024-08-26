@@ -87,5 +87,6 @@ session_agg AS (
         1, 2, 3, 4--, 5--, 6
 )
 
-select country_code, fs_clientservermask, fs_session_id, device_category, date,
-    sum(revenue) over(partition by fs_session_id) revenue from session_agg
+select country_code, fs_clientservermask, fs_session_id, device_category, date, revenue
+    --sum(revenue) over(partition by fs_session_id) revenue
+    from session_agg
