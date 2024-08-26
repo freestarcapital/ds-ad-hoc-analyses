@@ -21,6 +21,7 @@ WITH device_class_cte AS (
 
 auc_end AS (
     SELECT
+        server_time,
         placement_id,
         DATE(TIMESTAMP_TRUNC(TIMESTAMP_MILLIS(server_time), DAY)) AS date,
         iso AS country_code,
@@ -58,7 +59,6 @@ session_agg AS (
         auc_end.country_code,
         auc_end.domain,
         auc_end.fs_clientservermask,
-        bidder,
         auc_end.fs_session_id,
         -- `freestar-157323.ad_manager_dtf`.RTTClassify(`freestar-157323.ad_manager_dtf`.device_category_eventstream(device_class, os), CAST(auc_end.floors_rtt AS int64)) AS rtt_category,
         `freestar-157323.ad_manager_dtf`.device_category_eventstream(device_class, os) AS device_category,
@@ -84,7 +84,7 @@ session_agg AS (
         -- AND fsrefresh<>'' --AND fs_auction_id<>''
         fs_testgroup='experiment'
     GROUP BY
-        1, 2, 3, 4, 5, 6, 7
+        1, 2, 3, 4, 5, 6
 )
 
 select * from session_agg

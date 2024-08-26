@@ -46,7 +46,7 @@ def get_data_using_query(query, filename, index=None, force_calc=False, repl_dic
     if not force_calc and os.path.exists(data_cache_filename):
         print(f'found existing data file, loading: {data_cache_filename}')
     else:
-        print(f'querying to create file: {data_cache_filename}')
+        print(f'{datetime.datetime.now()}: querying to create file: {data_cache_filename}')
         df = get_bq_data(query, repl_dict)
         if index is not None:
             df = df.set_index(index)
@@ -78,9 +78,11 @@ def get_df_stats_and_df_hist_dict(last_date, days, number_of_buckets=1000, modif
         and_filter_string = modifications[1]
         amazon_and_preGAM_client = modifications[2]
 
-    eventstream_session_data_tablename = get_eventstream_session_data(last_date, days, force_recalc_eventstream_data)
+    #session_data_tablename = get_eventstream_session_data(last_date, days, force_recalc_eventstream_data)
+    session_data_tablename = get_dtf_session_data(last_date, days, force_recalc_eventstream_data)
+    
     repl_dict = {'number_of_buckets': number_of_buckets,
-                 'eventstream_session_data_tablename':  eventstream_session_data_tablename,
+                 'session_data_tablename':  session_data_tablename,
                  'and_filter_string': and_filter_string}
 
     df_bidders = get_bidders(force_calc=force_calc_rps_uncertainty)
@@ -106,9 +108,11 @@ def get_df_stats_and_df_hist_dict(last_date, days, number_of_buckets=1000, modif
                 f'bidder_status_session_count_{bidder}_{status}{filename_filter_string}',
                 force_calc=force_calc_rps_uncertainty, repl_dict=repl_dict).values[0, 0]
 
+            repl_dict['total_sessions'] = session_count
+
             df_list = []
             for sessions_per_bucket in [20, 100, 500, 2500, 12500]:
-                if session_count < sessions_per_bucket * repl_dict['number_of_buckets']:
+                if session_count < sessions_per_bucket * repl_dict['number_of_buckets'] / 5:
                     continue
 
                 repl_dict['sessions_per_bucket'] = sessions_per_bucket
@@ -186,13 +190,14 @@ def main(last_date, days, force_calc_rps_uncertainty=False, force_recalc_eventst
     US_desktop = "and country_code='US' and device_category='desktop'"
 
     for modifications in [
-        ("", "", False),
-        ("_US_desktop", "and country_code='US' and device_category='desktop'", False),
-        ("_amazon_preGAMAuction_client", "", True),
-        ("_US_desktop_amazon_preGAMAuction_client", US_desktop, True),
-        ("_US_desktop_8_5_US_desktop_apGc", US_desktop + client_server_count_and_modification(0, 0), True),
-        ("_US_desktop_789_456_US_desktop_apGc", US_desktop + client_server_count_and_modification(1, 1), True),
-        ("_US_desktop_678910_34567_US_desktop_apGc", US_desktop + client_server_count_and_modification(2, 2), True)]:
+        #("", "", False)
+#         ("_US_desktop", "and country_code='US' and device_category='desktop'", False)
+        #("_amazon_preGAMAuction_client", "", True)
+        # ("_US_desktop_amazon_preGAMAuction_client", US_desktop, True),
+        # ("_US_desktop_8_5_US_desktop_apGc", US_desktop + client_server_count_and_modification(0, 0), True),
+       #  ("_US_desktop_789_456_US_desktop_apGc", US_desktop + client_server_count_and_modification(1, 1), True),
+         ("_US_desktop_678910_34567_US_desktop_apGc", US_desktop + client_server_count_and_modification(2, 2), True)#]:
+        ]:
 
         df_stats, df_hist_dict, filename_filter_string = get_df_stats_and_df_hist_dict(last_date, days, number_of_buckets,
             modifications, force_calc_rps_uncertainty, force_recalc_eventstream_data)
@@ -213,6 +218,22 @@ def main(last_date, days, force_calc_rps_uncertainty=False, force_recalc_eventst
     for analysis_columns in [['sessions', 'modification'], ['sessions', 'status', 'modification']]:
         results = df_stats_no_disables[['mean', 'std', 'std_over_mean_times_sqrt_sessions'] + analysis_columns].groupby(analysis_columns).mean()
         results.to_csv(f'plots/bidder_status_analysis_{number_of_buckets}_{'_'.join(analysis_columns)}.csv')
+
+def get_dtf_session_data(last_date, days, force_recalc=True):
+    repl_dict = {'project_id': project_id,
+                 'processing_date': last_date,
+                 'days_back_start': days,
+                 'days_back_end': 1}
+
+    tablename = f'DTF_DAS_expt_stats_{repl_dict["processing_date"]}_{repl_dict["days_back_start"]}_{repl_dict["days_back_end"]}'
+
+    if force_recalc:
+        print(f'creating table: {tablename}')
+        query = open(os.path.join(sys.path[0], "query_create_DTF_DAS_expt_stats.sql"), "r").read()
+        get_bq_data(query, repl_dict)
+
+    return tablename
+
 
 if __name__ == "__main__":
     main(last_date=datetime.date(2024, 8, 20), days=30)
