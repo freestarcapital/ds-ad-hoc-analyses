@@ -1,7 +1,7 @@
 
 DECLARE dates ARRAY<DATE> DEFAULT GENERATE_DATE_ARRAY(DATE_SUB('{processing_date}', INTERVAL {days_back_start} DAY), DATE_SUB('{processing_date}', INTERVAL {days_back_end} DAY));
 
-CREATE OR REPLACE TABLE `{project_id}.DAS_eventstream_session_data.eventstream_DAS_expt_stats_{processing_date}_{days_back_start}_{days_back_end}`
+CREATE OR REPLACE TABLE `{project_id}.DAS_eventstream_session_data.eventstream_DAS_expt_stats_split_revenue_{processing_date}_{days_back_start}_{days_back_end}`
     OPTIONS (
         expiration_timestamp = TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL 365 DAY))
     AS

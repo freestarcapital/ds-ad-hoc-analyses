@@ -32,7 +32,6 @@ def get_eventstream_session_data(last_date, days, force_recalc=False, session_da
                  'days_back_start': days,
                  'days_back_end': 1}
 
-
     if 'split_revenue' in session_data_type:
         tablename = f'eventstream_DAS_expt_stats_split_revenue_{repl_dict["processing_date"]}_{repl_dict["days_back_start"]}_{repl_dict["days_back_end"]}'
         query_file = "query_eventstream_DAS_expt_stats_split_revenue.sql"
@@ -146,8 +145,8 @@ def get_df_stats_and_df_hist_dict(last_date, days, number_of_buckets=1000, modif
             repl_dict['total_sessions'] = session_count
 
             df_list = []
-            for sessions_per_bucket in [20, 100, 500, 2500, 12500]:
-                if session_count < sessions_per_bucket * repl_dict['number_of_buckets'] / 5:
+            for sessions_per_bucket in [20, 100, 500, 2500, 12500, 60000, 300000]:
+                if session_count < sessions_per_bucket * repl_dict['number_of_buckets'] / 20:
                     continue
 
                 repl_dict['sessions_per_bucket'] = sessions_per_bucket
@@ -170,10 +169,9 @@ def get_df_stats_and_df_hist_dict(last_date, days, number_of_buckets=1000, modif
     df_stats = pd.DataFrame(stats_list)
     return df_stats, df_hist_dict, filename_filter_string
 
-def do_hist_plots(df_in, bidder_status, session_count=0, log=False, pdf=None):
+def do_hist_plots(df_in, filename, session_count=0, log=False, pdf=None):
     df = df_in.copy()
 
-    filename = bidder_status
     if log:
         df = np.log(df)
         xlabel = 'log(rps)'
@@ -195,7 +193,7 @@ def do_hist_plots(df_in, bidder_status, session_count=0, log=False, pdf=None):
     df_hist_cdf = pd.DataFrame(y_cdf.transpose(), index=pd.Index(x_cdf[:-1]), columns=col_names)
     df_hist_cdf['mean'] = (df_hist_cdf.index >= df_mean.iloc[-1]) * y_cdf.max()
     fig, ax = plt.subplots(figsize=(12, 9), nrows=2)
-    df_hist_pdf.plot(ax=ax[0], title=f'Histogram of rps for {bidder_status}, session count: {session_count/1e6:0.2f}M', xlabel=xlabel, ylabel='pdf')
+    df_hist_pdf.plot(ax=ax[0], title=f'Histogram of rps for {filename}, session count: {session_count/1e6:0.2f}M', xlabel=xlabel, ylabel='pdf')
     df_hist_cdf.plot(ax=ax[1], xlabel=xlabel, ylabel='cdf')
 
     fig.savefig(f'plots/bidder_status_rps_uncertainty_pngs/{filename}.png')
@@ -220,22 +218,21 @@ def main(last_date, days,
          force_calc_rps_uncertainty=False,
          force_recalc_session_data=False,
          number_of_buckets=1000,
-         do_plots=True,
-         session_data_type='dtf'):
+         do_plots=False,
+         session_data_type='_dtf'):
 
     df_stats_list = []
     #(name, additional and in where clause, amazon_and_preGAM_client)
     US_desktop = "and country_code='US' and device_category='desktop'"
 
     for modifications in [
-        #("", "", False)
-#        ("_US_desktop", "and country_code='US' and device_category='desktop'", False)
-        #("_amazon_preGAMAuction_client", "", True)
-        # ("_US_desktop_amazon_preGAMAuction_client", US_desktop, True),
-         ("_US_desktop_8_5_US_desktop_apGc", US_desktop + client_server_count_and_modification(0, 0), True),
-       #  ("_US_desktop_789_456_US_desktop_apGc", US_desktop + client_server_count_and_modification(1, 1), True),
-        # ("_US_desktop_678910_34567_US_desktop_apGc", US_desktop + client_server_count_and_modification(2, 2), True)#]:
-        ]:
+        ("", "", False),
+        ("_US_desktop", "and country_code='US' and device_category='desktop'", False),
+        ("_amazon_preGAMAuction_client", "", True),
+        ("_US_desktop_amazon_preGAMAuction_client", US_desktop, True),
+        ("_US_desktop_8_5_US_desktop_apGc", US_desktop + client_server_count_and_modification(0, 0), True),
+        ("_US_desktop_789_456_US_desktop_apGc", US_desktop + client_server_count_and_modification(1, 1), True),
+        ("_US_desktop_678910_34567_US_desktop_apGc", US_desktop + client_server_count_and_modification(2, 2), True)]:
 
         df_stats, df_hist_dict, filename_filter_string = get_df_stats_and_df_hist_dict(last_date, days, number_of_buckets,
             modifications, force_calc_rps_uncertainty, force_recalc_session_data, session_data_type)
@@ -243,24 +240,38 @@ def main(last_date, days,
         if do_plots:
             with PdfPages(f'plots/bidder_status_rps_uncertainty_{number_of_buckets}{filename_filter_string}.pdf') as pdf:
                 for bidder_status, data in df_hist_dict.items():
-                    do_hist_plots(data['df'], bidder_status, data['session_count'], pdf=pdf)
+                    do_hist_plots(data['df'], f'{filename_filter_string}_{bidder_status}', data['session_count'], pdf=pdf)
 
         df_stats_list.append(df_stats)
 
     df_stats = pd.concat(df_stats_list)
     df_stats['std_over_mean'] = df_stats['std'] / df_stats['mean']
     df_stats['std_over_mean_times_sqrt_sessions'] = df_stats['std_over_mean'] * np.sqrt(df_stats['sessions'])
-    df_stats.to_csv(f'plots/bidder_status_rps_uncertainty_stats_{number_of_buckets}.csv')
+    df_stats.to_csv(f'plots/bidder_status_rps_uncertainty_stats_{number_of_buckets}{session_data_type}.csv')
 
     df_stats_no_disables = df_stats[df_stats['status'] != 'disabled']
     for analysis_columns in [['sessions', 'modification'], ['sessions', 'status', 'modification']]:
         results = df_stats_no_disables[['mean', 'std', 'std_over_mean_times_sqrt_sessions'] + analysis_columns].groupby(analysis_columns).mean()
-        results.to_csv(f'plots/bidder_status_analysis_{number_of_buckets}_{'_'.join(analysis_columns)}.csv')
+        results.to_csv(f'plots/bidder_status_analysis_{number_of_buckets}_{'_'.join(analysis_columns)}{session_data_type}.csv')
+
+
+def main_final_merge(base_file='bidder_status_analysis_1000_sessions_modification'):
+
+    df_list = []
+    for f in ['dtf', 'dtf_split_revenue', 'evt', 'evt_split_revenue']:
+        df_in = pd.read_csv(f'plots/{base_file}_{f}.csv')
+        df_in['file'] = f
+        df_list.append(df_in)
+
+    df = pd.concat(df_list, axis=0)
+    df.to_csv(f'plots/{base_file}_merged.csv')
+    f = 0
 
 
 if __name__ == "__main__":
-#    main(last_date=datetime.date(2024, 8, 20), days=30)
+    main_final_merge()
 
-    #main(last_date=datetime.date(2024, 8, 20), days=30, session_data_type='_dtf_split_revenue', force_recalc_session_data=True)
-
-    main(last_date=datetime.date(2024, 8, 20), days=30, session_data_type='_evt_split_revenue', force_recalc_session_data=True)
+    # main(last_date=datetime.date(2024, 8, 20), days=30, do_plots=False)
+    # main(last_date=datetime.date(2024, 8, 20), days=30, session_data_type='_dtf_split_revenue')
+    # main(last_date=datetime.date(2024, 8, 20), days=30, session_data_type='_evt_split_revenue', force_recalc_session_data=False)
+    # main(last_date=datetime.date(2024, 8, 20), days=30, session_data_type='_evt', force_recalc_session_data=False)

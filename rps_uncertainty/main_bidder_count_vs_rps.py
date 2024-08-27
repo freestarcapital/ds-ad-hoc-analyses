@@ -25,6 +25,7 @@ def get_bq_data(query, replacement_dict={}):
         query = query.replace("{"+k+"}", f'{v}')
     return client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
 
+
 def main():
 
     query = open(os.path.join(sys.path[0], 'query_bidder_count_vs_rps.sql'), "r").read()
@@ -36,5 +37,55 @@ def main():
 
     a=0
 
+def main_device():
+
+    query = open(os.path.join(sys.path[0], 'query_bidder_count_vs_rps_device.sql'), "r").read()
+    df = get_bq_data(query)
+    df = df.pivot(index='bidders', columns='device_category', values='rps_client_server')
+    fig, ax = plt.subplots(figsize=(12, 9))
+    df.plot(style='x-', ylabel='rps', title='mask bidder count vs average rps', ax=ax)
+    fig.savefig('plots/bidder_count_vs_rps_device.png')
+
+    a=0
+
+def main_country():
+
+    include_counts = False
+    N = 20
+    query = open(os.path.join(sys.path[0], 'query_bidder_count_vs_rps_country_or_device.sql'), "r").read()
+
+    for cd in ['device_category', 'country_code']:
+        repl_dict = {'country_or_device': cd}
+
+        if include_counts:
+            fig, ax = plt.subplots(figsize=(20, 16), ncols=3, nrows=2)
+        else:
+            fig, ax = plt.subplots(figsize=(16, 12), ncols=3)
+
+        for i, bidders in enumerate(['client_bidders', 'server_bidders', 'all_bidders']):
+            repl_dict['which_bidders'] = bidders
+            df = get_bq_data(query, repl_dict)
+            df = df[df[bidders] > 0]
+            top_N = df[[cd, 'count']].groupby(cd).sum().sort_values('count', ascending=False)[:N].index
+
+            df_p = df.pivot(index=bidders, columns=cd, values='rps')
+            df_p = df_p[top_N]
+            col_order = df_p.iloc[0].sort_values(ascending=False).index
+            if include_counts:
+                df_p[col_order].plot(style='x-', ylabel='rps', ax=ax[0, i], title=bidders)
+
+                df_p = df.pivot(index=bidders, columns=cd, values='count')
+                df_p = df_p[top_N]
+                df_p[col_order].plot(style='x-', ylabel='count', ax=ax[1, i], title=bidders, logy=True)
+            else:
+                df_p[col_order].plot(style='x-', ylabel='rps', ax=ax[i], title=bidders)
+
+
+        fig.savefig(f'plots/bidder_count_vs_rps_{cd}.png')
+
+    a=0
+
 if __name__ == "__main__":
-    main()
+   # main()
+   # main_device()
+    main_country()
