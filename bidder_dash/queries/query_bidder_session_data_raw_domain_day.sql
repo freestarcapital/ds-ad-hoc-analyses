@@ -1,7 +1,7 @@
 
 DECLARE dates ARRAY<DATE> DEFAULT GENERATE_DATE_ARRAY(DATE_SUB('{processing_date}', INTERVAL {days_back_start} DAY), DATE_SUB('{processing_date}', INTERVAL {days_back_end} DAY));
 
-CREATE OR REPLACE TABLE `{project_id}.DAS_eventstream_session_data.bidder_session_data_raw_{aer_to_bwr_join_type}_{processing_date}_{days_back_start}_{days_back_end}`
+CREATE OR REPLACE TABLE `{project_id}.DAS_eventstream_session_data.bidder_session_data_raw_domain_day_{aer_to_bwr_join_type}_{processing_date}_{days_back_start}_{days_back_end}`
     OPTIONS (
         expiration_timestamp = TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL 365 DAY))
     AS
@@ -56,7 +56,7 @@ auc_end AS (
 session_agg AS (
     SELECT
         auc_end.country_code,
-        --auc_end.domain,
+        auc_end.domain,
         auc_end.fs_clientservermask,
         auc_end.fs_session_id,
         bwr.bidder winning_bidder,
@@ -88,23 +88,21 @@ session_agg AS (
         fs_testgroup in ('optimised', 'experiment')
         --fs_testgroup in ('experiment')
     GROUP BY
-        1, 2, 3, 4, 5, 6
+        1, 2, 3, 4, 5, 6, 7
 
 ), expanded AS (
-       SELECT offset+1 bidder_position, mask_value,
-           date, ts, country_code, fs_testgroup, fs_clientservermask, fs_session_id, device_category, winning_bidder, revenue
+       SELECT offset+1 bidder_position, * except (arr, offset)
        FROM (
-                SELECT SPLIT(fs_clientservermask, '') as arr,
-                    date, ts, country_code, fs_testgroup, fs_clientservermask, fs_session_id, device_category, winning_bidder, revenue
+                SELECT SPLIT(fs_clientservermask, '') as arr, *
                 FROM session_agg
             ) AS mask, mask.arr AS mask_value WITH OFFSET AS offset
-       )
+)
 
-select timestamp_trunc(ts, hour) date_hour, bidder, status, country_code, device_category, fs_testgroup,
+select date, bidder, status, country_code, domain, device_category, fs_testgroup,
     count(*) as session_count,
     sum(if(bidders.bidder = winning_bidder, revenue, 0)) revenue,
     sum(if(bidders.bidder = winning_bidder, pow(revenue, 2), 0)) revenue_sq
 from expanded
 LEFT JOIN `freestar-157323.ad_manager_dtf.lookup_bidders` bidders ON bidders.position = expanded.bidder_position
 LEFT JOIN `freestar-157323.ad_manager_dtf.lookup_mask` mask_lookup ON mask_lookup.mask_value = expanded.mask_value
-group by 1, 2, 3, 4, 5, 6
+group by 1, 2, 3, 4, 5, 6, 7

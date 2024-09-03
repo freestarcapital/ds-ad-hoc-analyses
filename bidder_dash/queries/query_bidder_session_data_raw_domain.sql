@@ -86,6 +86,7 @@ session_agg AS (
         --auc_end.fsrefresh != 'undefined'
         -- AND fsrefresh<>'' --AND fs_auction_id<>''
         fs_testgroup in ('optimised', 'experiment')
+        --fs_testgroup in ('experiment')
     GROUP BY
         1, 2, 3, 4, 5, 6, 7
 
@@ -95,10 +96,13 @@ session_agg AS (
                 SELECT SPLIT(fs_clientservermask, '') as arr, *
                 FROM session_agg
             ) AS mask, mask.arr AS mask_value WITH OFFSET AS offset
-       )
+)
 
-select bidder, status, expanded.* except (bidder_position, fs_clientservermask, winning_bidder, mask_value, revenue),
-    if(bidders.bidder = winning_bidder, revenue, 0) revenue
+select timestamp_trunc(ts, hour) date_hour, bidder, status, country_code, domain, device_category, fs_testgroup,
+    count(*) as session_count,
+    sum(if(bidders.bidder = winning_bidder, revenue, 0)) revenue,
+    sum(if(bidders.bidder = winning_bidder, pow(revenue, 2), 0)) revenue_sq
 from expanded
 LEFT JOIN `freestar-157323.ad_manager_dtf.lookup_bidders` bidders ON bidders.position = expanded.bidder_position
 LEFT JOIN `freestar-157323.ad_manager_dtf.lookup_mask` mask_lookup ON mask_lookup.mask_value = expanded.mask_value
+group by 1, 2, 3, 4, 5, 6, 7
