@@ -63,6 +63,6 @@ agg as
     group by 1, 2, 3, 4
 )
 
-select fs_session_id, fs_clientservermask, country_code, device_category, date --, revenue
+select fs_session_id, fs_clientservermask, country_code, device_category, date, --, revenue
     sum(revenue) over(partition by fs_session_id) revenue
 from agg

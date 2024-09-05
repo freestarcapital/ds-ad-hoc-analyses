@@ -101,7 +101,9 @@ session_agg AS (
 select date, bidder, status, country_code, domain, device_category, fs_testgroup,
     count(*) as session_count,
     sum(if(bidders.bidder = winning_bidder, revenue, 0)) revenue,
-    sum(if(bidders.bidder = winning_bidder, pow(revenue, 2), 0)) revenue_sq
+    sum(if(bidders.bidder = winning_bidder, pow(revenue, 2), 0)) revenue_sq,
+    sum(if(bidders.bidder = winning_bidder, 1, 0)) wins
+
 from expanded
 LEFT JOIN `freestar-157323.ad_manager_dtf.lookup_bidders` bidders ON bidders.position = expanded.bidder_position
 LEFT JOIN `freestar-157323.ad_manager_dtf.lookup_mask` mask_lookup ON mask_lookup.mask_value = expanded.mask_value

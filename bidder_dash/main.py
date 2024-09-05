@@ -61,29 +61,27 @@ def main_create_bidder_session_data_raw(last_date=datetime.date(2024, 9, 3), day
     # query = open(os.path.join(sys.path[0], 'queries/query_bidder_session_data_raw.sql'), "r").read()
     # get_bq_data(query, repl_dict)
 
-    query = open(os.path.join(sys.path[0], 'queries/query_bidder_session_data_raw_domain.sql'), "r").read()
-    get_bq_data(query, repl_dict)
+    # query = open(os.path.join(sys.path[0], 'queries/query_bidder_session_data_raw_domain.sql'), "r").read()
+    # get_bq_data(query, repl_dict)
 
-def main_country_code():
-
-    domain_table = '_domain'
-    domain_table = ''
+def main_country_code(rolling_days=1):
 
     repl_dict = {
         'project_id': project_id,
-        'select_dimensions': 'timestamp_trunc(date_hour, day) date, bidder, country_code',
-        'group_by_dimensions': 'date, bidder, country_code',
-        'tablename': f'bidder_session_data_raw_{domain_table} join _2024-09-01_30_1',
-        'where': f"where status = 'client' and bidder not in ('amazon', 'preGAMAuction') and device_category='desktop' and fs_testgroup = 'experiment'"
+        'select_dimensions': 'bidder, country_code',
+        'group_by_dimensions': 'bidder, country_code',
+        'tablename': 'bidder_session_data_raw_domain_day_join_2024-09-05_20_1',
+        'where': f" and status = 'client' and fs_testgroup = 'experiment'",
+        'N_days_preceding': rolling_days-1
     }
 
-    query = open(os.path.join(sys.path[0], 'queries/query_get_rps_and_uncertainty.sql'), "r").read()
+    query = open(os.path.join(sys.path[0], 'queries/query_get_rps_and_uncertainty_day_from_day_table.sql'), "r").read()
     df = get_bq_data(query, repl_dict)
     df['date'] = pd.to_datetime(df['date'])
 
     country_codes = df[['country_code', 'session_count']].groupby('country_code').sum().sort_values('session_count', ascending=False).index[:30]
 
-    with PdfPages(f'plots/rps_country_code{domain_table}.pdf') as pdf:
+    with PdfPages(f'plots/rps_country_code_rolling_{repl_dict["N_days_preceding"]+1}.pdf') as pdf:
         for cc in country_codes:
 
             df_cc = df[df['country_code'] == cc]
@@ -96,11 +94,11 @@ def main_country_code():
                 df_p_dict[value] = df_p
 
             fig, ax = plt.subplots(figsize=(16, 12), ncols=2)
-            fig.suptitle(f'{cc}, desktop')
-            df_p_dict['rps'].plot(yerr=df_p_dict['rps_std'], ax=ax[0], ylabel='rps with uncertainty')
+            fig.suptitle(f'{cc} desktop, rolling {repl_dict["N_days_preceding"]+1} day average')
+            df_p_dict['rps'].plot(yerr=df_p_dict['rps_std'], ax=ax[0], ylabel='bidder rps with uncertainty')
             df_p_dict['session_count'].plot(ax=ax[1], logy=True, ylabel='session count')
 
-            fig.savefig(f'plots/country_pngs/rps_{cc}.png')
+            fig.savefig(f'plots/country_pngs/rps_{cc}_rolling_{repl_dict["N_days_preceding"]+1}.png')
             pdf.savefig()
 
 
@@ -221,15 +219,18 @@ def main_testgroup():
                 pdf.savefig()
 
 def main_change():
-    main_bidders()
-    main_bidders('US desktop', "and country_code='US' and device_category = 'desktop'")
-
-
-def main_bidders(title='all', additional_where=""):
     # day_or_hour = 'hour'
     # days_or_hours_smoothing = 24
     day_or_hour = 'day'
-    days_or_hours_smoothing = 7
+
+    for days_or_hours_smoothing in [1, 7]:
+
+        main_bidders(day_or_hour=day_or_hour, days_or_hours_smoothing=days_or_hours_smoothing)
+        main_bidders('US desktop', "and country_code='US' and device_category = 'desktop'",
+                     day_or_hour=day_or_hour, days_or_hours_smoothing=days_or_hours_smoothing)
+
+
+def main_bidders(title='all', additional_where="", day_or_hour='day', days_or_hours_smoothing=7):
 
     if day_or_hour == 'day':
         time_col = 'date'
@@ -247,8 +248,7 @@ def main_bidders(title='all', additional_where=""):
         'select_dimensions': "bidder, fs_testgroup",
         'group_by_dimensions': 'bidder, fs_testgroup',
         'tablename': tablename,
-        'where': f" where status in ('client') "
-                 f" and bidder not in ('amazon', 'preGAMAuction', 'seedtag', 'justpremium', 'sonobi', 'insticator') {additional_where}",
+        'where': f" and status='client' {additional_where}",
         f'N_{day_or_hour}s_preceding': days_or_hours_smoothing-1
     }
     query = open(os.path.join(sys.path[0], f'queries/{query_name}.sql'), "r").read()
@@ -256,7 +256,7 @@ def main_bidders(title='all', additional_where=""):
     df[time_col] = pd.to_datetime(df[time_col])
 
     fig, ax = plt.subplots(figsize=(16, 12), ncols=2)
-    fig.suptitle(title)
+    fig.suptitle(f'{title}, rolling {days_or_hours_smoothing}{day_or_hour}s')
 
     for i, tg in enumerate(['experiment', 'optimised']):
         df_tg = df[df['fs_testgroup'] == tg]
@@ -302,16 +302,15 @@ def main_domain():
 
             fig, ax = plt.subplots(figsize=(12, 9))
             fig.suptitle(d)
-            df_p_dict['rps'].plot(yerr=df_p_dict['rps_std'], ax=ax, ylabel='rps with uncertainty')
+            df_p_dict['rps'].plot(yerr=df_p_dict['rps_std'], ax=ax, ylabel='bidder rps with uncertainty')
             #df_p_dict['session_count'].plot(ax=ax[1], logy=True, ylabel='session count')
 
             fig.savefig(f'plots/domain_pngs/rps_{d}.png')
             pdf.savefig()
 
-
 if __name__ == "__main__":
-    #main_create_bidder_session_data_raw(datetime.date(2024, 9, 5), days=20)
-    #main_country_code()
+    #main_create_bidder_session_data_raw(datetime.date(2024, 9, 5), days=60)
+    #main_country_code(7)
     #main_rolling_hour()
 
     #main_rolling_day()
@@ -320,4 +319,6 @@ if __name__ == "__main__":
 
     #main_change()
 
-    main_domain()
+    #main_domain()
+
+    main_prediction()

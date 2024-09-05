@@ -28,34 +28,32 @@ def get_bq_data(query, replacement_dict={}):
 
 def main():
 
+#    repl_dict = {'table_ext': '2024-08-20_30_1'}
+    repl_dict = {'table_ext': '2024-09-05_7_1',
+                # 'DTF_or_eventstream': 'eventstream'}
+                 'DTF_or_eventstream': 'DTF'}
+
     query = open(os.path.join(sys.path[0], 'query_bidder_count_vs_rps.sql'), "r").read()
-    df = get_bq_data(query)
+    df = get_bq_data(query, repl_dict)
     df = df.set_index('bidders')
     fig, ax = plt.subplots(figsize=(12, 9))
     df.plot(style='x-', ylabel='rps', title='mask bidder count vs average rps', ax=ax)
-    fig.savefig('plots/bidder_count_vs_rps.png')
+    fig.savefig(f'plots/bidder_count_vs_rps_{repl_dict['DTF_or_eventstream']}_{repl_dict['table_ext']}.png')
 
-    a=0
-
-def main_device():
-
-    query = open(os.path.join(sys.path[0], 'query_bidder_count_vs_rps_device.sql'), "r").read()
-    df = get_bq_data(query)
-    df = df.pivot(index='bidders', columns='device_category', values='rps_client_server')
-    fig, ax = plt.subplots(figsize=(12, 9))
-    df.plot(style='x-', ylabel='rps', title='mask bidder count vs average rps', ax=ax)
-    fig.savefig('plots/bidder_count_vs_rps_device.png')
-
-    a=0
 
 def main_country():
 
-    include_counts = False
+#    repl_dict = {'table_ext': '2024-08-20_30_1'}
+    repl_dict = {'table_ext': '2024-09-05_7_1',
+                # 'DTF_or_eventstream': 'eventstream'}
+                 'DTF_or_eventstream': 'DTF'}
+
+    include_counts = True
     N = 20
     query = open(os.path.join(sys.path[0], 'query_bidder_count_vs_rps_country_or_device.sql'), "r").read()
 
     for cd in ['device_category', 'country_code']:
-        repl_dict = {'country_or_device': cd}
+        repl_dict['country_or_device'] = cd
 
         if include_counts:
             fig, ax = plt.subplots(figsize=(20, 16), ncols=3, nrows=2)
@@ -81,11 +79,10 @@ def main_country():
                 df_p[col_order].plot(style='x-', ylabel='rps', ax=ax[i], title=bidders)
 
 
-        fig.savefig(f'plots/bidder_count_vs_rps_{cd}.png')
+        fig.savefig(f'plots/bidder_count_vs_rps_{cd}_{repl_dict['DTF_or_eventstream']}_{repl_dict['table_ext']}.png')
 
     a=0
 
 if __name__ == "__main__":
-   # main()
-   # main_device()
+    #main()
     main_country()

@@ -269,7 +269,15 @@ def main_final_merge(base_file='bidder_status_analysis_1000_sessions_modificatio
 
 
 if __name__ == "__main__":
-    main_final_merge()
+
+#    get_dtf_session_data('2024-09-05', 7, force_recalc=True, session_data_type='_dtf_split_revenue')
+#    get_dtf_session_data('2024-09-05', 7, force_recalc=True, session_data_type='_dtf')
+
+#    get_eventstream_session_data('2024-09-05', 7, force_recalc=True, session_data_type='split_revenue')
+    get_eventstream_session_data('2024-09-05', 7, force_recalc=True, session_data_type='')
+
+
+    #main_final_merge()
 
     # main(last_date=datetime.date(2024, 8, 20), days=30, do_plots=False)
     # main(last_date=datetime.date(2024, 8, 20), days=30, session_data_type='_dtf_split_revenue')

@@ -38,7 +38,7 @@ with status_fix as (
 select date, {group_by_dimensions},
     session_count,
     mean_revenue * 1000 rps,
-    sqrt((mean_revenue_sq - pow(mean_revenue, 2)) / session_count) * 1000 rps_std
+    if(mean_revenue_sq < pow(mean_revenue, 2), 0, sqrt((mean_revenue_sq - pow(mean_revenue, 2)) / session_count)) * 1000 rps_std
 
 from stats
 
