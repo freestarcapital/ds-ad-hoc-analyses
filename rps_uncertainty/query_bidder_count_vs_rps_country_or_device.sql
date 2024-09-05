@@ -10,7 +10,9 @@ where fs_clientservermask is not null
     select *, client_bidders + server_bidders all_bidders from t1
 )
  select {which_bidders}, {country_or_device},
-  avg(revenue) * 1000 rps, count(*) count
+  avg(revenue) * 1000 rps, count(*) count,
+  sqrt((avg(pow(revenue, 2)) - pow(avg(revenue), 2)) / count(*)) * 1000 rps_err
+
   from t2
   group by 1, 2
 order by 1, 2

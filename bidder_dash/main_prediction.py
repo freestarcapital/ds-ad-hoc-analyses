@@ -78,7 +78,7 @@ def main_prediction():
         ['country_code', 'device_category']).sum().sort_values(by='session_count', ascending=False).index
 
     stats_list = []
-    for (cc, dc) in cc_dc_list[:20]:
+    for (cc, dc) in cc_dc_list[:200]:
         if (len(cc) > 0) and (len(dc) > 0):
             print(f'doing: {cc} {dc}')
             stats = main_prediction_country(query, repl_dict, cc, dc)
@@ -87,9 +87,9 @@ def main_prediction():
 
     h = 0
 
-def main_prediction_country(query, repl_dict, country_code='US', device_category='desktop', pdf=None, tablename='bidder_session_data_raw_domain_day_join_2024-09-05_20_1'):
+def main_prediction_country(query, repl_dict, country_code='US', device_category='desktop'):
 
-    N_vals = [1, 2, 3, 7, 14]
+    N_vals = [1, 2, 3, 7]
     df_dict = {}
     for N in N_vals:
         repl_dict['N_days_preceding'] = N
@@ -99,28 +99,18 @@ def main_prediction_country(query, repl_dict, country_code='US', device_category
 
     N_max = max(N_vals)
 
-    df_target = df_dict[1]['rps'].shift(-1)
-    bidders = df_target.columns
-    y = df_target[N_max:-1].values.flatten()
-
-    if pdf is not None:
-        for b in bidders:
-            fig, ax = plt.subplots(figsize=(12, 9))
-            fig.suptitle(b)
-            df = pd.concat([df_target[b].to_frame('target')] + [df['rps', b].to_frame(N) for N, df in df_dict.items()], axis=1)
-            df[N_max:-1].plot(ax=ax)
-            pdf.savefig()
-
     stats_list = []
-    for N, df in df_dict.items():
-        z = pd.DataFrame({'X': df['rps'][bidders][N_max:-1].values.flatten(), 'y': y}).dropna()
+    for N, df_N in df_dict.items():
+        rps = df_N['rps']
+        df_target = rps.shift(-N)
+        z = pd.DataFrame({'X': rps[N_max:-N_max].values.flatten(), 'y': df_target[N_max:-N_max].values.flatten()}).dropna()
         reg = LinearRegression(fit_intercept=False).fit(z[['X']], z['y'])
         stats_list.append({'country_code': country_code,
                            'device_category': device_category,
                            'N': N,
                            'R^2': reg.score(z[['X']], z['y']),
                            'coeff': reg.coef_[0],
-                           'session_count': df['session_count'].mean().mean()})
+                           'session_count': df_N['session_count'].mean().mean()})
 
     stats = pd.DataFrame(stats_list)
     return(stats)

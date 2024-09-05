@@ -63,7 +63,6 @@ session_agg AS (
         `freestar-157323.ad_manager_dtf`.device_category_eventstream(device_class, os) AS device_category,
         --MIN(`freestar-157323.ad_manager_dtf`.FSRefreshClassify(auc_end.fsrefresh)) AS fsrefresh, -- not convinced this is right - should it really be min?
         CAST(FORMAT('%.10f', COALESCE(ROUND(SUM(bwr.cpm), 0), 0) / 1e7) AS float64) AS revenue,
-        CAST(FORMAT('%.10f', COALESCE(ROUND(SUM(power(bwr.cpm, 2)), 0), 0) / 1e7) AS float64) AS revenue_sq,
         min(auc_end.date) date,
         --COUNT(DISTINCT CONCAT(auc_end.placement_id, auc_end.fs_auction_id)) AS impressions,
         -- SUM(IF(is_empty IS TRUE and is_native_render is FALSE, 1, 0)) AS unfilled,
@@ -90,7 +89,5 @@ session_agg AS (
 )
 
 select country_code, fs_clientservermask, fs_session_id, device_category, date,
-    sum(revenue) over(partition by fs_session_id) revenue,
-    sum(revenue_sq) over(partition by fs_session_id) revenue_sq
-
-   from session_agg
+    sum(revenue) over(partition by fs_session_id) revenue
+    from session_agg
