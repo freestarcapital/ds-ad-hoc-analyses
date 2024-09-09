@@ -54,7 +54,9 @@ def get_data_using_query(query, filename, index=None, force_calc=False, repl_dic
 
 
 def main_prediction():
-    predict_N_ahead = True
+    predict_N_ahead = False
+    #(x_axis, x_axis_label, logx, min_session_count, include_err) = ('std_prop_perc', 'rps-std / rps-mean in %', False, 500, True)
+    (x_axis, x_axis_label, logx, min_session_count, include_err) = ('session_count_bin', 'session count (binned)', True, 500, True)
 
     query_name = 'query_get_rps_and_uncertainty_day_from_day_table'
     tablename = 'bidder_session_data_raw_domain_day_join_2024-09-05_60_1'
@@ -76,11 +78,12 @@ def main_prediction():
     #     stats = main_prediction_country(query, repl_dict, pdf=pdf)
     # print(stats)
 
-    cc_dc_list = df_all[['country_code', 'device_category', 'session_count']].groupby(
-        ['country_code', 'device_category']).sum().sort_values(by='session_count', ascending=False).index
+    cc_dc_session_count = df_all[['country_code', 'device_category', 'session_count']].groupby(
+        ['country_code', 'device_category']).sum().sort_values(by='session_count', ascending=False)
+    cc_dc_list = cc_dc_session_count[cc_dc_session_count['session_count'] > min_session_count].index
 
     stats_list = []
-    for (cc, dc) in cc_dc_list[:20]:
+    for (cc, dc) in cc_dc_list:
         if (len(cc) > 0) and (len(dc) > 0):
             #print(f'doing: {cc} {dc}')
             stats = main_prediction_country(query, repl_dict, cc, dc, predict_N_ahead=predict_N_ahead)
@@ -90,16 +93,20 @@ def main_prediction():
     stats = pd.concat(stats_list)
     stats['R^2_sq'] = stats['R^2'] ** 2
     stats['count'] = 1
-    sg = stats.groupby(['std_prop_perc', 'N']).agg({'count': 'sum', 'R^2': 'mean', 'R^2_sq': 'mean'})
+    sg = stats.groupby([x_axis, 'N']).agg({'count': 'sum', 'R^2': 'mean', 'R^2_sq': 'mean'})
     sg['R^2_err'] = np.sqrt((sg['R^2_sq'] - (sg['R^2'] ** 2)) / (sg['count'] - 1))
     sg = sg.reset_index()
-    r_sq = 100 * sg.pivot(index='std_prop_perc', columns='N', values='R^2')
-    r_sq_err = 100 * sg.pivot(index='std_prop_perc', columns='N', values='R^2_err')
+    r_sq = 100 * sg.pivot(index=x_axis, columns='N', values='R^2')
+    r_sq_err = 100 * sg.pivot(index=x_axis, columns='N', values='R^2_err')
 
     fig, ax = plt.subplots(figsize=(16, 12))
-    r_sq.plot(ax=ax, yerr=r_sq_err, ylabel='R^2', xlabel='rps-std / rps-mean',
+    if include_err:
+        r_sq.plot(ax=ax, yerr=r_sq_err, ylabel='R^2', xlabel=x_axis_label, logx=logx,
+                  title=f'R^2 of rolling rps as a predictor of future rps ({"N" if predict_N_ahead else "1"} ahead)')
+    else:
+        r_sq.plot(ax=ax, ylabel='R^2', xlabel=x_axis_label, logx=logx,
               title=f'R^2 of rolling rps as a predictor of future rps ({"N" if predict_N_ahead else "1"} ahead)')
-    fig.savefig(f'plots/predictions_predict_N_ahead_{predict_N_ahead}.pdf')
+    fig.savefig(f'plots/predictions_predict_N_ahead_{predict_N_ahead}_{x_axis}.png')
 
     h = 0
 
@@ -133,28 +140,32 @@ def main_prediction_country(query, repl_dict, country_code='US', device_category
 
         std_prop_perc = 100 * df_N['rps_std'].mean().mean() / df_N['rps'].mean().mean()
         std_prop_perc_bin = 100
-        for b in [2, 5, 10, 20, 50]:
+        for b in [2, 5, 10, 20, 50, 80]:
             if std_prop_perc < b:
                 std_prop_perc_bin = b
                 break
 
+        session_count_mean = df_N['session_count'].mean().mean()
+        session_count_bin = 300
+        for b in [300000, 100000, 30000, 10000, 3000, 1000]:
+            if session_count_mean > b:
+                session_count_bin = b
+                break
+
         reg = LinearRegression(fit_intercept=False).fit(z[['X']], z['y'])
+        rmse = np.sqrt(np.mean((z['y'] - reg.predict(z[['X']])) ** 2))
+
         stats_list.append({'country_code': country_code,
                            'device_category': device_category,
                            'N': N,
                            'R^2': reg.score(z[['X']], z['y']),
                            'coeff': reg.coef_[0],
                            'session_count': df_N['session_count'].mean().mean(),
-                           'std_prop_perc': std_prop_perc_bin})
+                           'std_prop_perc': std_prop_perc_bin,
+                           'session_count_bin': session_count_bin})
 
     stats = pd.DataFrame(stats_list)
     return(stats)
-
-
-
-
-
-
 
     h = 0
 

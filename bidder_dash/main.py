@@ -317,8 +317,7 @@ if __name__ == "__main__":
 
     #main_testgroup()
 
-    #main_change()
+    main_change()
 
     #main_domain()
 
-    main_prediction()

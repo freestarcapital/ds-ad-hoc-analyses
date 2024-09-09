@@ -46,18 +46,18 @@ def get_eventstream_session_data(last_date, days, force_recalc=False, session_da
 
     return tablename
 
-def get_dtf_session_data(last_date, days, force_recalc=True, session_data_type=''):
+def get_dtf_session_data(last_date, days, force_recalc=True, session_data_type='', expt_or_opt='expt'):
     repl_dict = {'project_id': project_id,
                  'processing_date': last_date,
                  'days_back_start': days,
                  'days_back_end': 1}
 
     if 'split_revenue' in session_data_type:
-        query_file = "query_create_DTF_DAS_expt_stats_split_revenue.sql"
-        tablename = f'DTF_DAS_expt_stats_split_revenue_{repl_dict["processing_date"]}_{repl_dict["days_back_start"]}_{repl_dict["days_back_end"]}'
+        query_file = f"query_create_DTF_DAS_{expt_or_opt}_stats_split_revenue.sql"
+        tablename = f'DTF_DAS_{expt_or_opt}_stats_split_revenue_{repl_dict["processing_date"]}_{repl_dict["days_back_start"]}_{repl_dict["days_back_end"]}'
     else:
-        query_file = "query_create_DTF_DAS_expt_stats.sql"
-        tablename = f'DTF_DAS_expt_stats_{repl_dict["processing_date"]}_{repl_dict["days_back_start"]}_{repl_dict["days_back_end"]}'
+        query_file = f"query_create_DTF_DAS_{expt_or_opt}_stats.sql"
+        tablename = f'DTF_DAS_{expt_or_opt}_stats_{repl_dict["processing_date"]}_{repl_dict["days_back_start"]}_{repl_dict["days_back_end"]}'
 
     if force_recalc:
         print(f'creating table: {tablename}')
@@ -269,11 +269,12 @@ def main_final_merge(base_file='bidder_status_analysis_1000_sessions_modificatio
 
 
 if __name__ == "__main__":
+    expt_or_opt = 'opt'
 
-#    get_dtf_session_data('2024-09-05', 7, force_recalc=True, session_data_type='_dtf_split_revenue')
+    get_dtf_session_data('2024-09-05', 20, force_recalc=True, session_data_type='_dtf_split_revenue', expt_or_opt=expt_or_opt)
 #    get_dtf_session_data('2024-09-05', 7, force_recalc=True, session_data_type='_dtf')
 
-    get_eventstream_session_data('2024-09-05', 7, force_recalc=True, session_data_type='split_revenue')
+#    get_eventstream_session_data('2024-09-05', 20, force_recalc=True, session_data_type='split_revenue')
 #    get_eventstream_session_data('2024-09-05', 7, force_recalc=True, session_data_type='')
 
 

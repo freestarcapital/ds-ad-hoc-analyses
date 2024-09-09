@@ -23,15 +23,20 @@ bqstorageclient = bigquery_storage.BigQueryReadClient()
 def get_bq_data(query, replacement_dict={}):
     for k, v in replacement_dict.items():
         query = query.replace("{"+k+"}", f'{v}')
-    return client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
 
+    df = client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
+    for col in ['date', 'date_hour']:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col])
+
+    return df
 
 def main():
 
 #    repl_dict = {'table_ext': '2024-08-20_30_1'}
     repl_dict = {'table_ext': '2024-09-05_7_1',
-                 'DTF_or_eventstream': 'eventstream'}
-                # 'DTF_or_eventstream': 'DTF'}
+                # 'DTF_or_eventstream': 'eventstream'}
+                 'DTF_or_eventstream': 'DTF'}
 
     query = open(os.path.join(sys.path[0], 'query_bidder_count_vs_rps.sql'), "r").read()
     df = get_bq_data(query, repl_dict)
@@ -100,6 +105,90 @@ def main_country():
 
     a=0
 
+def main_by_day():
+    repl_dict = {'table_ext': '2024-09-05_20_1',
+                 'DTF_or_eventstream': 'DTF'}
+    query = open(os.path.join(sys.path[0], 'query_bidder_count_vs_rps_by_day.sql'), "r").read()
+
+    for (where, title) in [("country_code = 'US' and device_category = 'desktop'", 'US desktop'),
+                           ("country_code = 'US' and device_category != 'desktop'", 'US non desktop'),
+                           ("country_code = 'US'", 'US'),
+                           ("country_code != 'US'", 'non US')]:
+
+        repl_dict['and_where'] = ' and ' + where
+        df_all = get_bq_data(query, repl_dict)
+
+        df_all = df_all[(df_all['date'] >= '2024-08-21') & (df_all['date'] != '2024-08-28')]
+
+        cols_to_plot = ['rps_client', 'rps_server', 'rps_client_server']
+        for i, col in enumerate(cols_to_plot):
+
+            plot_title = f'Experiment rps for {title} for {col.replace("rps_","")}'
+
+            df = df_all[['bidders', 'date'] + [col]].pivot(index='bidders', columns='date', values=col)
+            col_err = col + '_err'
+            df_err = df_all[['bidders', 'date'] + [col_err]].pivot(index='bidders', columns='date', values=col_err)
+            fig, ax = plt.subplots(figsize=(12, 9))
+            df.plot(ax=ax, ylabel=col, yerr=df_err, title=plot_title)
+            fig.savefig(f'plots/rps_count_date_{title.replace(' ', '_')}_{col}.png')
+
+            df_split = {'before': df.loc[:, df.columns < '2024-08-28'],
+                        'after': df.loc[:, df.columns >= '2024-08-29']}
+
+            df_list = []
+            df_err_list = []
+            for name, df_d in df_split.items():
+                df_list.append(df_d.mean(axis=1).to_frame(name))
+                df_err_list.append(np.sqrt(((df_d ** 2).mean(axis=1) - df_d.mean(axis=1) ** 2) / (len(df_d.columns)-1)).to_frame(name))
+
+            df_j = pd.concat(df_list, axis=1)
+            df_j_err = pd.concat(df_err_list, axis=1)
+
+            fig, ax = plt.subplots(figsize=(12, 9))
+            df_j.plot(ax=ax, ylabel=col, yerr=df_j_err, title=plot_title)
+            fig.savefig(f'plots/rps_count_date_joint_{title.replace(' ', '_')}_{col}.png')
+
+            j = 0
+
+def main_opt_over_time():
+
+    for (where, title) in [('country_code = "US" and device_category = "desktop"', 'US desktop'),
+                           ('country_code = "US" and device_category != "desktop"', 'US non desktop'),
+                           ("country_code = 'US'", 'US'),
+                           ('country_code != "US"', 'non US')]:
+
+        query = ('select date, avg(revenue) * 1000 rps, '
+                 'avg(array_length(REGEXP_EXTRACT_ALL(substr(fs_clientservermask, 2, 21), "2")) + if(date >= "2024-08-28", 6, 0)) AS client_bidders, '
+                 'avg(array_length(REGEXP_EXTRACT_ALL(substr(fs_clientservermask, 2, 21), "3"))) AS server_bidders, '
+                 'from `streamamp-qa-239417.DAS_eventstream_session_data.DTF_DAS_opt_stats_split_revenue_2024-09-05_20_1` '
+                 f'where (fs_clientservermask is not null) and char_length(fs_clientservermask) = 23 '
+                 "and regexp_contains(fs_clientservermask, '[0123]{23}') "
+                 f'and {where} '
+                 'group by 1 order by 1')
+
+        df = get_bq_data(query)
+        df = df[(df['date'] >= '2024-08-21') & (df['date'] != '2024-08-28')]
+        df = df.set_index('date')
+
+        df_dict = {'before': df[df.index < '2024-08-28']['rps'],
+                   'after': df[df.index > '2024-08-28']['rps']}
+
+        plot_title = title
+        for name, df_d in df_dict.items():
+            plot_title += f', {name} rps: {df_d.mean():0.1f} +/- {np.sqrt(((df_d ** 2).mean() - df_d.mean() ** 2) / (len(df_d) - 1)):0.1f}'
+
+        fig, ax = plt.subplots(figsize=(12, 9))
+        df[['rps']].plot(ax=ax, title=f'Optimised rps for {plot_title}', ylabel='rps', style='x-')
+        df[['client_bidders', 'server_bidders']].plot(ax=ax, ylabel='bidder count', style='x-',
+                secondary_y=['client_bidders', 'server_bidders'])
+        fig.savefig(f'plots/rps_opt_over_time_{title.replace(" ", "_")}.png')
+
+
+
 if __name__ == "__main__":
-    main()
+    #main()
     #main_country()
+
+    main_opt_over_time()
+
+#    main_by_day()
