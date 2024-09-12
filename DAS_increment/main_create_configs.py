@@ -43,15 +43,19 @@ def main_create_bidder_domain_expt_session_stats(last_date=datetime.date(2024, 9
 
 
 def main_create_daily_configs():
+
+    processing_date = datetime.date(2024, 8, 20)
+
     repl_dict = {'project_id': project_id,
-                 'tablename': 'DAS_increment.daily_bidder_domain_expt_stats_join_2024-09-09_30_1',
-                 'date': '2024-08-20',
-                 'dimensions': 'bidder, status, country_code, device_category',
-                 'min_session_count': 1000}
+                 'tablename_from': 'daily_bidder_domain_expt_stats_join_2024-09-09_30_1',
+                 'tablename_to': 'DAS_config',
+                 'processing_date': '2024-09-04',
+                 'days_back_start': 7,
+                 'days_back_end': 1,
+                 'min_all_bidder_session_count': 50000,
+                 'min_individual_bidder_session_count': 1000}
 
-    repl_dict['dimensions_without_country_code'] = [d for d in repl_dict['dimensions'] if d != 'country_code']
-
-    query = open(os.path.join(sys.path[0], 'queries/query_create_daily_config.sql'), "r").read()
+    query = open(os.path.join(sys.path[0], 'queries/query_create_daily_country_config.sql'), "r").read()
     get_bq_data(query, repl_dict)
 
 

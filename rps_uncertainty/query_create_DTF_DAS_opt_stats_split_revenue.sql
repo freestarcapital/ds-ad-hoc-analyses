@@ -57,12 +57,12 @@ CREATE OR REPLACE TABLE `{project_id}.DAS_eventstream_session_data.DTF_DAS_opt_s
 
 agg as
 (
-    select fs_session_id, fs_clientservermask, country_code, device_category, sum(revenue) as revenue, min(date) date
+    select fs_session_id, fs_clientservermask, country_code, device_category, rtt_category, sum(revenue) as revenue, min(date) date
     from uni
     where fs_testgroup = 'optimised'
-    group by 1, 2, 3, 4
+    group by 1, 2, 3, 4, 5
 )
 
-select fs_session_id, fs_clientservermask, country_code, device_category, date, revenue
+select fs_session_id, fs_clientservermask, country_code, device_category, date, rtt_category, revenue
     --sum(revenue) over(partition by fs_session_id) revenue
 from agg

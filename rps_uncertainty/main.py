@@ -269,9 +269,13 @@ def main_final_merge(base_file='bidder_status_analysis_1000_sessions_modificatio
 
 
 if __name__ == "__main__":
-    expt_or_opt = 'opt'
+    expt_or_opt = 'expt'
+    get_dtf_session_data('2024-09-11', 40, force_recalc=True, session_data_type='_dtf_split_revenue', expt_or_opt=expt_or_opt)
 
-    get_dtf_session_data('2024-09-05', 20, force_recalc=True, session_data_type='_dtf_split_revenue', expt_or_opt=expt_or_opt)
+    expt_or_opt = 'opt'
+    get_dtf_session_data('2024-09-11', 40, force_recalc=True, session_data_type='_dtf_split_revenue', expt_or_opt=expt_or_opt)
+#
+
 #    get_dtf_session_data('2024-09-05', 7, force_recalc=True, session_data_type='_dtf')
 
 #    get_eventstream_session_data('2024-09-05', 20, force_recalc=True, session_data_type='split_revenue')

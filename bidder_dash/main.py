@@ -309,7 +309,7 @@ def main_domain():
             pdf.savefig()
 
 if __name__ == "__main__":
-    #main_create_bidder_session_data_raw(datetime.date(2024, 9, 5), days=60)
+    #main_create_bidder_session_data_raw(datetime.date(2024, 9, 10), days=40)
     #main_country_code(7)
     #main_rolling_hour()
 
