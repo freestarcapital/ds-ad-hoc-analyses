@@ -44,19 +44,39 @@ def main_create_bidder_domain_expt_session_stats(last_date=datetime.date(2024, 9
 
 def main_create_daily_configs():
 
-    processing_date = datetime.date(2024, 8, 20)
+    processing_date = datetime.date(2024, 9, 4)
 
     repl_dict = {'project_id': project_id,
                  'tablename_from': 'daily_bidder_domain_expt_stats_join_2024-09-09_30_1',
                  'tablename_to': 'DAS_config',
-                 'processing_date': '2024-09-04',
+                 'processing_date': processing_date.strftime("%Y-%m-%d"),
                  'days_back_start': 7,
                  'days_back_end': 1,
-                 'min_all_bidder_session_count': 50000,
+                 'min_all_bidder_session_count': 100000,
                  'min_individual_bidder_session_count': 1000}
 
-    query = open(os.path.join(sys.path[0], 'queries/query_create_daily_country_config.sql'), "r").read()
-    get_bq_data(query, repl_dict)
+    # query = open(os.path.join(sys.path[0], 'queries/query_create_daily_country_config.sql'), "r").read()
+    # get_bq_data(query, repl_dict)
+
+    query = (f'select bidder || "-" || status as bidder_status, rn, count(*) count, sum(session_count) session_count, avg(rps) rps '
+             f'from `{project_id}.DAS_increment.{repl_dict["tablename_to"]}` '
+             f'group by 1, 2')
+
+    df = get_bq_data(query, repl_dict)
+    df['revenue'] = df['session_count'] * df['rps']
+
+    for col in ['count', 'session_count', 'revenue']:
+        df_p = df.pivot(index='rn', columns='bidder_status', values=col).fillna(0)
+        df_p_cum_sum = df_p.cumsum()
+        df_totals = df_p.sum()
+        df_r = df_p_cum_sum / df_totals
+        col_order = df_r.mean().sort_values(ascending=False).index
+        df_r = df_r[col_order]
+
+        fig, ax = plt.subplots(figsize=(12, 9))
+        df_r.plot(ax=ax, xlabel='bidder status rank', ylabel=f'cumulative proportion weighted by {col}', title='Bidder status performance summary')
+        fig.savefig(f'plots/bidder_status_perf_{col}.png')
+    f = 0
 
 
 if __name__ == "__main__":

@@ -277,7 +277,7 @@ def main_domain():
         'project_id': project_id,
         'select_dimensions': 'bidder, domain',
         'group_by_dimensions': 'bidder, domain',
-        'tablename': 'bidder_session_data_raw_domain_day_join_2024-09-05_20_1',
+        'tablename': 'bidder_session_data_raw_domain_day_join_2024-09-16_10_1',
         'where': f" and status = 'client' and fs_testgroup='optimised'",
         'N_days_preceding': 0
     }
@@ -286,7 +286,7 @@ def main_domain():
     df = get_bq_data(query, repl_dict)
     df['date'] = pd.to_datetime(df['date'])
 
-    domains = df[['domain', 'session_count']].groupby('domain').sum().sort_values('session_count', ascending=False).index[:30]
+    domains = df[['domain', 'session_count']].groupby('domain').sum().sort_values('session_count', ascending=False).index[:50]
 
     with PdfPages(f'plots/rps_domains.pdf') as pdf:
         for d in domains:
@@ -309,7 +309,7 @@ def main_domain():
             pdf.savefig()
 
 if __name__ == "__main__":
-    #main_create_bidder_session_data_raw(datetime.date(2024, 9, 10), days=40)
+    #main_create_bidder_session_data_raw(datetime.date(2024, 9, 16), days=10)
     #main_country_code(7)
     #main_rolling_hour()
 
@@ -317,7 +317,7 @@ if __name__ == "__main__":
 
     #main_testgroup()
 
-    main_change()
+    #main_change()
 
-    #main_domain()
+    main_domain()
 

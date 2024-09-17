@@ -59,7 +59,7 @@ with status_fix as (
 
 ), rank as (
 
-    select *, safe_divide(rps, rps_std) rps_z_score,
+    select *, ifnull(safe_divide(rps, rps_std), 0) rps_z_score,
         row_number() over(partition by country_code order by rps desc) rn
     from stats
 
@@ -67,4 +67,6 @@ with status_fix as (
 
 select cast('{processing_date}' as date) as date, *
 from rank
+
+
 

@@ -106,22 +106,23 @@ def main_country():
     a=0
 
 def main_by_day():
-    repl_dict = {'table_ext': '2024-09-11_40_1',
+    repl_dict = {'table_ext': '2024-09-15_40_1',
                  'DTF_or_eventstream': 'DTF'}
     query = open(os.path.join(sys.path[0], 'query_bidder_count_vs_rps_by_day.sql'), "r").read()
+    query_session_count = open(os.path.join(sys.path[0], 'query_bidder_count_vs_rps_session_count.sql'), "r").read()
 
     for (where_raw, title_raw) in [("country_code = 'US' and device_category = 'desktop'", 'US desktop'),
                            ("country_code = 'US' and device_category != 'desktop'", 'US non desktop'),
                            ("country_code = 'US'", 'US'),
                            ("country_code != 'US'", 'non US')]:
 
-        for rtt in [None, 'slow', 'medium', 'fast', 'superfast']:
+        for rtt in [None]:#, 'slow', 'medium', 'fast', 'superfast']:
 
             where = where_raw
             title = title_raw
             if rtt is not None:
-                where += f' and rtt_category = "{rtt}"'
-                title += f' rtt {rtt}'
+                where += f" and rtt_category = '{rtt}'"
+                title += f" rtt {rtt}"
 
             print(f'doing: {title}')
 
@@ -131,7 +132,7 @@ def main_by_day():
                 print(f'no data for {title}, skipping')
                 continue
 
-            df_all = df_all[(df_all['date'] >= '2024-08-16') & (df_all['date'] != '2024-08-28')]
+            df_all = df_all[(df_all['date'] >= '2024-08-17') & (df_all['date'] != '2024-08-28')]
 
             cols_to_plot = ['rps_client', 'rps_server', 'rps_client_server']
             for i, col in enumerate(cols_to_plot):
@@ -146,7 +147,9 @@ def main_by_day():
                 fig.savefig(f'plots/rps_count_date_{title.replace(' ', '_')}_{col}.png')
 
                 df_split = {'before': df.loc[:, df.columns <= '2024-08-27'],
-                            'after': df.loc[:, df.columns >= '2024-08-29']}
+                            #'after': df.loc[:, df.columns >= '2024-08-29']}
+                            'after_wk1': df.loc[:, (df.columns >= '2024-08-29') & (df.columns <= '2024-09-03')],
+                            'after_wk2': df.loc[:, df.columns >= '2024-09-03']}
 
                 df_list = []
                 df_err_list = []
@@ -155,11 +158,19 @@ def main_by_day():
                     df_err_list.append(np.sqrt(((df_d ** 2).mean(axis=1) - df_d.mean(axis=1) ** 2) / (len(df_d.columns)-1)).to_frame(name))
 
                 df_j = pd.concat(df_list, axis=1)
+                df_j = df_j.loc[df_j.sum(axis=1) > 0]
                 df_j_err = pd.concat(df_err_list, axis=1)
+                df_j_err = df_j_err.loc[df_j_err.sum(axis=1) > 0]
 
                 fig, ax = plt.subplots(figsize=(12, 9))
                 df_j.plot(ax=ax, ylabel=col, yerr=df_j_err, title=plot_title)
-                fig.savefig(f'plots/rps_count_date_joint_{title.replace(' ', '_')}_{col}.png')
+                if col == 'rps_client':
+                    df_session_count = get_bq_data(query_session_count, repl_dict)
+                    df_session_count = df_session_count.set_index('client_bidders')
+                    df_session_count = df_session_count.loc[df_session_count.index <= df_j.index.max()]
+                    df_session_count.plot(ax=ax, secondary_y=True, ylabel='sessions', style='x-')
+
+                fig.savefig(f'plots/rps_count_date_joint_{title.replace(' ', '_')}_{col}_wk2.png')
 
 
 def main_opt_over_time():
@@ -169,7 +180,7 @@ def main_opt_over_time():
                            ("country_code = 'US'", 'US'),
                            ('country_code != "US"', 'non US')]:
 
-        for rtt in [None, 'slow', 'medium', 'fast', 'superfast']:
+        for rtt in [None]:#, 'slow', 'medium', 'fast', 'superfast']:
 
             where = where_raw
             title = title_raw
@@ -182,7 +193,7 @@ def main_opt_over_time():
             query = ('select date, avg(revenue) * 1000 rps, '
                      'avg(array_length(REGEXP_EXTRACT_ALL(substr(fs_clientservermask, 2, 21), "2")) + if(date >= "2024-08-28", 6, 0)) AS client_bidders, '
                      'avg(array_length(REGEXP_EXTRACT_ALL(substr(fs_clientservermask, 2, 21), "3"))) AS server_bidders, '
-                     'from `streamamp-qa-239417.DAS_eventstream_session_data.DTF_DAS_opt_stats_split_revenue_2024-09-11_40_1` '
+                     'from `streamamp-qa-239417.DAS_eventstream_session_data.DTF_DAS_opt_stats_split_revenue_2024-09-15_40_1` '
                      f'where (fs_clientservermask is not null) and char_length(fs_clientservermask) = 23 '
                      "and regexp_contains(fs_clientservermask, '[0123]{23}') "
                      f'and {where} '
@@ -193,7 +204,7 @@ def main_opt_over_time():
                 f'no data found for {title}, skipping'
                 continue
 
-            df = df[(df['date'] >= '2024-08-16') & (df['date'] != '2024-08-28')]
+            df = df[(df['date'] >= '2024-08-17') & (df['date'] != '2024-08-28')]
             df = df.set_index('date')
 
             df_dict = {'before': df[df.index < '2024-08-28']['rps'],
@@ -217,6 +228,4 @@ if __name__ == "__main__":
     #main_country()
 
     #main_opt_over_time()
-
-
     main_by_day()
