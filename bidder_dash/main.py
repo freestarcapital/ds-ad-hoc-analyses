@@ -288,6 +288,9 @@ def main_domain():
 
     domains = df[['domain', 'session_count']].groupby('domain').sum().sort_values('session_count', ascending=False).index[:50]
 
+    df_domains = df[[b in domains for b in df['domain']]]
+    df_domains.sort_values(['domain', 'bidder', 'date']).to_csv('plots/rps_domains.csv')
+
     with PdfPages(f'plots/rps_domains.pdf') as pdf:
         for d in domains:
 
@@ -309,7 +312,7 @@ def main_domain():
             pdf.savefig()
 
 if __name__ == "__main__":
-    #main_create_bidder_session_data_raw(datetime.date(2024, 9, 16), days=10)
+    main_create_bidder_session_data_raw(datetime.date(2024, 9, 23), days=30)
     #main_country_code(7)
     #main_rolling_hour()
 
@@ -319,5 +322,5 @@ if __name__ == "__main__":
 
     #main_change()
 
-    main_domain()
+    #main_domain()
 

@@ -96,7 +96,9 @@ session_agg AS (
 )
 
 select date, bidder,
-    if(bidder in  ('ix', 'rise', 'appnexus', 'rubicon', 'triplelift', 'pubmatic') and date >= '2024-08-28' and status = 'disabled', 'client', status) status,
+    if((bidder in  ('ix', 'rise', 'appnexus', 'rubicon', 'triplelift', 'pubmatic') and date >= '2024-08-28' and status = 'disabled')
+            or (bidder in  ('yieldmo', 'sharethrough', 'criteo', 'medianet', 'openx', 'gumgum', 'yahoo') and date >= '2024-09-24' and status = 'disabled'),
+        'client', status) status,
     country_code, domain, device_category, rtt_category,
     count(*) as session_count,
     sum(if(bidders.bidder = winning_bidder, revenue, 0)) revenue,

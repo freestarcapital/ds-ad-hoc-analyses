@@ -51,7 +51,7 @@ def main():
     df_avg_err = df_avg_err.rename(columns=dict(zip(df_avg_err_cols, df_avg_cols)))
 
     df_avg.plot(style='x-', ylabel='rps', title='mask bidder count vs average rps', ax=ax, yerr=df_avg_err)
-    fig.savefig(f'plots/bidder_count_vs_rps_{repl_dict['DTF_or_eventstream']}_{repl_dict['table_ext']}.png')
+    fig.savefig(f'plots/bidder_count_vs_rps_{repl_dict['DTF_or_eventstream']}_{repl_dict['table_ext']}_{datetime.datetime.today().strftime("%Y-%m-%d")}.png')
 
 
 def main_country():
@@ -101,12 +101,12 @@ def main_country():
                 df_p.plot(style='x-', ylabel='rps', ax=ax[i], title=bidders, yerr=df_p_err)
 
 
-        fig.savefig(f'plots/bidder_count_vs_rps_{cd}_{repl_dict['DTF_or_eventstream']}_{repl_dict['table_ext']}.png')
+        fig.savefig(f'plots/bidder_count_vs_rps_{cd}_{repl_dict['DTF_or_eventstream']}_{repl_dict['table_ext']}_{datetime.datetime.today().strftime("%Y-%m-%d")}.png')
 
     a=0
 
 def main_by_day():
-    repl_dict = {'table_ext': '2024-09-15_40_1',
+    repl_dict = {'table_ext': '2024-09-25_40_1',
                  'DTF_or_eventstream': 'DTF'}
     query = open(os.path.join(sys.path[0], 'query_bidder_count_vs_rps_by_day.sql'), "r").read()
     query_session_count = open(os.path.join(sys.path[0], 'query_bidder_count_vs_rps_session_count.sql'), "r").read()
@@ -144,12 +144,13 @@ def main_by_day():
                 df_err = df_all[['bidders', 'date'] + [col_err]].pivot(index='bidders', columns='date', values=col_err)
                 fig, ax = plt.subplots(figsize=(12, 9))
                 df.plot(ax=ax, ylabel=col, yerr=df_err, title=plot_title)
-                fig.savefig(f'plots/rps_count_date_{title.replace(' ', '_')}_{col}.png')
+                fig.savefig(f'plots/rps_count_date_{title.replace(' ', '_')}_{col}_{datetime.datetime.today().strftime("%Y-%m-%d")}.png')
 
                 df_split = {'before': df.loc[:, df.columns <= '2024-08-27'],
-                            #'after': df.loc[:, df.columns >= '2024-08-29']}
-                            'after_wk1': df.loc[:, (df.columns >= '2024-08-29') & (df.columns <= '2024-09-03')],
-                            'after_wk2': df.loc[:, df.columns >= '2024-09-03']}
+                            'from_Aug29_to_Sep03': df.loc[:, (df.columns >= '2024-08-29') & (df.columns <= '2024-09-03')],
+                            'from_Aug04_to_Sep17': df.loc[:, (df.columns >= '2024-09-04') & (df.columns <= '2024-09-17')],
+                            'from_Sep18_to_Sep23': df.loc[:, (df.columns >= '2024-09-18') & (df.columns <= '2024-09-23')],
+                            'from_Sep24': df.loc[:, df.columns >= '2024-09-24']}
 
                 df_list = []
                 df_err_list = []
@@ -170,7 +171,7 @@ def main_by_day():
                     df_session_count = df_session_count.loc[df_session_count.index <= df_j.index.max()]
                     df_session_count.plot(ax=ax, secondary_y=True, ylabel='sessions', style='x-')
 
-                fig.savefig(f'plots/rps_count_date_joint_{title.replace(' ', '_')}_{col}_wk2.png')
+                fig.savefig(f'plots/rps_count_date_joint_{title.replace(' ', '_')}_{col}_{datetime.datetime.today().strftime("%Y-%m-%d")}.png')
 
 
 def main_opt_over_time():
@@ -193,7 +194,7 @@ def main_opt_over_time():
             query = ('select date, avg(revenue) * 1000 rps, '
                      'avg(array_length(REGEXP_EXTRACT_ALL(substr(fs_clientservermask, 2, 21), "2")) + if(date >= "2024-08-28", 6, 0)) AS client_bidders, '
                      'avg(array_length(REGEXP_EXTRACT_ALL(substr(fs_clientservermask, 2, 21), "3"))) AS server_bidders, '
-                     'from `streamamp-qa-239417.DAS_eventstream_session_data.DTF_DAS_opt_stats_split_revenue_2024-09-15_40_1` '
+                     'from `streamamp-qa-239417.DAS_eventstream_session_data.DTF_DAS_opt_stats_split_revenue_2024-09-25_40_1` '
                      f'where (fs_clientservermask is not null) and char_length(fs_clientservermask) = 23 '
                      "and regexp_contains(fs_clientservermask, '[0123]{23}') "
                      f'and {where} '
@@ -210,6 +211,12 @@ def main_opt_over_time():
             df_dict = {'before': df[df.index < '2024-08-28']['rps'],
                        'after': df[df.index > '2024-08-28']['rps']}
 
+            df_dict = {'before': df[df.index < '2024-08-28']['rps'],
+                       'from_Aug29_to_Sep03': df[(df.index >= '2024-08-29') & (df.index <= '2024-09-03')]['rps'],
+                       'from_Aug04_to_Sep17': df[(df.index >= '2024-09-04') & (df.index <= '2024-09-17')]['rps'],
+                       'from_Sep18_to_Sep23': df[(df.index >= '2024-09-18') & (df.index <= '2024-09-23')]['rps'],
+                       'from_Sep24': df[df.index >= '2024-09-24']['rps']}
+
             plot_title = title
             for name, df_d in df_dict.items():
                 plot_title += f', {name} rps: {df_d.mean():0.1f} +/- {np.sqrt(((df_d ** 2).mean() - df_d.mean() ** 2) / (len(df_d) - 1)):0.1f}'
@@ -218,7 +225,7 @@ def main_opt_over_time():
             df[['rps']].plot(ax=ax, title=f'Optimised rps for {plot_title}', ylabel='rps', style='x-')
             df[['client_bidders', 'server_bidders']].plot(ax=ax, ylabel='bidder count', style='x-',
                     secondary_y=['client_bidders', 'server_bidders'])
-            fig.savefig(f'plots/rps_opt_over_time_{title.replace(" ", "_")}.png')
+            fig.savefig(f'plots/rps_opt_over_time_{title.replace(" ", "_")}_{datetime.datetime.today().strftime("%Y-%m-%d")}.png')
 
 
 
@@ -227,5 +234,5 @@ if __name__ == "__main__":
     #main()
     #main_country()
 
-    #main_opt_over_time()
+    main_opt_over_time()
     main_by_day()

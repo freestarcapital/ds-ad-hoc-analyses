@@ -81,6 +81,6 @@ def main_create_daily_configs():
 
 if __name__ == "__main__":
 
-#    main_create_bidder_domain_expt_session_stats()
+    main_create_bidder_domain_expt_session_stats()
     main_create_daily_configs()
 
