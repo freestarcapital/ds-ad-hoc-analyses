@@ -1,7 +1,7 @@
 
 DECLARE dates ARRAY<DATE> DEFAULT GENERATE_DATE_ARRAY(DATE_SUB('{processing_date}', INTERVAL {days_back_start} DAY), DATE_SUB('{processing_date}', INTERVAL {days_back_end} DAY));
 
-CREATE OR REPLACE TABLE `{project_id}.DAS_increment.daily_bidder_domain_expt_session_stats_{aer_to_bwr_join_type}_{processing_date}_{days_back_start}_{days_back_end}`
+CREATE OR REPLACE TABLE `{project_id}.DAS_increment.daily_bidder_domain_expt_session_stats_unexpanded_{aer_to_bwr_join_type}_{processing_date}_{days_back_start}_{days_back_end}`
     OPTIONS (
         expiration_timestamp = TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL 365 DAY))
     AS
@@ -86,12 +86,21 @@ session_agg AS (
         --fs_testgroup in ('experiment')
     GROUP BY
         1, 2, 3, 4, 5, 6, 7
+)
+select * from session_agg;
 
-), expanded AS (
+
+CREATE OR REPLACE TABLE `{project_id}.DAS_increment.daily_bidder_domain_expt_session_stats_{aer_to_bwr_join_type}_{processing_date}_{days_back_start}_{days_back_end}`
+    OPTIONS (
+        expiration_timestamp = TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL 365 DAY))
+    AS
+
+
+with expanded AS (
        SELECT offset+1 bidder_position, * except (arr, offset)
        FROM (
                 SELECT SPLIT(fs_clientservermask, '') as arr, *
-                FROM session_agg
+                FROM `{project_id}.DAS_increment.daily_bidder_domain_expt_session_stats_unexpanded_{aer_to_bwr_join_type}_{processing_date}_{days_back_start}_{days_back_end}`
             ) AS mask, mask.arr AS mask_value WITH OFFSET AS offset
 )
 

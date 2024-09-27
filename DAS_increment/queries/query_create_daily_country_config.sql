@@ -19,31 +19,31 @@ with status_fix as (
 
 ) , first_agg as (
 
-    select bidder, status, country_code,
+    select bidder, status, country_code {additional_dims},
         sum(session_count) session_count,
         sum(revenue) revenue,
         sum(revenue_sq) revenue_sq
     from status_fix
-    group by bidder, status, country_code
+    group by bidder, status, country_code {additional_dims}
 
 ), country_code_agg as (
     select * except (country_code),
-        if(sum(session_count) over(partition by country_code) > {min_all_bidder_session_count}, country_code, 'default') country_code
+        if(sum(session_count) over(partition by country_code {additional_dims}) > {min_all_bidder_session_count}, country_code, 'default') country_code
     from first_agg
 
 ), second_agg as (
 
-    select bidder, status, country_code,
+    select bidder, status, country_code {additional_dims},
         sum(session_count) session_count,
         sum(revenue) revenue,
         sum(revenue_sq) revenue_sq
     from country_code_agg
-    group by bidder, status, country_code
+    group by bidder, status, country_code {additional_dims}
     having session_count > {min_individual_bidder_session_count}
 
 ), pre_stats as (
 
-    select bidder, status, country_code,
+    select bidder, status, country_code {additional_dims},
         session_count,
         safe_divide(revenue, session_count) mean_revenue,
         safe_divide(revenue_sq, session_count) mean_revenue_sq
@@ -51,7 +51,7 @@ with status_fix as (
 
 ), stats as (
 
-    select bidder, status, country_code,
+    select bidder, status, country_code {additional_dims},
         session_count,
         mean_revenue * 1000 rps,
         if(mean_revenue_sq < pow(mean_revenue, 2), 0, sqrt((mean_revenue_sq - pow(mean_revenue, 2)) / session_count)) * 1000 rps_std
@@ -60,7 +60,7 @@ with status_fix as (
 ), rank as (
 
     select *, ifnull(safe_divide(rps, rps_std), 0) rps_z_score,
-        row_number() over(partition by country_code order by rps desc) rn
+        row_number() over(partition by country_code {additional_dims} order by rps desc) rn
     from stats
 
 )

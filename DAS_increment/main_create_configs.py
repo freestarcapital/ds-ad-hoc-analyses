@@ -29,7 +29,7 @@ def get_bq_data(query, replacement_dict={}):
         query = query.replace("{" + k + "}", str(v))
     return client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
 
-def main_create_bidder_domain_expt_session_stats(last_date=datetime.date(2024, 9, 9), days=30):
+def main_create_bidder_domain_expt_session_stats(last_date=datetime.date(2024, 9, 26), days=10):
 
     repl_dict = {'project_id': project_id,
                  'processing_date': last_date,
@@ -44,43 +44,56 @@ def main_create_bidder_domain_expt_session_stats(last_date=datetime.date(2024, 9
 
 def main_create_daily_configs():
 
-    processing_date = datetime.date(2024, 9, 4)
+    processing_date = datetime.date(2024, 9, 24)
 
     repl_dict = {'project_id': project_id,
-                 'tablename_from': 'daily_bidder_domain_expt_stats_join_2024-09-09_30_1',
-                 'tablename_to': 'DAS_config',
+                 'tablename_from': 'daily_bidder_domain_expt_session_stats_join_2024-09-25_10_1',
                  'processing_date': processing_date.strftime("%Y-%m-%d"),
-                 'days_back_start': 7,
                  'days_back_end': 1,
                  'min_all_bidder_session_count': 100000,
                  'min_individual_bidder_session_count': 1000}
 
-    # query = open(os.path.join(sys.path[0], 'queries/query_create_daily_country_config.sql'), "r").read()
-    # get_bq_data(query, repl_dict)
+    # (additional_dims, days_back_start)
+    levels = [('', 7),
+              ('', 1),
+              (', device_category', 1),
+              (', device_category, rtt_category', 1)]
 
-    query = (f'select bidder || "-" || status as bidder_status, rn, count(*) count, sum(session_count) session_count, avg(rps) rps '
-             f'from `{project_id}.DAS_increment.{repl_dict["tablename_to"]}` '
-             f'group by 1, 2')
+    for (additional_dims, days_back_start) in levels:
+        name = f"{additional_dims.replace(',', '_').replace(' ', '')}_{days_back_start}"
 
-    df = get_bq_data(query, repl_dict)
-    df['revenue'] = df['session_count'] * df['rps']
+        repl_dict['additional_dims'] = additional_dims
+        repl_dict['days_back_start'] = days_back_start
+        repl_dict['tablename_to'] = f'DAS_config{name}'
 
-    for col in ['count', 'session_count', 'revenue']:
-        df_p = df.pivot(index='rn', columns='bidder_status', values=col).fillna(0)
-        df_p_cum_sum = df_p.cumsum()
-        df_totals = df_p.sum()
-        df_r = df_p_cum_sum / df_totals
-        col_order = df_r.mean().sort_values(ascending=False).index
-        df_r = df_r[col_order]
+        print(f'creating: {repl_dict['tablename_to']}')
 
-        fig, ax = plt.subplots(figsize=(12, 9))
-        df_r.plot(ax=ax, xlabel='bidder status rank', ylabel=f'cumulative proportion weighted by {col}', title='Bidder status performance summary')
-        fig.savefig(f'plots/bidder_status_perf_{col}.png')
+        query = open(os.path.join(sys.path[0], 'queries/query_create_daily_country_config.sql'), "r").read()
+        get_bq_data(query, repl_dict)
+
+        query = (f'select bidder || "-" || status as bidder_status, rn, count(*) count, sum(session_count) session_count, avg(rps) rps '
+                 f'from `{project_id}.DAS_increment.{repl_dict["tablename_to"]}` '
+                 f'group by 1, 2')
+
+        df = get_bq_data(query, repl_dict)
+        df['revenue'] = df['session_count'] * df['rps']
+
+        for col in ['count', 'session_count', 'revenue']:
+            df_p = df.pivot(index='rn', columns='bidder_status', values=col).fillna(0)
+            df_p_cum_sum = df_p.cumsum()
+            df_totals = df_p.sum()
+            df_r = df_p_cum_sum / df_totals
+            col_order = df_r.mean().sort_values(ascending=False).index
+            df_r = df_r[col_order]
+
+            fig, ax = plt.subplots(figsize=(12, 9))
+            df_r.plot(ax=ax, xlabel='bidder status rank', ylabel=f'cumulative proportion weighted by {col}', title='Bidder status performance summary')
+            fig.savefig(f'plots/bidder_status_perf{name}_{col}.png')
     f = 0
 
 
 if __name__ == "__main__":
 
     main_create_bidder_domain_expt_session_stats()
-    main_create_daily_configs()
+#    main_create_daily_configs()
 
