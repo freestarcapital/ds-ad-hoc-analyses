@@ -28,7 +28,7 @@ where (fs_clientservermask is not null) and char_length(fs_clientservermask) = 2
 group by 1
 )
 select client_bidders,
-    coalesce(session_count_before_opt, 0) + coalesce(session_count_before_expt, 0) session_count_before,
+    coalesce(session_count_before_opt, 0) + coalesce(session_count_before_expt, 0) session_count_to_Aug28,
     coalesce(session_count_after_from_Aug29_to_Sep03_opt, 0) + coalesce(session_count_after_from_Aug29_to_Sep03_expt, 0) session_count_after_from_Aug29_to_Sep03,
     coalesce(session_count_after_from_Aug04_to_Sep17_opt, 0) + coalesce(session_count_after_from_Aug04_to_Sep17_expt, 0) session_count_after_from_Aug04_to_Sep17,
     coalesce(session_count_after_from_Sep18_to_Sep23_opt, 0) + coalesce(session_count_after_from_Sep18_to_Sep23_expt, 0) session_count_after_from_Sep18_to_Sep23,
