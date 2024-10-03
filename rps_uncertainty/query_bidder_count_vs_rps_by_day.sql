@@ -6,7 +6,13 @@ select date,
     revenue
 from `streamamp-qa-239417.DAS_eventstream_session_data.{DTF_or_eventstream}_DAS_expt_stats_split_revenue_{table_ext}`
 where (fs_clientservermask is not null) and char_length(fs_clientservermask) = 23  and regexp_contains(fs_clientservermask, '[0123]{23}')
- {and_where}
+    and substr(fs_clientservermask, 10, 1) in ('0', '1') and substr(fs_clientservermask, 11, 1) in ('0', '1')
+    and substr(fs_clientservermask, 21, 1) in ('0', '1')
+    and substr(fs_clientservermask, 22, 1) in ('0', '1')
+    and substr(fs_clientservermask, 17, 1) in ('0', '1') and substr(fs_clientservermask, 18, 1) in ('0', '1')
+    and substr(fs_clientservermask, 19, 1) in ('0', '1')
+    --and substr(fs_clientservermask, 13, 1) in ('0', '1')
+    {and_where}
 ), client_split_revenue as (
   select date, client_bidders bidders, avg(revenue) * 1000 rps_client,
      sqrt((avg(pow(revenue, 2)) - pow(avg(revenue), 2)) / count(*)) * 1000 rps_client_err
@@ -28,7 +34,7 @@ select coalesce(t1.date, t2.date, t3.date) date, coalesce(t1.bidders, t2.bidders
 from client_split_revenue t1
 full join server_split_revenue t2 using (date, bidders)
 full join client_server_split_revenue t3 using (date, bidders)
-where coalesce(t1.bidders, t2.bidders, t3.bidders) < 20
+where coalesce(t1.bidders, t2.bidders, t3.bidders) <= 14
 
 order by 1
 
