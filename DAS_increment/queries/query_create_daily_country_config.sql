@@ -7,11 +7,9 @@ CREATE OR REPLACE TABLE `{project_id}.DAS_increment.{tablename_to}`
 
 with status_fix as (
 
-    select * --except (status),
-        --if(bidder in  ('ix', 'rise', 'appnexus', 'rubicon', 'triplelift', 'pubmatic') and date > '2024-08-28' and status = 'disabled', 'client', status) status
-        -- don't need the above as it's fixed in the data load query
+    select *
     from `{project_id}.DAS_increment.{tablename_from}`
-    where bidder not in ('amazon', 'preGAMAuction', 'seedtag', 'justpremium', 'sonobi', 'insticator')
+    where bidder not in ('amazon', 'preGAMAuction', 'seedtag', 'justpremium', 'sonobi')
         and status in ('client', 'server')
         and date_sub('{processing_date}', interval {days_back_start} day) <= date
             and date <= date_sub('{processing_date}', interval {days_back_end} day)

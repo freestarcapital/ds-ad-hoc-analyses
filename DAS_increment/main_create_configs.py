@@ -245,13 +245,13 @@ if __name__ == "__main__":
     last_date = dt.date(2024, 10, 2)
     days = 10
 
-    main_create_bidder_domain_expt_session_stats(last_date, days)
+    #main_create_bidder_domain_expt_session_stats(last_date, days)
 
     #main_create_optimial_bidder_count(last_date, days)
 
     #main_create_optimial_bidder_count_by_bidder(last_date, days)
 
-#    main_create_daily_configs(last_date, days)
+    main_create_daily_configs(last_date, days)
 
 #    main_bidder_count(last_date, days)
 
