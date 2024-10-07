@@ -5,51 +5,57 @@ CREATE OR REPLACE TABLE `{project_id}.DAS_increment.{tablename_to}`
         expiration_timestamp = TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL 365 DAY))
     AS
 
-with status_fix as (
+with raw as (
 
     select *
     from `{project_id}.DAS_increment.{tablename_from}`
     where bidder not in ('amazon', 'preGAMAuction', 'seedtag', 'justpremium', 'sonobi')
         and status in ('client', 'server')
-        and date_sub('{processing_date}', interval {days_back_start} day) <= date
-            and date <= date_sub('{processing_date}', interval {days_back_end} day)
+       -- and date_sub('{processing_date}', interval {days_back_start} day) <= date
+            --and date <= date_sub('{processing_date}', interval {days_back_end} day)
+        and date <= date_sub('{processing_date}', interval 1 day)
         and country_code is not null and country_code != ''
 
-) , first_agg as (
-
-    select bidder, status, country_code {additional_dims},
+), agg_1_day as (
+    select date, bidder, status {dims},
         sum(session_count) session_count,
         sum(revenue) revenue,
         sum(revenue_sq) revenue_sq
-    from status_fix
-    group by bidder, status, country_code {additional_dims}
+    from raw
+    group by date, bidder, status {dims}
 
-), country_code_agg as (
-    select * except (country_code),
-        if(sum(session_count) over(partition by country_code {additional_dims}) > {min_all_bidder_session_count}, country_code, 'default') country_code
-    from first_agg
 
-), second_agg as (
+), agg_N_days as (
 
-    select bidder, status, country_code {additional_dims},
-        sum(session_count) session_count,
-        sum(revenue) revenue,
-        sum(revenue_sq) revenue_sq
-    from country_code_agg
-    group by bidder, status, country_code {additional_dims}
-    having session_count > {min_individual_bidder_session_count}
+    select date, bidder, status {dims},
+        sum(session_count) over(partition by bidder, status {dims} order by date rows between {N_days_preceding} preceding and current row) session_count,
+        sum(revenue) over(partition by bidder, status {dims} order by date rows between {N_days_preceding} preceding and current row) revenue,
+        sum(revenue_sq) over(partition by bidder, status {dims} order by date rows between {N_days_preceding} preceding and current row) revenue_sq
+    from agg_1_day
+
+), qual_1 as (
+
+    select *
+    from agg_N_days
+    where session_count > {min_individual_bidder_session_count}
+        and date >= date_add((select min(date) from `{project_id}.DAS_increment.{tablename_from}`), interval {N_days_preceding} day)
+
+), qual_2 as (
+    select *
+    from qual_1
+    qualify sum(session_count) over(partition by date, status {dims}) > {min_all_bidder_session_count}
 
 ), pre_stats as (
 
-    select bidder, status, country_code {additional_dims},
+    select date, bidder, status {dims},
         session_count,
         safe_divide(revenue, session_count) mean_revenue,
         safe_divide(revenue_sq, session_count) mean_revenue_sq
-    from second_agg
+    from qual_2
 
 ), stats as (
 
-    select bidder, status, country_code {additional_dims},
+    select date, bidder, status {dims},
         session_count,
         mean_revenue * 1000 rps,
         if(mean_revenue_sq < pow(mean_revenue, 2), 0, sqrt((mean_revenue_sq - pow(mean_revenue, 2)) / session_count)) * 1000 rps_std
@@ -58,12 +64,12 @@ with status_fix as (
 ), rank as (
 
     select *, ifnull(safe_divide(rps, rps_std), 0) rps_z_score,
-        row_number() over(partition by country_code {additional_dims} order by rps desc) rn
+        row_number() over(partition by date, status {dims} order by rps desc) rn
     from stats
 
 )
 
-select cast('{processing_date}' as date) as date, *
+select cast('{processing_date}' as date) as processing_date, *
 from rank
 
 
