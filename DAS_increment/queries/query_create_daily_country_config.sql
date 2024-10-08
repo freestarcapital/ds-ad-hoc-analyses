@@ -9,6 +9,7 @@ with raw as (
 
     select *
     from `{project_id}.DAS_increment.{tablename_from}`
+    left join `sublime-elixir-273810.ideal_ad_stack.continent_country_mapping` on country_code = geo_country
     where bidder not in ('amazon', 'preGAMAuction', 'seedtag', 'justpremium', 'sonobi')
         and status in ('client', 'server')
        -- and date_sub('{processing_date}', interval {days_back_start} day) <= date

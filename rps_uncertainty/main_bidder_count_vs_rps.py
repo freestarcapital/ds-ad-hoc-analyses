@@ -106,7 +106,7 @@ def main_country():
     a=0
 
 def main_by_day():
-    repl_dict = {'table_ext': '2024-10-7_60_1',
+    repl_dict = {'table_ext': '2024-10-8_60_1',
                  'DTF_or_eventstream': 'DTF'}
     query = open(os.path.join(sys.path[0], 'query_bidder_count_vs_rps_by_day.sql'), "r").read()
     query_session_count = open(os.path.join(sys.path[0], 'query_bidder_count_vs_rps_session_count.sql'), "r").read()
@@ -196,7 +196,7 @@ def main_opt_over_time():
                      'avg(array_length(REGEXP_EXTRACT_ALL(substr(fs_clientservermask, 2, 21), "2")) + '
                             'if(date >= "2024-08-28", 6, 0) + if(date >= "2024-09-24", 7, 0)) AS client_bidders, '
                      'avg(array_length(REGEXP_EXTRACT_ALL(substr(fs_clientservermask, 2, 21), "3"))) AS server_bidders '
-                     'from `streamamp-qa-239417.DAS_eventstream_session_data.DTF_DAS_opt_stats_split_revenue_2024-10-7_60_1` '
+                     'from `streamamp-qa-239417.DAS_eventstream_session_data.DTF_DAS_opt_stats_split_revenue_2024-10-8_60_1` '
                      f'where (fs_clientservermask is not null) and char_length(fs_clientservermask) = 23 '
                      "and regexp_contains(fs_clientservermask, '[0123]{23}') "
                      "and substr(fs_clientservermask, 10, 1) in ('0', '1') and substr(fs_clientservermask, 11, 1) in ('0', '1') "

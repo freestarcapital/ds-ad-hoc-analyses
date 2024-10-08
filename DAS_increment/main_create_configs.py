@@ -11,6 +11,7 @@ import pickle
 import plotly.express as px
 import kaleido
 from scipy.stats import linregress
+from matplotlib.backends.backend_pdf import PdfPages
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 1000)
@@ -56,12 +57,18 @@ def main_create_daily_configs(last_date, days, do_plots=True):
                  'min_individual_bidder_session_count': 1000}
 
     # (dims, days_back_start)
+
     levels = [('', 7),
               ('', 1),
+              (', geo_continent', 7),
+              (', geo_continent', 1),
               (', country_code', 7),
               (', country_code', 1),
+              (', country_code, device_category', 7),
               (', country_code, device_category', 1),
+              (', country_code, device_category, rtt_category', 7),
               (', country_code, device_category, rtt_category', 1),
+              (', country_code, device_category, rtt_category, domain', 7),
               (', country_code, device_category, rtt_category, domain', 1)]
     
     for (dims, days_smoothing) in levels:
@@ -115,16 +122,38 @@ def main_create_daily_configs(last_date, days, do_plots=True):
                 col_order = df_t.iloc[-1].sort_values(ascending=False).index
                 df_t = df_t[col_order]
                 fig, ax = plt.subplots(figsize=(12, 9))
-                df_t.plot(ax=ax, ylabel=col, title=where_and)
+                df_t.plot(ax=ax, ylabel=col, title=f'Bidder {col} for date{where_and} with {days_smoothing} days smoothing')
                 fig.savefig(f'plots/bidder_status_over_time{name}_{col}.png')
 
-    f = 0
+            if 'continent' in dims:
+                query = (
+                    f'select date, bidder, geo_continent, avg(rn) rn, count(*) count, sum(session_count) session_count, avg(rps) rps '
+                    f'from `{project_id}.DAS_increment.{repl_dict["tablename_to"]}` '
+                    f'where status = "client"'
+                    f'group by 1, 2, 3')
+                df = get_bq_data(query, repl_dict)
+
+                with PdfPages(f'plots/configs{name}.pdf') as pdf:
+                    for continent in df['geo_continent'].unique():
+                        df_c = df[df['geo_continent'] == continent]
+
+                        fig, ax = plt.subplots(figsize=(12, 9), nrows=2)
+                        fig.suptitle(continent)
+                        for i, col in enumerate(['rn', 'rps']):
+                            df_c_v = df_c.pivot(index='date', columns='bidder', values=col)
+                            col_order = df_c_v.iloc[-1].sort_values(ascending=False).index
+                            df_c_v = df_c_v[col_order]
+                            df_c_v.plot(ax=ax[i], ylabel=col)
+                        pdf.savefig()
+                f = 0
 
 
 if __name__ == "__main__":
-    last_date = dt.date(2024, 10, 2)
-    days = 10
-
-    #main_create_bidder_domain_expt_session_stats(last_date, days)
-
+    last_date = dt.date(2024, 10, 8)
+    days = 20
+    # main_create_bidder_domain_expt_session_stats(last_date, days)
     main_create_daily_configs(last_date, days)
+
+    # last_date = dt.date(2024, 10, 2)
+    # days = 10
+    # main_create_daily_configs(last_date, days)
