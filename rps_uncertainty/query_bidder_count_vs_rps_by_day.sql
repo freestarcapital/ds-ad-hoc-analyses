@@ -1,7 +1,8 @@
 with t1_split_revenue as (
 select date,
     array_length(REGEXP_EXTRACT_ALL(substr(fs_clientservermask, 2, 21), '2'))
-        + if(date >= '2024-08-28', 6, 0) + if(date >= '2024-09-24', 7, 0) AS client_bidders,
+        + if(date >= '2024-08-28', 6, 0) + if(date >= '2024-09-24', 7, 0)
+        - if(date >= "2024-10-9", 4, 0) AS client_bidders,
     array_length(REGEXP_EXTRACT_ALL(substr(fs_clientservermask, 2, 21), '3')) AS server_bidders,
     revenue
 from `streamamp-qa-239417.DAS_eventstream_session_data.{DTF_or_eventstream}_DAS_expt_stats_split_revenue_{table_ext}`

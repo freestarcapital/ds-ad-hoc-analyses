@@ -106,7 +106,7 @@ def main_country():
     a=0
 
 def main_by_day():
-    repl_dict = {'table_ext': '2024-10-8_60_1',
+    repl_dict = {'table_ext': '2024-10-10_60_1',
                  'DTF_or_eventstream': 'DTF'}
     query = open(os.path.join(sys.path[0], 'query_bidder_count_vs_rps_by_day.sql'), "r").read()
     query_session_count = open(os.path.join(sys.path[0], 'query_bidder_count_vs_rps_session_count.sql'), "r").read()
@@ -132,7 +132,7 @@ def main_by_day():
                 print(f'no data for {title}, skipping')
                 continue
 
-            df_all = df_all[(df_all['date'] >= '2024-08-17') & (df_all['date'] != '2024-08-28') & (df_all['date'] != '2024-09-24')]
+            df_all = df_all[(df_all['date'] >= '2024-08-17') & (df_all['date'] != '2024-08-28') & (df_all['date'] != '2024-09-24') & (df_all['date'] != '2024-10-8')]
 
             cols_to_plot = ['rps_client', 'rps_server', 'rps_client_server']
             for i, col in enumerate(cols_to_plot):
@@ -151,7 +151,8 @@ def main_by_day():
                             # 'from_Aug29_to_Sep03': df.loc[:, (df.columns >= '2024-08-29') & (df.columns <= '2024-09-03')],
                             # 'from_Aug04_to_Sep17': df.loc[:, (df.columns >= '2024-09-04') & (df.columns <= '2024-09-17')],
                             # 'from_Sep18_to_Sep23': df.loc[:, (df.columns >= '2024-09-18') & (df.columns <= '2024-09-23')],
-                            'from_Sep25': df.loc[:, df.columns >= '2024-09-25']}
+                            'from_Sep25_Oct7': df.loc[:, (df.columns >= '2024-09-25') & (df.columns <= '2024-10-7')],
+                            'from_Oct9': df.loc[:, (df.columns >= '2024-10-9')]}
 
                 df_list = []
                 df_err_list = []
@@ -194,9 +195,10 @@ def main_opt_over_time():
 
             query = ('select date, avg(revenue) * 1000 rps, '
                      'avg(array_length(REGEXP_EXTRACT_ALL(substr(fs_clientservermask, 2, 21), "2")) + '
-                            'if(date >= "2024-08-28", 6, 0) + if(date >= "2024-09-24", 7, 0)) AS client_bidders, '
+                            'if(date >= "2024-08-28", 6, 0) + if(date >= "2024-09-24", 7, 0)'
+                           '- if(date >= "2024-10-9", 4, 0)) AS client_bidders, '
                      'avg(array_length(REGEXP_EXTRACT_ALL(substr(fs_clientservermask, 2, 21), "3"))) AS server_bidders '
-                     'from `streamamp-qa-239417.DAS_eventstream_session_data.DTF_DAS_opt_stats_split_revenue_2024-10-8_60_1` '
+                     'from `streamamp-qa-239417.DAS_eventstream_session_data.DTF_DAS_opt_stats_split_revenue_2024-10-10_60_1` '
                      f'where (fs_clientservermask is not null) and char_length(fs_clientservermask) = 23 '
                      "and regexp_contains(fs_clientservermask, '[0123]{23}') "
                      "and substr(fs_clientservermask, 10, 1) in ('0', '1') and substr(fs_clientservermask, 11, 1) in ('0', '1') "
@@ -213,7 +215,7 @@ def main_opt_over_time():
                 f'no data found for {title}, skipping'
                 continue
 
-            df = df[(df['date'] >= '2024-08-17') & (df['date'] != '2024-08-28') & (df['date'] != '2024-09-24')]
+            df = df[(df['date'] >= '2024-08-17') & (df['date'] != '2024-08-28') & (df['date'] != '2024-09-24') & (df['date'] != '2024-10-8')]
             df = df.set_index('date')
 
             df_dict = {'to_Aug28': df[df.index < '2024-08-28']['rps'],
@@ -221,7 +223,9 @@ def main_opt_over_time():
                        # 'Aug29_Sep3': df[(df.index >= '2024-08-29') & (df.index <= '2024-09-03')]['rps'],
                        # 'Aug4_Sep17': df[(df.index >= '2024-09-04') & (df.index <= '2024-09-17')]['rps'],
                        # 'Sep18_Sep23': df[(df.index >= '2024-09-18') & (df.index <= '2024-09-23')]['rps'],
-                       'from_Sep25': df[df.index >= '2024-09-25']['rps']}
+                       'from_Sep25_Oct7': df[(df.index >= '2024-09-25') & (df.index <= '2024-10-7')]['rps'],
+                       'from_Oct9': df[(df.index >= '2024-10-9')]['rps']
+                       }
 
             plot_title = title
             for name, df_d in df_dict.items():
