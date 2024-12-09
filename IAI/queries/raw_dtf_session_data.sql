@@ -1,12 +1,12 @@
-DECLARE ddates ARRAY<DATE> DEFAULT GENERATE_DATE_ARRAY(DATE('2024-11-11'), DATE('2024-11-18'));
+DECLARE ddates ARRAY<DATE> DEFAULT GENERATE_DATE_ARRAY(DATE('{start_date}'), DATE('{end_date}'));
 
-CREATE OR REPLACE TABLE `streamamp-qa-239417.DAS_increment.IAI_dtf_session_data` AS
+CREATE OR REPLACE TABLE `streamamp-qa-239417.DAS_increment.IAI_dtf_session_data_{test_id}` AS
 
 with pgv as (
     select distinct session_id
     from `freestar-157323.prod_eventstream.pagehits_raw`
     where _PARTITIONDATE in UNNEST(ddates)
-    and test_name = '8546772e-1260-4361-a981-23b20bd27126' and test_group = 1
+    and test_name = '{test_id}' and test_group = 1
 ),
 
 uni AS (

@@ -1,14 +1,14 @@
-DECLARE ddates ARRAY<DATE> DEFAULT GENERATE_DATE_ARRAY(DATE('2024-11-11'), DATE('2024-11-18'));
+DECLARE ddates ARRAY<DATE> DEFAULT GENERATE_DATE_ARRAY(DATE('{start_date}'), DATE('{end_date}'));
 
 with dtf as (
     select fs_session_id, min(date) date,
-    sum(if(ad_unit_name='droid-life-dynamic_inarticle_iai', revenue, 0)) revenue_iai,
+    sum(if({ad_unit_name_match}, revenue, 0)) revenue_iai,
     sum(revenue) revenue_total,
-    sum(if(ad_unit_name='droid-life-dynamic_inarticle_iai', impressions, 0)) impressions_iai,
+    sum(if({ad_unit_name_match}, impressions, 0)) impressions_iai,
     sum(impressions) impressions_total,
-    sum(if(ad_unit_name='droid-life-dynamic_inarticle_iai', unfilled, 0)) unfilled_iai,
+    sum(if({ad_unit_name_match}, unfilled, 0)) unfilled_iai,
     sum(unfilled) unfilled_total
-    from `streamamp-qa-239417.DAS_increment.IAI_dtf_session_data`
+    from `streamamp-qa-239417.DAS_increment.IAI_dtf_session_data_{test_id}`
     group by 1
 ), ar as (
   select session_id fs_session_id, percentile_placement,

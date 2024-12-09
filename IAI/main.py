@@ -43,14 +43,22 @@ def get_data(query_filename, data_cache_filename, force_requery=False, repl_dict
     return df
 
 
-def main():
+def main_raw_dtf_data():
+    repl_dict = {'start_date': '2024-11-28',
+                 'end_date': '2024-12-03',
+                 'test_id': '9551c850-0bb3-4145-80cf-f10e2913d207'}
+
     query = open(os.path.join(sys.path[0], f"queries/raw_dtf_session_data.sql"), "r").read()
-    get_bq_data(query)
+    get_bq_data(query, repl_dict)
 
 def main_iai_performance():
+    repl_dict = {'start_date': '2024-11-28',
+                 'end_date': '2024-12-03',
+                 'test_id': '9551c850-0bb3-4145-80cf-f10e2913d207',
+                 'ad_unit_name_match': '((lower(ad_unit_name) like "%iai%") or (lower(ad_unit_name) like "%dynamic%") or (lower(ad_unit_name) like "%incontent%"))'}
 
     query = open(os.path.join(sys.path[0], f"queries/iai_performance_stats.sql"), "r").read()
-    df_all = get_bq_data(query)
+    df_all = get_bq_data(query, repl_dict)
 
     fig, ax = plt.subplots(figsize=(12, 9), nrows=3, ncols=2)
     ax = ax.flatten()
@@ -80,10 +88,10 @@ def main_iai_performance():
         p_value_table = pd.DataFrame(results_list).pivot(index='i1', columns='i2', values='p_value') * 100
         df.plot(title=col, ylabel=col, ax=ax_i)
 
-    fig.savefig(f'plots/iai_performance.png')
+    fig.savefig(f'plots/iai_performance_{repl_dict["test_id"]}.png')
 
 
 if __name__ == "__main__":
 
-    main()
-#    main_iai_performance()
+#    main_raw_dtf_data()
+    main_iai_performance()
