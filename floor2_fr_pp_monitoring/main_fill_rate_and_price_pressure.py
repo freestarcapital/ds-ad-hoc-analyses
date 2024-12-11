@@ -44,28 +44,23 @@ def get_data(query_filename, data_cache_filename, force_requery=False, repl_dict
 
 
 def main():
-    for ad_unit_ref in ['all_signupgenius', 'one_ad_unit_signupgenius']:
-        for query_file in ['query_fill_rate']:#, 'query_fill_rate_eventstream']:
-            for granularity in ['per_day', 'per_hour']:
-                main_2(granularity, query_file, ad_unit_ref)
+    for ad_unit_ref in ['all_signupgenius']:#, 'one_ad_unit_signupgenius']:
+        for granularity in ['per_hour']:#, 'per_day']:
+            main_2(granularity, ad_unit_ref)
 
-def main_2(granularity='per_day', query_file='query_fill_rate', ad_unit_ref='all_signupgenius'):
+def main_2(granularity='per_day', ad_unit_ref='all_signupgenius'):
 
     assert granularity in ['per_hour', 'per_day']
-    assert query_file in ['query_fill_rate', 'query_fill_rate_eventstream']
+
+    query_file = 'query_fill_rate_price_pressure'
 
     ad_unit_name_match_dict = {'one_ad_unit_signupgenius': 'ad_unit_name = "/15184186/signupgenius_Desktop_SignUps_Sheet_300x600_Right"',
                                'all_signupgenius': 'ad_unit_name like "/15184186/signupgenius%"'}
     ad_unit_name_match = ad_unit_name_match_dict[ad_unit_ref]
 
-    placement_id_match = 'NET.REG_DOMAIN(auc.page_url) like "%signupgenius%"'
-    if ad_unit_ref == 'one_ad_unit_signupgenius':
-        placement_id_match += ' and placement_id = "signupgenius_Desktop_SignUps_Sheet_300x600_Right"'
-
     repl_dict = {'first_date': '2024-12-5',
                  'last_date': '2024-12-8',
                  'ad_unit_name_match': ad_unit_name_match,
-                 'placement_id_match': placement_id_match,
                  'granularity': granularity}
 
     if granularity == 'per_day':
@@ -74,16 +69,14 @@ def main_2(granularity='per_day', query_file='query_fill_rate', ad_unit_ref='all
     else:
         repl_dict['date_hour'] = 'date_hour'
         repl_dict['N'] = 23
-    if query_file == 'query_fill_rate_eventstream':
-        repl_dict['date_hour'] = f'TIMESTAMP_TRUNC(TIMESTAMP_MILLIS(server_time), {granularity.replace('per_', '')}) date_hour'
 
     print(f'Running with query_file: {query_file}, granularity: {granularity}, ad_unit_ref: {ad_unit_ref}')
     query = open(os.path.join(sys.path[0], f"queries/{query_file}.sql"), "r").read()
     df_all = get_bq_data(query, repl_dict).set_index('date_hour')
 
-    df_all.to_csv(f'data_out/df_all_{ad_unit_ref}_{query_file}_{granularity}.csv')
+#    df_all.to_csv(f'data_out/df_all_{ad_unit_ref}_{query_file}_{granularity}.csv')
 
-    for base_col in ['fill_rate', granularity, 'perc']:
+    for base_col in [granularity, 'fill_rate', 'perc', 'cpm']:
 
         cols = [c for c in df_all.columns if (base_col in c) and ('err' not in c)]
         if len(cols) == 0:
@@ -96,7 +89,7 @@ def main_2(granularity='per_day', query_file='query_fill_rate', ad_unit_ref='all
         df_err = df_all[err_cols].rename(columns=dict([(c, c.replace('_err', '')) for c in err_cols]))
         df.plot(ax=ax, title=f'{query_file}, {ad_unit_name_match}, {granularity}', ylabel=base_col, yerr=df_err)
 
-        fig.savefig(f'plots/plot_{ad_unit_ref}_{query_file}_{base_col}_{granularity}.png')
+        fig.savefig(f'plots_fr_pp/plot_fr_pp_{ad_unit_ref}_{query_file}_{base_col}_{granularity}.png')
 
 
 

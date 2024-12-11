@@ -1,8 +1,8 @@
 with hourly_fill_rate as (
     select {date_hour},
-        SUM(coalesce(if(advertiser="House", 0, impressions), 0)) impressions,
+        SUM(coalesce(if(advertiser="House" or advertiser="Internal", 0, impressions), 0)) impressions,
         SUM(impressions + unfilled) requests,
-        safe_divide(SUM(coalesce(if(advertiser="House", 0, impressions), 0)),
+        safe_divide(SUM(coalesce(if(advertiser="House" or advertiser="Internal", 0, impressions), 0)),
                     SUM(impressions + unfilled)) fill_rate,
     from `sublime-elixir-273810.floors.detailed_reporting`
     where date_hour >= TIMESTAMP(DATE_SUB('{first_date}', INTERVAL 3 DAY))
