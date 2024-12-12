@@ -44,8 +44,8 @@ def get_data(query_filename, data_cache_filename, force_requery=False, repl_dict
 
 
 def main():
-    for ad_unit_ref in ['all_signupgenius']:#, 'one_ad_unit_signupgenius']:
-        for granularity in ['per_hour']:#, 'per_day']:
+    for ad_unit_ref in ['all_signupgenius', 'one_ad_unit_signupgenius']:
+        for granularity in ['per_hour', 'per_day']:
             main_2(granularity, ad_unit_ref)
 
 def main_2(granularity='per_day', ad_unit_ref='all_signupgenius'):
@@ -59,7 +59,7 @@ def main_2(granularity='per_day', ad_unit_ref='all_signupgenius'):
     ad_unit_name_match = ad_unit_name_match_dict[ad_unit_ref]
 
     repl_dict = {'first_date': '2024-12-5',
-                 'last_date': '2024-12-8',
+                 'last_date': '2024-12-7',
                  'ad_unit_name_match': ad_unit_name_match,
                  'granularity': granularity}
 
@@ -76,24 +76,44 @@ def main_2(granularity='per_day', ad_unit_ref='all_signupgenius'):
 
 #    df_all.to_csv(f'data_out/df_all_{ad_unit_ref}_{query_file}_{granularity}.csv')
 
-    for base_col in [granularity, 'fill_rate', 'perc', 'cpm']:
+    fig_specs = {'requests': (['requests', 'impressions', 'revenue'], True),
+                 'fill_rate': (['fill_rate'], False),
+                 'cpm': (['cpm_'], False),
+                 'cpma': (['cpma'], False),
+                 'price_pressure': (['price_pressure'], False),
+                 'floor_price': (['floor_price'], False)
+                 }
 
-        cols = [c for c in df_all.columns if (base_col in c) and ('err' not in c)]
-        if len(cols) == 0:
-            continue
-        df = df_all[cols]
+    for fig_name, (fig_cols, use_secondary_y) in fig_specs.items():
+        fig, ax = plt.subplots(figsize=(12, 9), nrows=len(fig_cols))
+        fig.suptitle(fig_name)
 
-        fig, ax = plt.subplots(figsize=(12, 9))
+        for i, col in enumerate(fig_cols):
+            if len(fig_cols) == 1:
+                ax_i = ax
+            else:
+                ax_i = ax[i]
 
-        err_cols = [c for c in df_all.columns if (base_col in c) and ('err' in c)]
-        df_err = df_all[err_cols].rename(columns=dict([(c, c.replace('_err', '')) for c in err_cols]))
-        df.plot(ax=ax, title=f'{query_file}, {ad_unit_name_match}, {granularity}', ylabel=base_col, yerr=df_err)
+            cols = [c for c in df_all.columns if (col in c) and ('err' not in c) and ('perc' not in c)]
+            baseline_cols = [cc for cc in cols if 'baseline' in cc]
+            df = df_all[cols]
+            err_cols = [c for c in df_all.columns if (col in c) and ('err' in c) and ('perc' not in c)]
+            df_err = df_all[err_cols]
+            df_err = df_err.rename(columns=dict(zip(err_cols, [c.replace('_err', '') for c in err_cols])))
 
-        fig.savefig(f'plots_fr_pp/plot_fr_pp_{ad_unit_ref}_{query_file}_{base_col}_{granularity}.png')
+            col_order = list(df_err.mean().sort_values(ascending=False).index)
+            col_order = [c for c in df.columns if c not in col_order] + col_order
+            df = df[col_order]
 
+            capsize = 4
+            if use_secondary_y:
+                df.plot(yerr=df_err, secondary_y=baseline_cols, ylabel=col, ax=ax_i, capsize=capsize)
+            else:
+                df.plot(yerr=df_err, ylabel=col, ax=ax_i, capsize=capsize)
 
+        fig.savefig(f'plots_fr_pp/plot_fr_pp_{ad_unit_ref}_{fig_name}_{granularity}.png')
+        j = 0
 
-    c = 0
 
 if __name__ == "__main__":
 
