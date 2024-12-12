@@ -35,6 +35,9 @@ hourly_analytics as (
         COALESCE(SAFE_DIVIDE(SUM(if(baseline, revenue, 0)), SUM(if(baseline, impressions, 0))), 0) * 1000 baseline_cpm_,
         COALESCE(SAFE_DIVIDE(SUM(if(baseline, revenue, 0)), SUM(if(baseline, requests, 0))), 0) * 1000 baseline_cpma,
 
+        (safe_divide(COALESCE(SAFE_DIVIDE(SUM(if(baseline, revenue, 0)), SUM(if(baseline, requests, 0))), 0),
+            COALESCE(SAFE_DIVIDE(SUM(if(optimised, revenue, 0)), SUM(if(optimised, requests, 0))), 0)) - 1) * 100 price__pressure,
+
         CAST(safe_divide(sum(if(floor_price_valid, floor_price * requests, 0)), sum(if(floor_price_valid, requests, 0))) AS FLOAT64) floor_price
 
     from base    
@@ -91,6 +94,10 @@ stats as (
         sqrt((avg(power(baseline_cpma, 2)) over(order by date_hour rows between {N} preceding and current row) -
             power(avg(baseline_cpma) over(order by date_hour rows between {N} preceding and current row), 2))/({N}+1)) baseline_cpma_sm_err,
 
+        avg(price__pressure) over(order by date_hour rows between {N} preceding and current row) price_pressure_sm,
+        sqrt((avg(power(price__pressure, 2)) over(order by date_hour rows between {N} preceding and current row) -
+            power(avg(price__pressure) over(order by date_hour rows between {N} preceding and current row), 2))/({N}+1)) price_pressure_sm_err,
+
         safe_divide(avg(optimised_impressions) over(order by date_hour rows between {N} preceding and current row),
             avg(optimised_requests) over(order by date_hour rows between {N} preceding and current row)) optimised_fill_rate_sm_ratio,
 
@@ -134,8 +141,8 @@ select *,
     sqrt(power(perc_baseline_requests_sm, 2) + power(perc_baseline_impressions_sm, 2)) / 100 * baseline_fill_rate_sm_ratio baseline_fill_rate_sm_ratio_err,
     sqrt(power(perc_baseline_impressions_sm, 2) + power(perc_baseline_revenue_sm, 2)) / 100 * baseline_cpm_sm_ratio baseline_cpm_sm_ratio_err,
     sqrt(power(perc_baseline_requests_sm, 2) + power(perc_baseline_revenue_sm, 2)) / 100 * baseline_cpma_sm_ratio baseline_cpma_sm_ratio_err,
-    (baseline_cpma_sm / optimised_cpma_sm - 1) * 100 price_pressure_sm,
-    (baseline_cpma_sm_ratio / optimised_cpma_sm_ratio - 1) * 100 price_pressure_sm_ratio
+    (baseline_cpma_sm / optimised_cpma_sm - 1) * 100 price_pressure_sm_ratio,
+    (baseline_cpma_sm_ratio / optimised_cpma_sm_ratio - 1) * 100 price_pressure_sm_ratio_ratio
 
 
 from perc_err 
