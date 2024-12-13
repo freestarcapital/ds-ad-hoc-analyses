@@ -18,7 +18,7 @@ config = configparser.ConfigParser()
 config.read(config_path)
 
 project_id = "streamamp-qa-239417"
-client = bigquery.Client(project=project_id)
+client = bigquery.Client(project=project_id)#, location='US')
 bqstorageclient = bigquery_storage.BigQueryReadClient()
 
 def get_bq_data(query, replacement_dict={}):
@@ -121,15 +121,15 @@ def main_dashboard():
 
 def main_dashboard_2(ad_unit_ref='all_signupgenius'):
 
-    query_file = 'query_fill_rate_price_pressure_dash'
+    query_file = 'query_fill_rate_price_pressure_dash_mini'
 
     ad_unit_name_match_dict = {
         'one_ad_unit_signupgenius': 'ad_unit_name = "/15184186/signupgenius_Desktop_SignUps_Sheet_300x600_Right"',
         'all_signupgenius': 'ad_unit_name like "/15184186/signupgenius%"'}
     ad_unit_name_match = ad_unit_name_match_dict[ad_unit_ref]
 
-    repl_dict = {'first_date': '2024-12-5',
-                 'last_date': '2024-12-7',
+    repl_dict = {'first_date': '2024-12-2',
+                 'last_date': '2024-12-9',
                  'ad_unit_name_match': ad_unit_name_match,
                  'N': 23}
 
@@ -142,7 +142,7 @@ def main_dashboard_2(ad_unit_ref='all_signupgenius'):
     fig_cols =  ['fill_rate', 'cpma', 'price_pressure', 'floor_price']
 
     fig, ax = plt.subplots(figsize=(12, 9), nrows=len(fig_cols))
-
+    fig.suptitle(ad_unit_ref)
     for i, col in enumerate(fig_cols):
         ax_i = ax[i]
         df = df_all[[c for c in df_all.columns if (col in c)]]
@@ -151,8 +151,19 @@ def main_dashboard_2(ad_unit_ref='all_signupgenius'):
         fig.savefig(f'plots_fr_pp/dash_fr_pp_{ad_unit_ref}.png')
         j = 0
 
+def main_process_dashboard():
+    query_file = 'query_fill_rate_price_pressure_dash'
+
+    repl_dict = {'first_date': '2024-12-2',
+                 'last_date': '2024-12-9',
+                 'N': 23}
+
+    print(f'Running with query_file: {query_file}')
+    query = open(os.path.join(sys.path[0], f"queries/{query_file}.sql"), "r").read()
+    get_bq_data(query, repl_dict)
 
 if __name__ == "__main__":
 
 #    main()
-    main_dashboard()
+#    main_dashboard()
+    main_process_dashboard()

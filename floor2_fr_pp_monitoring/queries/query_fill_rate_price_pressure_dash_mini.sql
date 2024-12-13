@@ -1,9 +1,4 @@
 
-CREATE OR REPLACE TABLE `streamamp-qa-239417.Floors_2_0.floors_ad_unit_dash`
-    OPTIONS (
-        expiration_timestamp = TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL 365 DAY))
-    AS
-
 with base as (
     select date_hour,
         ad_unit_name,
@@ -19,11 +14,12 @@ with base as (
         ON floors_id = upr_id
     where date_hour >= TIMESTAMP(DATE_SUB('{first_date}', INTERVAL 3 DAY))
         and date_hour <= '{last_date}'
+        and {ad_unit_name_match}
 ),
 
 hourly_analytics as (
 
-    select date_hour, ad_unit_name,
+    select date_hour,
 
         COALESCE(SAFE_DIVIDE(SUM(if(optimised, impressions, 0)), SUM(if(optimised, requests, 0))), 0) optimised_fill_rate,
         COALESCE(SAFE_DIVIDE(SUM(if(optimised, revenue, 0)), SUM(if(optimised, impressions, 0))), 0) * 1000 optimised_cpm_,
@@ -39,19 +35,19 @@ hourly_analytics as (
         CAST(safe_divide(sum(if(floor_price_valid, floor_price * requests, 0)), sum(if(floor_price_valid, requests, 0))) AS FLOAT64) floor_price
 
     from base    
-    group by 1, 2
+    group by 1
 ),
 
 stats as (
     select *,
-        avg(optimised_fill_rate) over(order by date_hour, ad_unit_name rows between {N} preceding and current row) optimised_fill_rate_sm,
-        avg(baseline_fill_rate) over(order by date_hour, ad_unit_name rows between {N} preceding and current row) baseline_fill_rate_sm,
-        avg(optimised_cpm_) over(order by date_hour, ad_unit_name rows between {N} preceding and current row) optimised_cpm_sm,
-        avg(baseline_cpm_) over(order by date_hour, ad_unit_name rows between {N} preceding and current row) baseline_cpm_sm,
-        avg(optimised_cpma) over(order by date_hour, ad_unit_name rows between {N} preceding and current row) optimised_cpma_sm,
-        avg(baseline_cpma) over(order by date_hour, ad_unit_name rows between {N} preceding and current row) baseline_cpma_sm,
-        avg(price__pressure) over(order by date_hour, ad_unit_name rows between {N} preceding and current row) price_pressure_sm,
-        avg(floor_price) over(order by date_hour, ad_unit_name rows between {N} preceding and current row) floor_price_sm
+        avg(optimised_fill_rate) over(order by date_hour rows between {N} preceding and current row) optimised_fill_rate_sm,
+        avg(baseline_fill_rate) over(order by date_hour rows between {N} preceding and current row) baseline_fill_rate_sm,
+        avg(optimised_cpm_) over(order by date_hour rows between {N} preceding and current row) optimised_cpm_sm,
+        avg(baseline_cpm_) over(order by date_hour rows between {N} preceding and current row) baseline_cpm_sm,
+        avg(optimised_cpma) over(order by date_hour rows between {N} preceding and current row) optimised_cpma_sm,
+        avg(baseline_cpma) over(order by date_hour rows between {N} preceding and current row) baseline_cpma_sm,
+        avg(price__pressure) over(order by date_hour rows between {N} preceding and current row) price_pressure_sm,
+        avg(floor_price) over(order by date_hour rows between {N} preceding and current row) floor_price_sm
 
     from hourly_analytics
 )
