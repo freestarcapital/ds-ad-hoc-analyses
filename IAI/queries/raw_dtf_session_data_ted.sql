@@ -1,12 +1,12 @@
-DECLARE ddates ARRAY<DATE> DEFAULT GENERATE_DATE_ARRAY(DATE('{start_date}'), DATE('{end_date}'));
+DECLARE ddates ARRAY<DATE> DEFAULT GENERATE_DATE_ARRAY(DATE('2024-11-29'), DATE('2024-12-02'));
 
-CREATE OR REPLACE TABLE `streamamp-qa-239417.DAS_increment.IAI_dtf_session_data_new_{test_id}` AS
+CREATE OR REPLACE TABLE `streamamp-qa-239417.DAS_increment.IAI_dtf_session_data_ef8ba9f2-a848-4bb3-af2e-3f96aa47d320` AS
 
 with pgv as (
     select distinct session_id
     from `freestar-157323.prod_eventstream.pagehits_raw`
     where _PARTITIONDATE in UNNEST(ddates)
-    and test_name = '{test_id}' and test_group = 1
+    and test_name = 'ef8ba9f2-a848-4bb3-af2e-3f96aa47d320' and test_group = 1
 ),
 
 uni AS (
@@ -68,3 +68,11 @@ SELECT date, fs_session_id,
     SUM(unfilled) unfilled
 FROM uni
 GROUP BY 1, 2, 3, 4, 5;
+
+select date, count(distinct fs_session_id) sessions,
+count(distinct fs_auction_id) auctions, sum(revenue) revenue,
+sum(impressions) impressions, sum(unfilled) unfilled,
+sum(revenue) / count(distinct fs_session_id) * 1000 rps
+from `streamamp-qa-239417.DAS_increment.IAI_dtf_session_data_ef8ba9f2-a848-4bb3-af2e-3f96aa47d320`
+group by 1
+order by 1
