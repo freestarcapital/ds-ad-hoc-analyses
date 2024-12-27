@@ -25,6 +25,10 @@ hourly_analytics as (
 
     select date_hour, ad_unit_name,
 
+        sum(requests) requests,
+        sum(impressions) impressions,
+        sum(revenue) revenue,
+
         COALESCE(SAFE_DIVIDE(SUM(if(optimised, impressions, 0)), SUM(if(optimised, requests, 0))), 0) optimised_fill_rate,
         COALESCE(SAFE_DIVIDE(SUM(if(optimised, revenue, 0)), SUM(if(optimised, impressions, 0))), 0) * 1000 optimised_cpm_,
         COALESCE(SAFE_DIVIDE(SUM(if(optimised, revenue, 0)), SUM(if(optimised, requests, 0))), 0) * 1000 optimised_cpma,
@@ -44,6 +48,9 @@ hourly_analytics as (
 
 stats as (
     select *,
+        avg(requests) over(order by date_hour, ad_unit_name rows between {N} preceding and current row) requests_sm,
+        avg(impressions) over(order by date_hour, ad_unit_name rows between {N} preceding and current row) impressions_sm,
+        avg(revenue) over(order by date_hour, ad_unit_name rows between {N} preceding and current row) revenue_sm,
         avg(optimised_fill_rate) over(order by date_hour, ad_unit_name rows between {N} preceding and current row) optimised_fill_rate_sm,
         avg(baseline_fill_rate) over(order by date_hour, ad_unit_name rows between {N} preceding and current row) baseline_fill_rate_sm,
         avg(optimised_cpm_) over(order by date_hour, ad_unit_name rows between {N} preceding and current row) optimised_cpm_sm,

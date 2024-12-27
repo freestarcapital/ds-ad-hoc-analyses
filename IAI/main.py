@@ -115,7 +115,7 @@ def main_iai_performance():
 
 if __name__ == "__main__":
 
-    main_raw_dtf_data()
+    # main_raw_dtf_data()
 
     main_iai_performance()
 

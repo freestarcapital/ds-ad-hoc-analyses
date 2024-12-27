@@ -100,8 +100,8 @@ def main_2(granularity='per_day', query_file='query_fill_rate', ad_unit_ref='all
 
 
 
-    c = 0
-
 if __name__ == "__main__":
 
     main()
+
+

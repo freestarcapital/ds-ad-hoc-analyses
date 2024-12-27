@@ -154,8 +154,8 @@ def main_dashboard_2(ad_unit_ref='all_signupgenius'):
 def main_process_dashboard():
     query_file = 'query_fill_rate_price_pressure_dash'
 
-    repl_dict = {'first_date': '2024-12-2',
-                 'last_date': '2024-12-9',
+    repl_dict = {'first_date': '2024-11-1',
+                 'last_date': '2024-12-16',
                  'N': 23}
 
     print(f'Running with query_file: {query_file}')
