@@ -178,9 +178,9 @@ if __name__ == "__main__":
 
 #    main_process_data()
 
-#    main_process_data_domain()
+    main_process_data_domain()
 
-    main_process_data_page_url()
+#    main_process_data_page_url()
 
 
 
