@@ -46,7 +46,7 @@ def get_data(query_filename, data_cache_filename, force_requery=False, repl_dict
 def main_raw_dtf_data():
 
     repl_dict = {'start_date': '2024-12-19',
-                 'end_date': '2024-12-26'}
+                 'end_date': '2025-1-5'}
 
     print(f'running for from {repl_dict["start_date"]} to {repl_dict["end_date"]}')
     query = open(os.path.join(sys.path[0], f"queries/raw_dtf_session_data_all_data.sql"), "r").read()
@@ -55,7 +55,7 @@ def main_raw_dtf_data():
 def main_process_data():
 
     repl_dict = {'start_date': '2024-12-19',
-                 'end_date': '2024-12-26'}
+                 'end_date': '2025-1-5'}
 
     query_filename = 'flying_carpet_analysis'
 
@@ -77,7 +77,7 @@ def main_process_data():
         for i, col in enumerate(cols_to_plot):
              mean[col].plot(yerr=mean_uncertainty[col], ax=ax[i], ylabel=col)
 
-        fig.savefig(f'plots/rps_plots_{title[:10].replace(' ', '_')}.png')
+        fig.savefig(f'plots/rps_plots_{title[:10].replace(' ', '_')}_{repl_dict["start_date"]}_{repl_dict["end_date"]}.png')
 
     h = 0
 
@@ -85,7 +85,7 @@ def main_process_data():
 def main_process_data_domain():
 
     repl_dict = {'start_date': '2024-12-19',
-                 'end_date': '2024-12-26'}
+                 'end_date': '2025-1-5'}
 
     query_filename = 'flying_carpet_analysis_with_domain'
 
@@ -121,7 +121,7 @@ def main_process_data_domain():
             means_uncertainty_to_plot = (pd.concat(means_uncertainty_dict[col]).reset_index().rename(columns={'level_0': 'domain'})
                              .pivot(index='quantile_placement', columns='domain', values=col))
             means_to_plot.plot(yerr=means_uncertainty_to_plot, ax=ax[i], ylabel=col)
-        fig.savefig(f'plots/rps_plots_domain_{title[:10].replace(' ', '_')}.png')
+        fig.savefig(f'plots/rps_plots_domain_{title[:10].replace(' ', '_')}_{repl_dict["start_date"]}_{repl_dict["end_date"]}.png')
 
         fig, ax = plt.subplots(figsize=(12, 9), nrows=len(cols_to_plot))
         fig.suptitle(f'Effect of quantile_placement for {title}')
@@ -133,12 +133,12 @@ def main_process_data_domain():
                 .pivot(index='quantile_placement', columns='domain', values=col))
             norm = means_to_plot.iloc[0]
             (means_to_plot/norm).plot(yerr=means_uncertainty_to_plot/norm, ax=ax[i], ylabel=col)
-        fig.savefig(f'plots/rps_plots_domain_norm_{title[:10].replace(' ', '_')}.png')
+        fig.savefig(f'plots/rps_plots_domain_norm_{title[:10].replace(' ', '_')}_{repl_dict["start_date"]}_{repl_dict["end_date"]}.png')
 
 def main_process_data_page_url():
 
     repl_dict = {'start_date': '2024-12-19',
-                 'end_date': '2024-12-26'}
+                 'end_date': '2025-1-5'}
 
     query_filename = 'flying_carpet_analysis_with_page_url'
 
@@ -168,19 +168,19 @@ def main_process_data_page_url():
                 .pivot(index='quantile_placement', columns='page_url', values='all_rps'))
 
         df = pd.concat([means_to_plot, means_uncertainty_to_plot]).transpose()
-        df.to_csv('plots/page_url_stats.csv')
+        df.to_csv(f'plots/page_url_stats_{title[:10].replace(' ', '_')}_{repl_dict["start_date"]}_{repl_dict["end_date"]}.csv')
         h = 0
 
 
 if __name__ == "__main__":
 
-    #main_raw_dtf_data()
+#    main_raw_dtf_data()
 
 #    main_process_data()
 
-    main_process_data_domain()
+#    main_process_data_domain()
 
-#    main_process_data_page_url()
+    main_process_data_page_url()
 
 
 
