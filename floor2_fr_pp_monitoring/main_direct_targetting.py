@@ -372,17 +372,17 @@ def main_ad_unit_compare():
     df_target_floor_price = pd.DataFrame(target_floor_price_list)
     df_target_floor_price.to_csv(f'plots_direct/df_target_floor_price_{ad_unit_count}.csv')
 
-def main_ad_unit_compare_do_plots(filename):
+def main_ad_unit_compare_do_plots(filename, x_col='cpma_weighted_limit_ad_request_threshold', y_cols=['cpma_weighted_limit_fill_rate', 'target_fill_rate', 'max_cpma_dual_model']):
     ad_unit_count = 10000
 #    df = pd.read_csv(f'plots_direct/df_target_floor_price_{ad_unit_count}.csv')
 
     df = pd.read_csv(f'plots_direct/{filename}.csv')
 
-    #x_col = 'cpma_weighted_limit_ad_request_threshold'
-    x_col = df.columns[0]
+    if x_col is None:
+        x_col = df.columns[0]
 
-    #y_cols = ['cpma_weighted_limit_fill_rate', 'target_fill_rate', 'max_cpma_dual_model']
-    y_cols = df.columns[1:]
+    if y_cols is None:
+        y_cols = df.columns[1:]
 
     for y_col in y_cols:
         fig, ax = plt.subplots(figsize=(16, 12))
@@ -941,15 +941,14 @@ def target_floor_price_from_fill_rate(fill_rate, target_fill_rate):
         return np.nan
     return abs(fill_rate - target_fill_rate).idxmin()
 
-def main_ad_unit_combined_model_v2():
+def main_ad_unit_combined_model_v2(target_fill_rate=0.7):
     ad_unit_count = 1000
     do_plots = True
-    N_p = 4
+    N_p = 8
     N = 40
-    plotname = 'compare_combined_model_v2'
+    plotname = f'compare_combined_model_v2_{target_fill_rate*100:0.0f}'
 
     ad_request_cum_prop_threshold = 0.975
-    target_fill_rate = 0.7
 
     repl_dict = {'ad_unit_count': ad_unit_count}
     query_file = 'query_direct_targetting_multiple'
@@ -975,9 +974,37 @@ def main_ad_unit_combined_model_v2():
         df[f'cpm_model'] = fit_model(df[['floor_price']], df['cpm'], True, 'request_limit', df)
         df[f'fill_rate_combined_exp_power_law'] = np.exp(fit_model(-pd.concat([np.log(df[['floor_price']]), df[['floor_price']]], axis=1), np.log(df['fill_rate']), True,'request_limit', df))
         df[f'fill_rate_exp_of_power_law'] = np.exp(-np.exp(fit_model(np.log(df[['floor_price']]), np.log(-np.log(df['fill_rate'])), True,'request_limit', df)))
+
+        x1 = np.log(df['floor_price'].values)
+        y = np.log(-np.log(df['fill_rate'].values))
+
+        # X = np.matrix([[len(x1), x1.sum()], [x1.sum(), (x1 ** 2).sum()]])
+        # Xy = np.matrix([[y.sum()], [(x1 * y).sum()]])
+        # beta = np.linalg.inv(X) * Xy
+        # target_floor_price = np.exp((np.log(-np.log(target_fill_rate)) - beta[0]) / beta[1])[0, 0]
+
+        X11 = len(x1)
+        X12 = x1.sum()
+        X22 = (x1 ** 2).sum()
+        det = X11*X22 - X12*X12
+        # Xinv11 = X22 / det
+        # Xinv12 = -X12 / det
+        # Xinv22 = X11 / det
+        Xy1 = y.sum()
+        Xy2 = (x1 * y).sum()
+        # beta1 = (Xinv11 * Xy1) + (Xinv12 * Xy2)
+        # beta2 = (Xinv12 * Xy1) + (Xinv22 * Xy2)
+        beta1 = (X22*Xy1 - X12*Xy2) / (X11*X22 - X12*X12)
+        beta2 = (X11*Xy2 - X12*Xy1) / (X11*X22 - X12*X12)
+        target_floor_price = np.exp((np.log(-np.log(target_fill_rate)) - beta1) / beta2)
+
+        #f = exp [ ( ln ( -ln ( fill_rate ) ) - ln ( lambda ) ) / n ]
+        #reg = LinearRegression(fit_intercept=True, positive=False).fit(x1.reshape(-1, 1), y)
+
         df = df.set_index('floor_price')
 
-        target_floor_price = {'cpma_weighted': calculate_target_floor_price(df, 100, 'cpma')}
+        target_floor_price = {'cpma_weighted': calculate_target_floor_price(df, 100, 'cpma'),
+                              'closed_form': target_floor_price}
         for model in ['combined_exp_power_law', 'exp_of_power_law']:
             df[f'cpma_{model}'] = df[f'fill_rate_{model}'] * df[f'cpm_model']
             target_floor_price[f'fill_rate_{model}'] = target_floor_price_from_fill_rate(df[f'fill_rate_{model}'], target_fill_rate)
@@ -1016,8 +1043,46 @@ def main_ad_unit_combined_model_v2():
     df_target_floor_price = pd.DataFrame(target_floor_price_list)
     df_target_floor_price.to_csv(f'plots_direct/{plotname}_target_floor_prices_{ad_unit_count}.csv', index=False)
 
-    main_ad_unit_compare_do_plots(f'{plotname}_target_floor_prices_{ad_unit_count}')
-    #{plotname}_target_floor_prices
+    main_ad_unit_combined_model_v2_do_plots(f'{plotname}_target_floor_prices_{ad_unit_count}')
+
+def cum_plot(df, filename):
+
+    x_list = []
+    for nm, x in df.items():
+        x = x[np.isfinite(x)]
+        x = x.sort_values()
+        x_list.append(pd.DataFrame(np.arange(len(x)) / (len(x) - 1), index=pd.Index(x.values), columns=[nm]))
+
+    df = pd.concat(x_list)
+    df = df.groupby(df.index).mean()
+    df = df.sort_index().ffill().bfill()
+
+    fig, ax = plt.subplots(figsize=(12, 9))
+    (100 * df).plot(xlim=[0, 2], ax=ax, ylabel='Cumulative percent of data', xlabel='Target floor price',
+                    title='CDF of target floor prices for different approaches')
+    fig.savefig(f'plots_direct/{filename}.png')
+    f = 0
+
+
+def main_ad_unit_combined_model_v2_do_plots(filename):
+
+    #main_ad_unit_compare_do_plots(filename, None, None)
+
+    df = pd.read_csv(f'plots_direct/{filename}.csv')
+
+    # df_fill_rate = df[['fill_rate_combined_exp_power_law', 'fill_rate_exp_of_power_law']]
+    # filename_fill_rate = f'{filename}_fill_rate'
+    # df_fill_rate.to_csv(f'plots_direct/{filename_fill_rate}.csv', index=False)
+    # main_ad_unit_compare_do_plots(filename_fill_rate, None, None)
+
+#    cum_plot(df[['cpma_weighted', 'fill_rate_combined_exp_power_law', 'fill_rate_exp_of_power_law']], f'{filename}_cum_plot')
+
+    cum_plot(df, f'{filename}_cum_plot')
+
+    g = 0
+
+
+
 
 
 if __name__ == "__main__":
@@ -1046,4 +1111,7 @@ if __name__ == "__main__":
 #    fill_rate_modelling_selected()
 
     main_ad_unit_combined_model_v2()
+
+#    main_ad_unit_combined_model_v2_do_plots('compare_combined_model_v2')
+
 
