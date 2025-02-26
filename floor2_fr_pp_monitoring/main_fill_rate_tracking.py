@@ -119,3 +119,7 @@ def main():
 if __name__ == "__main__":
 
     main()
+
+
+    with PdfPages(f'plots_fill_rate_tracking/scatter_plots_{ad_unit_name.replace('/', '_')}.pdf') as pdf:
+        fig, ax = plt.subplots(figsize=(12, 9))

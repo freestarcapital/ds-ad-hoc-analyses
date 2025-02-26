@@ -986,7 +986,7 @@ def main_ad_unit_combined_model_v2(target_fill_rate=0.7):
         X11 = len(x1)
         X12 = x1.sum()
         X22 = (x1 ** 2).sum()
-        det = X11*X22 - X12*X12
+        # det = X11*X22 - X12*X12
         # Xinv11 = X22 / det
         # Xinv12 = -X12 / det
         # Xinv22 = X11 / det
@@ -994,9 +994,13 @@ def main_ad_unit_combined_model_v2(target_fill_rate=0.7):
         Xy2 = (x1 * y).sum()
         # beta1 = (Xinv11 * Xy1) + (Xinv12 * Xy2)
         # beta2 = (Xinv12 * Xy1) + (Xinv22 * Xy2)
-        beta1 = (X22*Xy1 - X12*Xy2) / (X11*X22 - X12*X12)
-        beta2 = (X11*Xy2 - X12*Xy1) / (X11*X22 - X12*X12)
-        target_floor_price = np.exp((np.log(-np.log(target_fill_rate)) - beta1) / beta2)
+        # beta1 = (X22*Xy1 - X12*Xy2) / det # = ln(lambda)
+        # beta2 = (X11*Xy2 - X12*Xy1) / det # = n
+        # target_floor_price = np.exp((np.log(-np.log(target_fill_rate)) - beta1) / beta2)
+        # target_floor_price = np.exp( (np.log(-np.log(target_fill_rate)) - beta1) / beta2 )
+        # target_floor_price = np.exp(det * (np.log(-np.log(target_fill_rate)) - (X22*Xy1 - X12*Xy2)) / (X22*Xy1 - X12*Xy2))
+
+        target_floor_price = np.exp( ((X11*X22 - X12*X12) * np.log(-np.log(target_fill_rate)) - (X22*Xy1 - X12*Xy2)) / (X11*Xy2 - X12*Xy1))
 
         #f = exp [ ( ln ( -ln ( fill_rate ) ) - ln ( lambda ) ) / n ]
         #reg = LinearRegression(fit_intercept=True, positive=False).fit(x1.reshape(-1, 1), y)
