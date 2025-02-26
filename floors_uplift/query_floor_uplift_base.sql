@@ -81,33 +81,32 @@ aggregated_base_data_country_continent as (
 ),
 
 cpma_country_continent as (
-  select date, country_continent,
-    safe_divide(sum(if(control, 0, rev)), sum(if(control, 0, ad_requests))) * 1000 cpma_optimised,
-    safe_divide(sum(if(control, rev, 0)), sum(if(control, ad_requests, 0))) * 1000 cpma_control,
-    sum(if(control, 0, ad_requests)) ad_requests_optimised,
-    sum(if(control, ad_requests, 0)) ad_requests_control
-  from aggregated_base_data_country_continent
-  where country_continent not like 'continent_%'
-  group by 1, 2
+    select date, country_continent,
+        safe_divide(sum(if(control, 0, rev)), sum(if(control, 0, ad_requests))) * 1000 cpma_optimised,
+        safe_divide(sum(if(control, rev, 0)), sum(if(control, ad_requests, 0))) * 1000 cpma_control,
+        sum(if(control, 0, ad_requests)) ad_requests_optimised,
+        sum(if(control, ad_requests, 0)) ad_requests_control
+    from aggregated_base_data_country_continent
+    where country_continent not like 'continent_%'
+    group by 1, 2
 
-  union all
+    union all
 
-  select date, 'continent_' || geo_continent country_continent,
-    safe_divide(sum(if(control, 0, rev)), sum(if(control, 0, ad_requests))) * 1000 cpma_optimised,
-    safe_divide(sum(if(control, rev, 0)), sum(if(control, ad_requests, 0))) * 1000 cpma_control,
-    sum(if(control, 0, ad_requests)) ad_requests_optimised,
-    sum(if(control, ad_requests, 0)) ad_requests_control
-  from aggregated_base_data_with_continent
-  group by 1, 2
+    select date, 'continent_' || geo_continent country_continent,
+        safe_divide(sum(if(control, 0, rev)), sum(if(control, 0, ad_requests))) * 1000 cpma_optimised,
+        safe_divide(sum(if(control, rev, 0)), sum(if(control, ad_requests, 0))) * 1000 cpma_control,
+        sum(if(control, 0, ad_requests)) ad_requests_optimised,
+        sum(if(control, ad_requests, 0)) ad_requests_control
+    from aggregated_base_data_with_continent
+    group by 1, 2
 )
 
 select date, domain,
-  sum(ad_requests * (cpma_optimised-cpma_control) / 1000) rev_uplift,
-  sum(rev) revenue,
-  sum(ad_requests) ad_requests,
-  safe_divide(sum(cpma_optimised * rev), sum(rev)) cpma_optimised,
-  safe_divide(sum(cpma_control * rev), sum(rev)) cpma_control
-
+    sum(ad_requests * (cpma_optimised-cpma_control) / 1000) rev_uplift,
+    sum(rev) revenue,
+    sum(ad_requests) ad_requests,
+    safe_divide(sum(cpma_optimised * rev), sum(rev)) cpma_optimised,
+    safe_divide(sum(cpma_control * rev), sum(rev)) cpma_control
 from aggregated_base_data_country_continent
 join cpma_country_continent using (country_continent, date)
 where not control
