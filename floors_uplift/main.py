@@ -31,6 +31,31 @@ def main():
     get_bq_data(query)
 
 
+def main_plot_country_continent_cpmas():
+
+    query = open(os.path.join(sys.path[0], f"query_plot_country_continent_cpmas.sql"), "r").read()
+    df = get_bq_data(query)
+    df = df.pivot(index='date', columns='country_continent', values='cpma_uplift')
+
+    fig, ax = plt.subplots(figsize=(26, 14))
+    col_order = df.mean().sort_values(ascending=False).index
+    df = df[col_order]
+    df.plot(ax=ax, ylabel='cpma_uplift')
+    fig.savefig('country_continent_cpma_uplifts.png')
+    f =0
+
+
+def main_scan_N():
+
+    for N_countries in [5, 20, 30, 50]:
+        print(f'doing: {N_countries}')
+        repl_dic = {'N_countries': N_countries}
+        query = open(os.path.join(sys.path[0], f"query_process_from_base_data.sql"), "r").read()
+        get_bq_data(query, repl_dic)
+
 
 if __name__ == "__main__":
-    main()
+    #main()
+    #main_plot_country_continent_cpmas()
+
+    main_scan_N()

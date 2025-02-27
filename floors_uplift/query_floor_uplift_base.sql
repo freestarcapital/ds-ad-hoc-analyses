@@ -1,7 +1,8 @@
-DECLARE from_backfill_date DATE DEFAULT DATE_SUB(CURRENT_DATE(), INTERVAL 50 DAY);
+DECLARE from_backfill_date DATE DEFAULT DATE_SUB(CURRENT_DATE(), INTERVAL 25 DAY);
 DECLARE to_backfill_date_exclusive DATE DEFAULT CURRENT_DATE();
 
-CREATE OR REPLACE TABLE `streamamp-qa-239417.floors_uplift_US.floors_uplift_domain_50_days` AS
+--CREATE OR REPLACE TABLE `streamamp-qa-239417.floors_uplift_US.floors_uplift_domain_50_days` AS
+CREATE OR REPLACE TABLE `streamamp-qa-239417.floors_uplift_US.floors_uplift_base_data_25_days` AS
 
 WITH base AS (
     SELECT  a.EventDateMST date,
@@ -65,6 +66,7 @@ aggregated_base_data_with_continent as (
     join `sublime-elixir-273810.ideal_ad_stack.continent_country_mapping` on country_code = geo_country
 ),
 
+--select * from aggregated_base_data_with_continent;
 -- could save this as base data if you want to try things out quickly
 
 qualifying_country_codes as (
