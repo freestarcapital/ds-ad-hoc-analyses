@@ -1,8 +1,8 @@
 DECLARE from_backfill_date DATE DEFAULT DATE_SUB(CURRENT_DATE(), INTERVAL 25 DAY);
 DECLARE to_backfill_date_exclusive DATE DEFAULT CURRENT_DATE();
 
---CREATE OR REPLACE TABLE `streamamp-qa-239417.floors_uplift_US.floors_uplift_domain_50_days` AS
-CREATE OR REPLACE TABLE `streamamp-qa-239417.floors_uplift_US.floors_uplift_base_data_25_days` AS
+CREATE OR REPLACE TABLE `streamamp-qa-239417.floors_uplift_US.floors_uplift_domain_50_days` AS
+--CREATE OR REPLACE TABLE `streamamp-qa-239417.floors_uplift_US.floors_uplift_base_data_25_days` AS
 
 WITH base AS (
     SELECT  a.EventDateMST date,
