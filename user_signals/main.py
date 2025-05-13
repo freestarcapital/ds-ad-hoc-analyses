@@ -50,6 +50,10 @@ def get_cdf(x, col_name):
     return pd.DataFrame(np.arange(len(x)) / len(x), index=pd.Index(x[col_name].sort_values()), columns=[col_name])
 
 def do_scatter(x, x_col, y_col, ax, add_title=True):
+    x = x[~x[[x_col, y_col]].isna().any(axis=1)]
+
+    print(f'number of filtered non-na data points: {len(x)}')
+
     ax.scatter(x[x_col], x[y_col])
     reg = LinearRegression(fit_intercept=False).fit(x[[x_col]], x[y_col])
     x_max = x[x_col].max()
@@ -57,12 +61,18 @@ def do_scatter(x, x_col, y_col, ax, add_title=True):
     ax.set_xlabel(x_col)
     ax.set_ylabel(y_col)
     r2 = reg.score(x[[x_col]], x[y_col])
-    title_text = f'{y_col} ~ {reg.coef_[0]:0.2f} x {x_col}, R^2: {100 * r2:0.1f}%'
+    title_text = f'{y_col} ~ {reg.coef_[0]:0.2f} x {x_col}, R^2: {100 * r2:0.1f}% (N={len(x)})'
     if add_title:
         ax.set_title(title_text)
     return title_text
-def main():
-    x = get_data('get_expt_data_floor_price', force_requery=False)
+
+def main(expt_number=11):
+    x = get_data('get_expt_data_floor_price',
+                 f'get_expt_data_floor_price_expt_{expt_number}',
+                 repl_dict={'EXPT_NUMBER': expt_number},
+                 force_requery=False)
+
+    print(f'number of data points: {len(x)}')
 
     fig, ax = plt.subplots(figsize=(16, 12), nrows=2, ncols=2)
     for col_name in x.columns:
@@ -73,16 +83,16 @@ def main():
     do_scatter(x, 'floor_price_prod', 'floor_price_no_user', ax[1, 0])
     do_scatter(x, 'floor_price_prod', 'floor_price_user', ax[1, 1])
 
-    fig.savefig('cdf.png')
+    fig.savefig(f'cdf_expt_{expt_number}.png')
 
     fig, ax = plt.subplots(figsize=(16, 12))
-    title_text_1 = do_scatter(x, 'floor_price_prod', 'floor_price_no_user', ax)
-    title_text_2 = do_scatter(x, 'floor_price_prod', 'floor_price_user', ax)
+    title_text_1 = do_scatter(x, 'floor_price_prod', 'floor_price_no_user', ax, False)
+    title_text_2 = do_scatter(x, 'floor_price_prod', 'floor_price_user', ax, False)
     ax.set_ylabel('floor_price_no_user OR floor_price_user')
     ax.set_xlabel('floor_price_prod')
-    fig.suptitle(f'{title_text_1} {title_text_2}')
+    fig.suptitle(f'{title_text_1} AND {title_text_2}')
 
-    fig.savefig('cdf_2.png')
+    fig.savefig(f'cdf_expt_{expt_number}_2.png')
 
     h = 0
 
