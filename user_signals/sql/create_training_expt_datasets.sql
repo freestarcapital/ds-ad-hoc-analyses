@@ -61,7 +61,6 @@ join t3 using (device_category_raw, date, hour_x, hour_y, country_code, ad_unit_
 -- order by date, hour_x, hour_y, country_code, ad_unit_name, device_category
 -- limit 1000
 
-
 drop table if exists `streamamp-qa-239417.training.floors_vertex_devbrowser-signal_green_28042025_expt_4`;
 create table `streamamp-qa-239417.training.floors_vertex_devbrowser-signal_green_28042025_expt_4` as
 with t1 as (
