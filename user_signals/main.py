@@ -49,7 +49,7 @@ def get_data(query_filename, data_cache_filename=None, force_requery=False, repl
 def get_cdf(x, col_name):
     return pd.DataFrame(np.arange(len(x)) / len(x), index=pd.Index(x[col_name].sort_values()), columns=[col_name])
 
-def do_scatter(x, x_col, y_col, ax):
+def do_scatter(x, x_col, y_col, ax, add_title=True):
     ax.scatter(x[x_col], x[y_col])
     reg = LinearRegression(fit_intercept=False).fit(x[[x_col]], x[y_col])
     x_max = x[x_col].max()
@@ -58,8 +58,9 @@ def do_scatter(x, x_col, y_col, ax):
     ax.set_ylabel(y_col)
     r2 = reg.score(x[[x_col]], x[y_col])
     title_text = f'{y_col} ~ {reg.coef_[0]:0.2f} x {x_col}, R^2: {100 * r2:0.1f}%'
-    ax.set_title(title_text)
-
+    if add_title:
+        ax.set_title(title_text)
+    return title_text
 def main():
     x = get_data('get_expt_data_floor_price', force_requery=False)
 
@@ -73,6 +74,15 @@ def main():
     do_scatter(x, 'floor_price_prod', 'floor_price_user', ax[1, 1])
 
     fig.savefig('cdf.png')
+
+    fig, ax = plt.subplots(figsize=(16, 12))
+    title_text_1 = do_scatter(x, 'floor_price_prod', 'floor_price_no_user', ax)
+    title_text_2 = do_scatter(x, 'floor_price_prod', 'floor_price_user', ax)
+    ax.set_ylabel('floor_price_no_user OR floor_price_user')
+    ax.set_xlabel('floor_price_prod')
+    fig.suptitle(f'{title_text_1} {title_text_2}')
+
+    fig.savefig('cdf_2.png')
 
     h = 0
 
