@@ -1,11 +1,13 @@
-create table floors_us.daily_uplift_us_gam_v2_domain_daily as
+create table floors_us.daily_uplift_us_gam_v2_domain_monthly as
 
 with
 aggregated_base_data_month as (
-    select --date_trunc(date, month) date,
-      date, domain, country_code, device_category, control, sum(ad_requests) ad_requests, sum(rev) rev
+    select date_trunc(date, month) date,
+      --date,
+      domain, country_code, device_category, control, sum(ad_requests) ad_requests, sum(rev) rev
     from `streamamp-qa-239417.floors_uplift_US.floors_uplift_domain_2025_aggregated_base_data`
     where device_category in ('tablet', 'smartphone', 'desktop', 'smartphone-ios')
+        and date < '2025-5-1'
     group by 1, 2, 3, 4, 5
 ),
 
