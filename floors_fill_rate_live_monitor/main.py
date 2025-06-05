@@ -38,6 +38,7 @@ def main():
     df_p = df.pivot(index='date_hour', columns='placement_id', values='avg_floor_price')
 
     fig, ax = plt.subplots(figsize=(12, 9))
+    df_p.plot(ax=ax)
     fig.savefig(f'plot.png')
 
 
