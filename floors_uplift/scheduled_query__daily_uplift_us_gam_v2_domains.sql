@@ -114,17 +114,17 @@ domain_aggregates as (
   select date, domain, country_continent, device_category,
       sum(ad_requests) domain_ad_requests, sum(rev) domain_rev
     from aggregated_base_data_country_continent
-    where not control and
-      country_continent not like 'continent_%'
+    where not control --and
+     -- country_continent not like 'continent_%'
     group by 1, 2, 3, 4
 
     union all
 
-    select date, domain, 'continent_' || geo_continent country_continent, device_category,
-      sum(ad_requests) domain_ad_requests, sum(rev) domain_rev
-    from aggregated_base_data_with_continent
-    where not control
-    group by 1, 2, 3, 4
+--    select date, domain, 'continent_' || geo_continent country_continent, device_category,
+--      sum(ad_requests) domain_ad_requests, sum(rev) domain_rev
+--    from aggregated_base_data_with_continent
+--    where not control
+--    group by 1, 2, 3, 4
 ),
 
 domain_stats as (
