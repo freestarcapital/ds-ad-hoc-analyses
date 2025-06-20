@@ -111,33 +111,24 @@ cpma_country_continent_device as (
 ),
 
 domain_aggregates as (
-  select date, domain, country_continent, device_category,
-      sum(ad_requests) domain_ad_requests, sum(rev) domain_rev
+    select date, domain, country_continent, device_category,
+         sum(ad_requests) domain_ad_requests, sum(rev) domain_rev
     from aggregated_base_data_country_continent
-    where not control --and
-     -- country_continent not like 'continent_%'
+    where not control
     group by 1, 2, 3, 4
-
---    union all
-
---    select date, domain, 'continent_' || geo_continent country_continent, device_category,
---      sum(ad_requests) domain_ad_requests, sum(rev) domain_rev
---    from aggregated_base_data_with_continent
---    where not control
---    group by 1, 2, 3, 4
 ),
 
 domain_stats as (
-  select date, domain,
-    safe_divide(sum(cpma_optimised * domain_ad_requests), sum(domain_ad_requests)) estimated_cpma_optimised,
-    safe_divide(sum(cpma_control * domain_ad_requests), sum(domain_ad_requests)) estimated_cpma_control,
-    100 * (1 - safe_divide(sum(cpma_control * domain_ad_requests), sum(cpma_optimised * domain_ad_requests))) estimated_floors_cpma_uplift_percent,
-    sum((1 - safe_divide(cpma_control, cpma_optimised)) * domain_rev) estimated_floors_revenue_uplift,
-    sum(domain_ad_requests) ad_requests,
-    sum(domain_rev) total_revenue
-  from domain_aggregates
-  join cpma_country_continent_device using (country_continent, date, device_category)
-  group by 1, 2
+    select date, domain,
+        safe_divide(sum(cpma_optimised * domain_ad_requests), sum(domain_ad_requests)) estimated_cpma_optimised,
+        safe_divide(sum(cpma_control * domain_ad_requests), sum(domain_ad_requests)) estimated_cpma_control,
+        100 * (1 - safe_divide(sum(cpma_control * domain_ad_requests), sum(cpma_optimised * domain_ad_requests))) estimated_floors_cpma_uplift_percent,
+        sum((1 - safe_divide(cpma_control, cpma_optimised)) * domain_rev) estimated_floors_revenue_uplift,
+        sum(domain_ad_requests) ad_requests,
+        sum(domain_rev) total_revenue
+    from domain_aggregates
+    join cpma_country_continent_device using (country_continent, date, device_category)
+    group by 1, 2
 )
 
 select * from domain_stats;

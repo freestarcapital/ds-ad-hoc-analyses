@@ -6,7 +6,6 @@ BEGIN TRANSACTION;
 DELETE FROM floors_us.daily_uplift_us_gam_v2_domain_monthly WHERE date >= from_backfill_date AND date < to_backfill_date_exclusive;
 INSERT INTO floors_us.daily_uplift_us_gam_v2_domain_monthly
 
-
 WITH base AS (
     SELECT  a.EventDateMST date,
             net.reg_domain(RefererURL) domain,
@@ -19,7 +18,6 @@ WITH base AS (
     left join `freestar-157323.ad_manager_dtf.p_MatchTableLineItem_15184186` match on a.LineItemId=match.Id AND match._PARTITIONDATE = a.EventDateMST
     left join `freestar-157323.ad_manager_dtf.p_MatchTableCompany_15184186` co on a.AdvertiserId=co.Id AND co._PARTITIONDATE = a.EventDateMST
     LEFT JOIN `freestar-157323.ad_manager_dtf.p_MatchTableGeoTarget_15184186` GeoLookup ON GeoLookup.Id = a.CountryId AND GeoLookup._PARTITIONDATE = a.EventDateMST
-
     WHERE a.EventDateMST >= from_backfill_date AND a.EventDateMST < to_backfill_date_exclusive
     AND (REGEXP_CONTAINS(co.Name, '(?i)^((T13-.*)|(fspb_.*)|(Google.*)|(Amazon)|(freestar_prebid)|(Mingle2)|(Brickseek)|(FootballDB)|(Ideas People.*)|(Blue Media Services)|(Mediaforce)|(WhatIsMyIPAddress)|(-)|(Open Bidding)|(AdSparc.*)|(Triple13)|(Adexchange)|(Ad Exchange)|(Freestar))$') OR LineItemId = 0)
 
@@ -118,48 +116,42 @@ cpma_country_continent_device as (
 ),
 
 domain_aggregates as (
-  select date, domain, country_continent, device_category,
-      sum(ad_requests) domain_ad_requests, sum(rev) domain_rev
+    select date, domain, country_continent, device_category,
+        sum(ad_requests) domain_ad_requests, sum(rev) domain_rev
     from aggregated_base_data_country_continent
     where not control 
     group by 1, 2, 3, 4
-
-
 ),
-rps_uplift AS (
-  SELECT 
-    DATE_TRUNC(date, MONTH) AS date,
-    domain,
-    (sum(proportion*rps_das)/sum(proportion*rps_base)- 1)*100 AS estimated_das_revenue_uplift_percent,
-    SUM(proportion * rps_das) AS estimated_das_rps,
-    SUM(proportion * rps_base) AS estimated_base_rps
-  FROM `sublime-elixir-273810.DAS_1_9.DAS_traffic_uplift_dashboarding_detail_optimised` 
-  GROUP BY 1, 2
+
+das_rps_uplift AS (
+    select date_trunc(date, month) as date, domain,
+        (safe_divide(sum(proportion * rps_das), sum(proportion * rps_base)) - 1) * 100 as estimated_das_revenue_uplift_percent,
+        sum(proportion * rps_das) as estimated_das_rps,
+        sum(proportion * rps_base) as estimated_base_rps
+    from `sublime-elixir-273810.das_1_9.das_traffic_uplift_dashboarding_detail_optimised`
+    group by 1, 2
 ),
 
 domain_stats as (
-  select date, domain,
-    safe_divide(sum(cpma_optimised * domain_ad_requests), sum(domain_ad_requests)) estimated_cpma_optimised,
-    safe_divide(sum(cpma_control * domain_ad_requests), sum(domain_ad_requests)) estimated_cpma_control,
-    100 * (1 - safe_divide(sum(cpma_control * domain_ad_requests), sum(cpma_optimised * domain_ad_requests))) estimated_floors_cpma_uplift_percent,
-    sum((1 - safe_divide(cpma_control, cpma_optimised)) * domain_rev) estimated_floors_revenue_uplift,
-    sum(domain_ad_requests) ad_requests,
-    sum(domain_rev) total_revenue
-  from domain_aggregates
-  join cpma_country_continent_device using (country_continent, date, device_category)
-  group by 1, 2
+    select date, domain,
+        safe_divide(sum(cpma_optimised * domain_ad_requests), sum(domain_ad_requests)) estimated_cpma_optimised,
+        safe_divide(sum(cpma_control * domain_ad_requests), sum(domain_ad_requests)) estimated_cpma_control,
+        100 * (1 - safe_divide(sum(cpma_control * domain_ad_requests), sum(cpma_optimised * domain_ad_requests))) estimated_floors_cpma_uplift_percent,
+        sum((1 - safe_divide(cpma_control, cpma_optimised)) * domain_rev) estimated_floors_revenue_uplift,
+        sum(domain_ad_requests) ad_requests,
+        sum(domain_rev) total_revenue
+    from domain_aggregates
+    join cpma_country_continent_device using (country_continent, date, device_category)
+    group by 1, 2
 )
- 
 
-SELECT 
-  ds.*,
-  COALESCE(ru.estimated_das_revenue_uplift_percent, 0) AS estimated_das_revenue_uplift_percent,
-
-COALESCE(ru.estimated_das_rps, 0) AS estimated_das_rps,
-COALESCE(ru.estimated_base_rps, 0) AS estimated_base_rps,
-COALESCE(ru.estimated_das_revenue_uplift_percent, 0) * ds.total_revenue / 100 AS das_revenue_uplift
-  FROM domain_stats ds
-LEFT JOIN rps_uplift ru USING (date, domain);
+select ds.*,
+    coalesce(ru.estimated_das_revenue_uplift_percent, 0) as estimated_das_revenue_uplift_percent,
+    coalesce(ru.estimated_das_rps, 0) as estimated_das_rps,
+    coalesce(ru.estimated_base_rps, 0) as estimated_base_rps,
+    coalesce(ru.estimated_das_revenue_uplift_percent, 0) * ds.total_revenue / 100 as das_revenue_uplift
+from domain_stats ds
+left join das_rps_uplift ru using (date, domain);
 
 COMMIT TRANSACTION;
 
