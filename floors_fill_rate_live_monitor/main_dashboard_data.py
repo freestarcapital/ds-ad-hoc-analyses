@@ -30,24 +30,32 @@ def main(recreate_raw_data=False):
         get_bq_data(query, {'table_name': 'sublime-elixir-273810.training_fill_rate.base_data_for_performance_checking'})
     #return
 
-    query = open(os.path.join(sys.path[0], f"query_get_performance_data_from_base_data_for_dashboard.sql"), "r").read()
+    results_tablename = 'sublime-elixir-273810.training_fill_rate.fill-rate_results_for_performance_checking'
+
+    query_plots = open(os.path.join(sys.path[0], f"query_get_perf_from_base_data_for_plots.sql"), "r").read()
+    query_dashboard = open(os.path.join(sys.path[0], f"query_get_perf_from_base_data_for_dashboard.sql"), "r").read()
     query_reference_ad_units = open(os.path.join(sys.path[0], f"query_get_reference_ad_units.sql"), "r").read()
 
     ad_units = pd.read_csv('fill-rate-ads.csv')
 
     and_where = ""
-    and_where = "and country_code = 'US' and device_category = 'Desktop'"
+    #and_where = "and country_code = 'US' and device_category = 'Desktop'"
 
     a_w_s = and_where.split("'")
     title_extra = f"{len(ad_units)}"
     if len(a_w_s) >= 4:
         title_extra += ' ' + a_w_s[1] + ' ' + a_w_s[3]
 
+
     with PdfPages(f'plots/fill-rate_results_{title_extra.replace(' ', '_')}.pdf') as pdf:
 
-        for _, (ad_unit, domain) in ad_units.iterrows():
+        first_row = True
+        for _, (ad_unit, domain, working) in ad_units.iterrows():
 
-            if (',' in ad_unit) or ('test' in ad_unit):
+            create_or_insert_statement = f"CREATE OR REPLACE TABLE `{results_tablename}` as" if first_row else f"insert into `{results_tablename}`"
+            first_row = False
+
+            if (',' in ad_unit) or ('test' in ad_unit) or not working:
                 continue
 
             print(f"ad_unit: {ad_unit}")
@@ -58,12 +66,16 @@ def main(recreate_raw_data=False):
 
             repl_dict = {'ad_unit': ad_unit,
                          'reference_ad_units_where': reference_ad_units_where,
-                         'and_where': and_where}
+                         'and_where': and_where,
+                         'create_or_insert_statement': create_or_insert_statement}
+
 
             df_reference_ad_units = get_bq_data(query_reference_ad_units, repl_dict)
             print (df_reference_ad_units)
 
-            df = get_bq_data(query, repl_dict)
+            get_bq_data(query_dashboard, repl_dict)
+
+            df = get_bq_data(query_plots, repl_dict)
             if not df.empty:
                 df_p = df.set_index('date').astype('float64')
                 plot_cols = ['floor_price', 'fill_rate', 'cpma', 'revenue']

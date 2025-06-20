@@ -61,7 +61,7 @@ def main_base_data():
 
         ad_unit_domain_base_like = ad_unit.split('_')[0] + '_%'
 
-        query = open(os.path.join(sys.path[0], f"query_get_performance_data_from_base_data.sql"), "r").read()
+        query = open(os.path.join(sys.path[0], f"query_get_perf_from_base_data.sql"), "r").read()
         df = get_bq_data(query, replacement_dict={'ad_unit': ad_unit,
                                                   'ad_unit_domain_base_like': ad_unit_domain_base_like,
                                                   'and_where': and_where})
