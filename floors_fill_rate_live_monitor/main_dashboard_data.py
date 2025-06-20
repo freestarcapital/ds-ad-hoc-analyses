@@ -23,7 +23,12 @@ def get_bq_data(query, replacement_dict={}):
         query = query.replace("{" + k + "}", str(v))
     return client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
 
-def main():
+def main(recreate_raw_data=False):
+
+    if recreate_raw_data:
+        query = open(os.path.join(sys.path[0], f"query_create_raw_data.sql"), "r").read()
+        get_bq_data(query, {'table_name': 'sublime-elixir-273810.training_fill_rate.base_data_for_performance_checking'})
+    #return
 
     query = open(os.path.join(sys.path[0], f"query_get_performance_data_from_base_data_for_dashboard.sql"), "r").read()
     query_reference_ad_units = open(os.path.join(sys.path[0], f"query_get_reference_ad_units.sql"), "r").read()
@@ -31,7 +36,7 @@ def main():
     ad_units = pd.read_csv('fill-rate-ads.csv')
 
     and_where = ""
-    #and_where = "and country_code = 'US' and device_category = 'Desktop'"
+    and_where = "and country_code = 'US' and device_category = 'Desktop'"
 
     a_w_s = and_where.split("'")
     title_extra = f"{len(ad_units)}"
@@ -61,7 +66,7 @@ def main():
             df = get_bq_data(query, repl_dict)
             if not df.empty:
                 df_p = df.set_index('date').astype('float64')
-                plot_cols = ['floor_price', 'fill_rate', 'cpma']
+                plot_cols = ['floor_price', 'fill_rate', 'cpma', 'revenue']
                 fig, ax = plt.subplots(figsize=(16, 12), nrows=len(plot_cols))
                 for i, col in enumerate(plot_cols):
                     df_p[[c for c in df_p.columns if col in c]].plot(ax=ax[i])
