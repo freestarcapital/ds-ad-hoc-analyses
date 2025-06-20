@@ -52,7 +52,7 @@ control AS
 (
     SELECT date, country_code, device_category, 'control' domain, True control, SUM(ad_requests) ad_requests, SUM(rev) rev
     FROM base_with_control_domain
-	WHERE control_domain
+    WHERE control_domain
     GROUP BY 1, 2, 3
 ),
 
@@ -60,7 +60,7 @@ optimised AS
 (
     SELECT date, country_code, device_category, domain, False control, SUM(ad_requests) ad_requests, SUM(rev) rev
     FROM base_with_control_domain
-	WHERE floors_id IS NOT NULL AND floors_id NOT IN ('timeout', 'control', 'learning') AND domain IS NOT NULL AND not control_domain
+    WHERE floors_id IS NOT NULL AND floors_id NOT IN ('timeout', 'control', 'learning') AND domain IS NOT NULL AND not control_domain
     GROUP BY 1, 2, 3, 4
 ),
 
@@ -74,7 +74,6 @@ aggregated_base_data_month as (
     select date_trunc(date, month) date, domain, country_code, device_category, control, sum(ad_requests) ad_requests, sum(rev) rev
     from aggregated_base_data
     where device_category in ('tablet', 'smartphone', 'desktop', 'smartphone-ios')
-        and date < '2025-5-1'
     group by 1, 2, 3, 4, 5
 ),
 
@@ -122,17 +121,20 @@ domain_aggregates as (
   select date, domain, country_continent, device_category,
       sum(ad_requests) domain_ad_requests, sum(rev) domain_rev
     from aggregated_base_data_country_continent
-    where not control --and
-      --country_continent not like 'continent_%'
+    where not control 
     group by 1, 2, 3, 4
 
---    union all
---
---    select date, domain, 'continent_' || geo_continent country_continent, device_category,
---      sum(ad_requests) domain_ad_requests, sum(rev) domain_rev
---    from aggregated_base_data_with_continent
---    where not control
---    group by 1, 2, 3, 4
+
+),
+rps_uplift AS (
+  SELECT 
+    DATE_TRUNC(date, MONTH) AS date,
+    domain,
+    (sum(proportion*rps_das)/sum(proportion*rps_base)- 1)*100 AS estimated_das_revenue_uplift_percent,
+    SUM(proportion * rps_das) AS estimated_das_rps,
+    SUM(proportion * rps_base) AS estimated_base_rps
+  FROM `sublime-elixir-273810.DAS_1_9.DAS_traffic_uplift_dashboarding_detail_optimised` 
+  GROUP BY 1, 2
 ),
 
 domain_stats as (
@@ -147,8 +149,17 @@ domain_stats as (
   join cpma_country_continent_device using (country_continent, date, device_category)
   group by 1, 2
 )
+ 
 
-select * from domain_stats;
+SELECT 
+  ds.*,
+  COALESCE(ru.estimated_das_revenue_uplift_percent, 0) AS estimated_das_revenue_uplift_percent,
+
+COALESCE(ru.estimated_das_rps, 0) AS estimated_das_rps,
+COALESCE(ru.estimated_base_rps, 0) AS estimated_base_rps,
+COALESCE(ru.estimated_das_revenue_uplift_percent, 0) * ds.total_revenue / 100 AS das_revenue_uplift
+  FROM domain_stats ds
+LEFT JOIN rps_uplift ru USING (date, domain);
 
 COMMIT TRANSACTION;
 
