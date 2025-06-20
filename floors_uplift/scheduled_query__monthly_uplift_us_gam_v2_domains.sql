@@ -121,7 +121,7 @@ domain_aggregates as (
   select date, domain, country_continent, device_category,
       sum(ad_requests) domain_ad_requests, sum(rev) domain_rev
     from aggregated_base_data_country_continent
-    where not control --and
+    where not control 
     group by 1, 2, 3, 4
 
 
@@ -130,10 +130,9 @@ rps_uplift AS (
   SELECT 
     DATE_TRUNC(date, MONTH) AS date,
     domain,
-    -- (SUM(proportion * rps_das) / SUM(proportion * rps_base) - 1) * 100 AS das_revenue_uplift_percent
-    (sum(proportion*rps_das)/sum(proportion*rps_base)- 1)*100 das_revenue_uplift,
-    SUM(proportion * rps_das) AS estimated_rps_das,
-    SUM(proportion * rps_base) AS estimated_rps_base
+    (sum(proportion*rps_das)/sum(proportion*rps_base)- 1)*100 AS estimated_das_revenue_uplift_percent,
+    SUM(proportion * rps_das) AS estimated_das_rps,
+    SUM(proportion * rps_base) AS estimated_base_rps
   FROM `sublime-elixir-273810.DAS_1_9.DAS_traffic_uplift_dashboarding_detail_optimised` 
   GROUP BY 1, 2
 ),
@@ -154,7 +153,8 @@ domain_stats as (
 
 SELECT 
   ds.*,
-COALESCE(ru.estimated_das_revenue_uplift_percent, 0) AS estimated_das_revenue_uplift_percent,
+  COALESCE(ru.estimated_das_revenue_uplift_percent, 0) AS estimated_das_revenue_uplift_percent,
+
 COALESCE(ru.estimated_das_rps, 0) AS estimated_das_rps,
 COALESCE(ru.estimated_base_rps, 0) AS estimated_base_rps,
 COALESCE(ru.estimated_das_revenue_uplift_percent, 0) * ds.total_revenue / 100 AS das_revenue_uplift
@@ -163,4 +163,8 @@ LEFT JOIN rps_uplift ru USING (date, domain);
 
 COMMIT TRANSACTION;
 
-
+-- template for how looker should do aggregation
+--   sum(estimated_floors_revenue_uplift),
+--   sum(estimated_cpma_optimised * ad_requests) / sum(ad_requests),
+--   sum(estimated_cpma_control * ad_requests) / sum(ad_requests),
+--   sum(estimated_floors_cpma_uplift_percent * ad_requests) / sum(ad_requests)
