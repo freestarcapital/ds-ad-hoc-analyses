@@ -122,16 +122,9 @@ domain_aggregates as (
       sum(ad_requests) domain_ad_requests, sum(rev) domain_rev
     from aggregated_base_data_country_continent
     where not control --and
---      country_continent not like 'continent_%'
     group by 1, 2, 3, 4
 
-    -- union all
 
-    -- select date, domain, 'continent_' || geo_continent country_continent, device_category,
-    --   sum(ad_requests) domain_ad_requests, sum(rev) domain_rev
-    -- from aggregated_base_data_with_continent
-    -- where not control
-    -- group by 1, 2, 3, 4
 ),
 rps_uplift AS (
   SELECT 
@@ -139,8 +132,8 @@ rps_uplift AS (
     domain,
     -- (SUM(proportion * rps_das) / SUM(proportion * rps_base) - 1) * 100 AS das_revenue_uplift_percent
     (sum(proportion*rps_das)/sum(proportion*rps_base)- 1)*100 das_revenue_uplift,
-    SUM(proportion * rps_das) AS weighted_rps_das,
-    SUM(proportion * rps_base) AS weighted_rps_base
+    SUM(proportion * rps_das) AS estimated_rps_das,
+    SUM(proportion * rps_base) AS estimated_rps_base
   FROM `sublime-elixir-273810.DAS_1_9.DAS_traffic_uplift_dashboarding_detail_optimised` 
   GROUP BY 1, 2
 ),
@@ -158,19 +151,16 @@ domain_stats as (
   group by 1, 2
 )
  
--- select * from domain_stats;
+
 SELECT 
   ds.*,
-  ru.das_revenue_uplift * total_revenue/100 as das_revenue_uplift,
-  ru.weighted_rps_das,
-  ru.weighted_rps_base,
+COALESCE(ru.estimated_das_revenue_uplift_percent, 0) AS estimated_das_revenue_uplift_percent,
+COALESCE(ru.estimated_das_rps, 0) AS estimated_das_rps,
+COALESCE(ru.estimated_base_rps, 0) AS estimated_base_rps,
+COALESCE(ru.estimated_das_revenue_uplift_percent, 0) * ds.total_revenue / 100 AS das_revenue_uplift
   FROM domain_stats ds
 LEFT JOIN rps_uplift ru USING (date, domain);
 
 COMMIT TRANSACTION;
 
--- template for how looker should do aggregation
---   sum(estimated_floors_revenue_uplift),
---   sum(estimated_cpma_optimised * ad_requests) / sum(ad_requests),
---   sum(estimated_cpma_control * ad_requests) / sum(ad_requests),
---   sum(estimated_floors_cpma_uplift_percent * ad_requests) / sum(ad_requests)
+
