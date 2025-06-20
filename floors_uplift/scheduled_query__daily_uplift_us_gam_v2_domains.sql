@@ -118,7 +118,7 @@ domain_aggregates as (
      -- country_continent not like 'continent_%'
     group by 1, 2, 3, 4
 
-    union all
+--    union all
 
 --    select date, domain, 'continent_' || geo_continent country_continent, device_category,
 --      sum(ad_requests) domain_ad_requests, sum(rev) domain_rev
