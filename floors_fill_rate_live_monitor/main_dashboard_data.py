@@ -46,7 +46,6 @@ def main(recreate_raw_data=False):
     if len(a_w_s) >= 4:
         title_extra += ' ' + a_w_s[1] + ' ' + a_w_s[3]
 
-
     with PdfPages(f'plots/fill-rate_results_{title_extra.replace(' ', '_')}.pdf') as pdf:
 
         first_row = True
@@ -67,8 +66,8 @@ def main(recreate_raw_data=False):
             repl_dict = {'ad_unit': ad_unit,
                          'reference_ad_units_where': reference_ad_units_where,
                          'and_where': and_where,
-                         'create_or_insert_statement': create_or_insert_statement}
-
+                         'create_or_insert_statement': create_or_insert_statement,
+                         'start_date': "2025-05-10"}
 
             df_reference_ad_units = get_bq_data(query_reference_ad_units, repl_dict)
             print (df_reference_ad_units)
@@ -84,9 +83,6 @@ def main(recreate_raw_data=False):
                     df_p[[c for c in df_p.columns if col in c]].plot(ax=ax[i])
                 fig.suptitle(f'{ad_unit}{title_extra}, number of reference ad_units: {len(df_reference_ad_units)}')
                 pdf.savefig()
-
-
-
 
     fig, ax = plt.subplots(figsize=(12, 9))
     df_p.plot(ax=ax)

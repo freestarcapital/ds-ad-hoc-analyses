@@ -6,7 +6,7 @@ with fill_rate as (
         SAFE_DIVIDE(sum(floor_price * ad_requests), sum(ad_requests)) floor_price_fr
 
     from `sublime-elixir-273810.training.base_data_main_green`
-    where time_day >= '2025-6-1'
+    where time_day >= '{start_date}'
         and ad_unit_name = '{ad_unit}'
         {and_where}
     group by 1
@@ -19,7 +19,7 @@ rev_max as (
         SAFE_DIVIDE(sum(floor_price * ad_requests), sum(ad_requests)) floor_price_rm
 
     from `sublime-elixir-273810.training.base_data_main_green`
-    where time_day >= '2025-6-1'
+    where time_day >= '{start_date}'
         and ad_unit_name like '{ad_unit_domain_base_like}'
         and ad_unit_name != '{ad_unit}'
         {and_where}

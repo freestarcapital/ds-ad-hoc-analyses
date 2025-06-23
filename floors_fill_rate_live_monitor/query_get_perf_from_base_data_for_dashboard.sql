@@ -9,7 +9,7 @@ with fill_rate as (
 
     from `sublime-elixir-273810.training_fill_rate.base_data_for_performance_checking`
 
-    where time_day >= '2025-5-10'
+    where time_day >= '{start_date}'
         and ad_unit_name = '{ad_unit}'
         {and_where}
     group by 1, 2, 3
@@ -24,7 +24,7 @@ rev_max as (
 
     from `sublime-elixir-273810.training_fill_rate.base_data_for_performance_checking`
 
-    where time_day >= '2025-6-1'
+    where time_day >= '{start_date}'
         and {reference_ad_units_where}
         {and_where}
     group by 1, 2, 3
