@@ -11,7 +11,6 @@ with fill_rate as (
 
     where time_day >= '{start_date}'
         and ad_unit_name = '{ad_unit}'
-        {and_where}
     group by 1, 2, 3
 ),
 
@@ -26,11 +25,10 @@ rev_max as (
 
     where time_day >= '{start_date}'
         and {reference_ad_units_where}
-        {and_where}
     group by 1, 2, 3
 )
 
-select '{ad_unit}' ad_unit, *
+select '{ad_unit}' ad_unit, *, if(date >= '{fill_rate_model_enabled_date}', 1, 0) fill_rate_model_enabled, '{fill_rate_model_enabled_date}' fill_rate_model_enabled_date
 from fill_rate join rev_max using (date, country_code, device_category)
 order by date
 

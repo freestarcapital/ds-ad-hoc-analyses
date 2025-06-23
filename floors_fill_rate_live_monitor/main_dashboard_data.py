@@ -5,6 +5,7 @@ import configparser
 from google.cloud import bigquery_storage
 import os, sys
 from matplotlib.backends.backend_pdf import PdfPages
+import datetime as dt
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 1000)
@@ -49,7 +50,7 @@ def main(recreate_raw_data=False):
     with PdfPages(f'plots/fill-rate_results_{title_extra.replace(' ', '_')}.pdf') as pdf:
 
         first_row = True
-        for _, (ad_unit, domain, working) in ad_units.iterrows():
+        for _, (ad_unit, domain, working, fill_rate_model_enabled_date) in ad_units.iterrows():
 
             create_or_insert_statement = f"CREATE OR REPLACE TABLE `{results_tablename}` as" if first_row else f"insert into `{results_tablename}`"
             first_row = False
@@ -67,7 +68,8 @@ def main(recreate_raw_data=False):
                          'reference_ad_units_where': reference_ad_units_where,
                          'and_where': and_where,
                          'create_or_insert_statement': create_or_insert_statement,
-                         'start_date': "2025-05-10"}
+                         'start_date': "2025-05-10",
+                         'fill_rate_model_enabled_date': dt.datetime.strptime(fill_rate_model_enabled_date, '%d/%m/%Y').strftime('%Y-%m-%d')}
 
             df_reference_ad_units = get_bq_data(query_reference_ad_units, repl_dict)
             print (df_reference_ad_units)
