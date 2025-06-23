@@ -1,4 +1,4 @@
-DECLARE window_days int64 DEFAULT 20;
+DECLARE window_days int64 DEFAULT 40;
 
 DECLARE midnight_UTC_after_last_date TIMESTAMP DEFAULT TIMESTAMP_TRUNC(CURRENT_TIMESTAMP(), DAY);
 DECLARE last_date_dow_offset int64 DEFAULT(EXTRACT(DAYOFWEEK FROM midnight_UTC_after_last_date) - 1);
