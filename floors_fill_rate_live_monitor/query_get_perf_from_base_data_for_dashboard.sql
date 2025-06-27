@@ -9,9 +9,8 @@ with fill_rate as (
 
     from `sublime-elixir-273810.training_fill_rate.base_data_for_performance_checking`
 
-    where time_day >= '2025-6-1'
+    where time_day >= '{start_date}'
         and ad_unit_name = '{ad_unit}'
-        {and_where}
     group by 1, 2, 3
 ),
 
@@ -24,13 +23,12 @@ rev_max as (
 
     from `sublime-elixir-273810.training_fill_rate.base_data_for_performance_checking`
 
-    where time_day >= '2025-6-1'
+    where time_day >= '{start_date}'
         and {reference_ad_units_where}
-        {and_where}
     group by 1, 2, 3
 )
 
-select '{ad_unit}' ad_unit, *
+select '{ad_unit}' ad_unit, *, if(date >= '{fill_rate_model_enabled_date}', 1, 0) fill_rate_model_enabled, '{fill_rate_model_enabled_date}' fill_rate_model_enabled_date
 from fill_rate join rev_max using (date, country_code, device_category)
 order by date
 
