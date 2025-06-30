@@ -145,17 +145,20 @@ def do_scatterplot(x, y, c, ax_):
 
 def main_summary_plots(results_tablename):
 
-    query = ("select ad_unit, date, min(fill_rate_model_enabled_date) fill_rate_model_enabled_date, "
+    #dims = "ad_unit, date, country_code, device_category"
+    dims = "ad_unit, date"
+
+    query = (f"select {dims}, min(fill_rate_model_enabled_date) fill_rate_model_enabled_date, "
              "date_diff(date(date), PARSE_DATE('%Y-%m-%d', min(fill_rate_model_enabled_date)), day) days_after_fill_rate_model_enabled, ")
 
     for c1 in ['cpm', 'cpma', 'fill_rate', ' ad_request_weighted_floor_price']:
         for c2 in ['rm', 'fr']:
             query += f'sum({c1}_{c2} * sum_ad_requests_{c2}) / sum(sum_ad_requests_{c2}) as {c1}_{c2}, '
 
-    query += f' from `{results_tablename}` group by 1, 2 order by 1, 2'
+    query += f' from `{results_tablename}` group by {dims} order by {dims}'
 
     df = get_bq_data(query)
-    val_cols = [c for c in df.columns if c not in ['ad_unit', 'date', 'days_after_fill_rate_model_enabled', 'fill_rate_model_enabled_date']]
+    val_cols = [c for c in df.columns if ('_rm' in c) or ('_fr' in c)]
 
     ad_units = df['ad_unit'].unique()
     results_list = []
@@ -198,6 +201,11 @@ def main_summary_plots(results_tablename):
 
     fig.savefig(f'plots/plot_1.png')
 
+    fig, ax = plt.subplots(figsize=(12, 9))
+    ax.scatter(df_r['ad_request_weighted_floor_price_fr_after'], df_r['fill_rate_fr_after'])
+    ax.set_xlabel('floor price')
+    ax.set_ylabel('fill rate')
+    fig.savefig(f'plots/plot_2.png')
 
     f = 0
 
