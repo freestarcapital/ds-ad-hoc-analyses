@@ -6,6 +6,7 @@ from google.cloud import bigquery_storage
 import os, sys
 from matplotlib.backends.backend_pdf import PdfPages
 import datetime as dt
+from sklearn.linear_model import LinearRegression
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 1000)
@@ -93,14 +94,12 @@ def main(recreate_raw_data=False):
     fig.savefig(f'plot.png')
 
 
-def main_dashboard_only(recreate_raw_data=False, print_reference_units=False):
+def main_dashboard_only(results_tablename, recreate_raw_data=False, print_reference_units=False):
     if recreate_raw_data:
         query = open(os.path.join(sys.path[0], f"query_create_raw_data.sql"), "r").read()
         get_bq_data(query,
                     {'table_name': 'sublime-elixir-273810.training_fill_rate.base_data_for_performance_checking'})
     # return
-
-    results_tablename = 'sublime-elixir-273810.training_fill_rate.fill-rate_results_for_performance_checking'
 
     query_dashboard = open(os.path.join(sys.path[0], f"query_get_perf_from_base_data_for_dashboard.sql"), "r").read()
     query_reference_ad_units = open(os.path.join(sys.path[0], f"query_get_reference_ad_units.sql"), "r").read()
@@ -136,5 +135,73 @@ def main_dashboard_only(recreate_raw_data=False, print_reference_units=False):
         get_bq_data(query_dashboard, repl_dict)
 
 
+def do_scatterplot(x, y, c, ax_):
+    ax_.scatter(x, y, c=c)
+    coef = LinearRegression(fit_intercept=False).fit(x.to_frame(), y).coef_[0]
+    x_max = x.max()
+    ax_.plot([0, x_max], [0, x_max*coef], c)
+    return coef
+
+
+def main_summary_plots(results_tablename):
+
+    query = ("select ad_unit, date, min(fill_rate_model_enabled_date) fill_rate_model_enabled_date, "
+             "date_diff(date(date), PARSE_DATE('%Y-%m-%d', min(fill_rate_model_enabled_date)), day) days_after_fill_rate_model_enabled, ")
+
+    for c1 in ['cpm', 'cpma', 'fill_rate', ' ad_request_weighted_floor_price']:
+        for c2 in ['rm', 'fr']:
+            query += f'sum({c1}_{c2} * sum_ad_requests_{c2}) / sum(sum_ad_requests_{c2}) as {c1}_{c2}, '
+
+    query += f' from `{results_tablename}` group by 1, 2 order by 1, 2'
+
+    df = get_bq_data(query)
+    val_cols = [c for c in df.columns if c not in ['ad_unit', 'date', 'days_after_fill_rate_model_enabled', 'fill_rate_model_enabled_date']]
+
+    ad_units = df['ad_unit'].unique()
+    results_list = []
+    for a in ad_units:
+        df_ad_unit = df[df['ad_unit'] == a]
+
+        T = df_ad_unit['days_after_fill_rate_model_enabled']
+
+        df_before = df_ad_unit[(-7 <= T) & (T <= -1)]
+        dict_before = df_before[val_cols].mean().rename(dict(zip(val_cols, [f'{c}_before' for c in val_cols])))
+        dict_before['N_before'] = len(df_before)
+
+        df_after = df_ad_unit[(1 <= T) & (T <= 7)]
+        dict_after = df_after[val_cols].mean().rename(dict(zip(val_cols, [f'{c}_after' for c in val_cols])))
+        dict_after['N_after'] = len(df_after)
+
+        results_list.append({**{'ad_unit': a,
+                                'fill_rate_model_enabled_date': df_ad_unit['fill_rate_model_enabled_date'].iloc[0]},
+                             **dict_before,
+                             **dict_after})
+
+    df_r = pd.DataFrame(results_list)
+
+    plot_bases = ['ad_request_weighted_floor_price', 'fill_rate', 'cpm', 'cpma']
+    fig, ax = plt.subplots(figsize=(12, 9), ncols=2, nrows=2)
+    fig.suptitle('Fill-rate model analysis: blue: fill-rate model, red: cpma-max model, black: unity gradient line')
+    ax = ax.flatten()
+    for i, pb in enumerate(plot_bases):
+        ax_ = ax[i]
+        coeff_fr = do_scatterplot(df_r[f'{pb}_fr_before'], df_r[f'{pb}_fr_after'], 'b', ax_)
+        coeff_rm = do_scatterplot(df_r[f'{pb}_rm_before'], df_r[f'{pb}_rm_after'], 'r', ax_)
+
+        xy_max = min(df_r[[f'{pb}_fr_before', f'{pb}_rm_before']].max().max(), df_r[[f'{pb}_fr_after', f'{pb}_rm_after']].max().max())
+        ax_.plot([0, xy_max], [0, xy_max], 'k--')
+        ax_.set_title(f'{pb}, coeff_rm: {coeff_rm:0.2f}, coeff_fr: {coeff_fr:0.2f}')
+        ax_.set_xlabel('before')
+        ax_.set_ylabel('after')
+
+    fig.savefig(f'plots/plot_1.png')
+
+
+    f = 0
+
 if __name__ == "__main__":
-    main_dashboard_only()
+
+    results_tablename = 'sublime-elixir-273810.training_fill_rate.fill-rate_results_for_performance_checking'
+
+    #main_dashboard_only(results_tablename)
+    main_summary_plots(results_tablename)

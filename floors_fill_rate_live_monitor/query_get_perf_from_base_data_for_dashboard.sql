@@ -29,12 +29,14 @@ rev_max as (
 )
 
 select '{ad_unit}' ad_unit, *,
-    sum_revenue_rm / sum_ad_requests_rm * 1000 cpma_rm,
-    sum_programmatic_impressions_rm / sum_ad_requests_rm fill_rate_rm,
-    sum_floor_price_ad_requests_rm / sum_ad_requests_rm ad_request_weighted_floor_price_rm,
-    sum_revenue_fr / sum_ad_requests_fr * 1000 cpma_fr,
-    sum_programmatic_impressions_fr / sum_ad_requests_fr fill_rate_fr,
-    sum_floor_price_ad_requests_fr / sum_ad_requests_fr ad_request_weighted_floor_price_fr,
+    safe_divide(sum_revenue_rm, sum_programmatic_impressions_rm) * 1000 cpm_rm,
+    safe_divide(sum_revenue_rm, sum_ad_requests_rm) * 1000 cpma_rm,
+    safe_divide(sum_programmatic_impressions_rm, sum_ad_requests_rm) fill_rate_rm,
+    safe_divide(sum_floor_price_ad_requests_rm, sum_ad_requests_rm) ad_request_weighted_floor_price_rm,
+    safe_divide(sum_revenue_fr, sum_programmatic_impressions_fr) * 1000 cpm_fr,
+    safe_divide(sum_revenue_fr, sum_ad_requests_fr) * 1000 cpma_fr,
+    safe_divide(sum_programmatic_impressions_fr, sum_ad_requests_fr) fill_rate_fr,
+    safe_divide(sum_floor_price_ad_requests_fr, sum_ad_requests_fr) ad_request_weighted_floor_price_fr,
     if(date >= '{fill_rate_model_enabled_date}', 1, 0) fill_rate_model_enabled,
     '{fill_rate_model_enabled_date}' fill_rate_model_enabled_date
 from fill_rate join rev_max using (date, country_code, device_category)
