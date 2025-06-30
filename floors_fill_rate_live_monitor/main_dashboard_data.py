@@ -179,20 +179,22 @@ def main_summary_plots(results_tablename):
 
     df_r = pd.DataFrame(results_list)
 
-    plot_bases = ['ad_request_weighted_floor_price', 'fill_rate', 'cpm', 'cpma']
+    plot_bases = [('ad_request_weighted_floor_price', 1, 1), ('fill_rate', 0.7, 0.8), ('cpm', 2.5, 2.5), ('cpma', 1.3, 1.3)]
     fig, ax = plt.subplots(figsize=(12, 9), ncols=2, nrows=2)
     fig.suptitle('Fill-rate model analysis: blue: fill-rate model, red: cpma-max model, black: unity gradient line')
     ax = ax.flatten()
-    for i, pb in enumerate(plot_bases):
+    for i, (pb, x_max, y_max) in enumerate(plot_bases):
         ax_ = ax[i]
         coeff_fr = do_scatterplot(df_r[f'{pb}_fr_before'], df_r[f'{pb}_fr_after'], 'b', ax_)
         coeff_rm = do_scatterplot(df_r[f'{pb}_rm_before'], df_r[f'{pb}_rm_after'], 'r', ax_)
 
-        xy_max = min(df_r[[f'{pb}_fr_before', f'{pb}_rm_before']].max().max(), df_r[[f'{pb}_fr_after', f'{pb}_rm_after']].max().max())
+        xy_max = min(x_max, y_max)
         ax_.plot([0, xy_max], [0, xy_max], 'k--')
         ax_.set_title(f'{pb}, coeff_rm: {coeff_rm:0.2f}, coeff_fr: {coeff_fr:0.2f}')
         ax_.set_xlabel('before')
         ax_.set_ylabel('after')
+        ax_.set_xlim([0, x_max])
+        ax_.set_ylim([0, y_max])
 
     fig.savefig(f'plots/plot_1.png')
 
