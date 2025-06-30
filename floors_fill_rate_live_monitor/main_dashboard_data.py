@@ -76,6 +76,8 @@ def main(recreate_raw_data=False):
 
             get_bq_data(query_dashboard, repl_dict)
 
+
+
             df = get_bq_data(query_plots, repl_dict)
             if not df.empty:
                 df_p = df.set_index('date').astype('float64')
@@ -91,6 +93,48 @@ def main(recreate_raw_data=False):
     fig.savefig(f'plot.png')
 
 
+def main_dashboard_only(recreate_raw_data=False, print_reference_units=False):
+    if recreate_raw_data:
+        query = open(os.path.join(sys.path[0], f"query_create_raw_data.sql"), "r").read()
+        get_bq_data(query,
+                    {'table_name': 'sublime-elixir-273810.training_fill_rate.base_data_for_performance_checking'})
+    # return
+
+    results_tablename = 'sublime-elixir-273810.training_fill_rate.fill-rate_results_for_performance_checking'
+
+    query_dashboard = open(os.path.join(sys.path[0], f"query_get_perf_from_base_data_for_dashboard.sql"), "r").read()
+    query_reference_ad_units = open(os.path.join(sys.path[0], f"query_get_reference_ad_units.sql"), "r").read()
+
+    ad_units = pd.read_csv('fill-rate-ads.csv')
+
+    first_row = True
+    for _, (ad_unit, domain, working, fill_rate_model_enabled_date) in ad_units.iterrows():
+
+        create_or_insert_statement = f"CREATE OR REPLACE TABLE `{results_tablename}` as" if first_row else f"insert into `{results_tablename}`"
+        first_row = False
+
+        if (',' in ad_unit) or ('test' in ad_unit) or not working:
+            continue
+
+        print(f"ad_unit: {ad_unit}")
+
+        reference_ad_units_where = f"ad_unit_name like '{ad_unit.split('_')[0]}\\\\_%'"
+        for ad_unit_other in ad_units[ad_units['domain'] == domain]['ad_unit']:
+            reference_ad_units_where += f" and ad_unit_name != '{ad_unit_other}'"
+
+        repl_dict = {'ad_unit': ad_unit,
+                     'reference_ad_units_where': reference_ad_units_where,
+                     'create_or_insert_statement': create_or_insert_statement,
+                     'start_date': "2025-05-10",
+                     'fill_rate_model_enabled_date': dt.datetime.strptime(fill_rate_model_enabled_date,
+                                                                          '%d/%m/%Y').strftime('%Y-%m-%d')}
+
+        if print_reference_units:
+            df_reference_ad_units = get_bq_data(query_reference_ad_units, repl_dict)
+            print(df_reference_ad_units)
+
+        get_bq_data(query_dashboard, repl_dict)
+
 
 if __name__ == "__main__":
-    main()
+    main_dashboard_only()
