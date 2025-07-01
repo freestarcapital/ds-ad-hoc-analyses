@@ -1,3 +1,5 @@
+CREATE OR REPLACE TABLE `{results_tablename}_summary` as
+
 with t1 as (
     select {dims},
       date_diff(date(date), PARSE_DATE('%Y-%m-%d', fill_rate_model_enabled_date), day) days_past_fill_rate_model_enabled_date,
@@ -27,7 +29,7 @@ before as (
         avg(fill_rate_fr) fill_rate_fr_before,
         avg(ad_request_weighted_floor_price_rm) ad_request_weighted_floor_price_rm_before,
         avg(ad_request_weighted_floor_price_fr) ad_request_weighted_floor_price_fr_before,
-        count(*) N_before
+        count(distinct days_past_fill_rate_model_enabled_date) N_before
     from t1
     where (-{before_and_after_analysis_days} <= days_past_fill_rate_model_enabled_date) and (days_past_fill_rate_model_enabled_date <= -1)
     group by {dims}
@@ -45,16 +47,50 @@ after as (
         avg(fill_rate_fr) fill_rate_fr_after,
         avg(ad_request_weighted_floor_price_rm) ad_request_weighted_floor_price_rm_after,
         avg(ad_request_weighted_floor_price_fr) ad_request_weighted_floor_price_fr_after,
-        count(*) N_after
+        count(distinct days_past_fill_rate_model_enabled_date) N_after
     from t1
     where (1 <= days_past_fill_rate_model_enabled_date) and (days_past_fill_rate_model_enabled_date <= {before_and_after_analysis_days})
     group by {dims}
+),
+
+combined_data as ( 
+    select *,
+        least(sum_ad_requests_fr_before, sum_ad_requests_rm_before, sum_ad_requests_fr_after, sum_ad_requests_rm_after) min_daily_ad_requests
+    from before
+    join after using ({dims})
+    where least(sum_ad_requests_fr_before, sum_ad_requests_rm_before, sum_ad_requests_fr_after, sum_ad_requests_rm_after) > {min_daily_ad_requests}
+        and N_before = {before_and_after_analysis_days}
+        and N_after = {before_and_after_analysis_days}
 )
 
-select *,
-    least(sum_ad_requests_fr_before, sum_ad_requests_rm_before, sum_ad_requests_fr_after, sum_ad_requests_rm_after) min_daily_ad_requests
-from before
-join after using ({dims})
-where least(sum_ad_requests_fr_before, sum_ad_requests_rm_before, sum_ad_requests_fr_after, sum_ad_requests_rm_after) > {min_daily_ad_requests}
-    and N_before = {before_and_after_analysis_days}
-    and N_after = {before_and_after_analysis_days}
+select 'fill-rate' model, {dims},
+    sum_ad_requests_fr_before,
+    cpm_fr_before,
+    cpma_fr_before,
+    fill_rate_fr_before,
+    ad_request_weighted_floor_price_fr_before,
+    N_before,
+    sum_ad_requests_fr_after,
+    cpm_fr_after,
+    cpma_fr_after,
+    fill_rate_fr_after,
+    ad_request_weighted_floor_price_fr_after,
+N_after
+from combined_data
+
+union all
+
+select 'cpma-max' model, {dims},
+    sum_ad_requests_rm_before,
+    cpm_rm_before,
+    cpma_rm_before,
+    fill_rate_rm_before,
+    ad_request_weighted_floor_price_rm_before,
+    N_before,
+    sum_ad_requests_rm_after,
+    cpm_rm_after,
+    cpma_rm_after,
+    fill_rate_rm_after,
+    ad_request_weighted_floor_price_rm_after,
+    N_after
+from combined_data

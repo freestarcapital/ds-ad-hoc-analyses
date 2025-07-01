@@ -152,8 +152,7 @@ def main_summary_plots_from_query(results_tablename):
 
     query = open(os.path.join(sys.path[0], f"query_main_summary_plots.sql"), "r").read()
     df = get_bq_data(query, {'dims': dims, 'min_daily_ad_requests': min_daily_ad_requests,
-        'before_and_after_analysis_days': before_and_after_analysis_days, 'results_tablename': results_tablename,
-                             'create_table': ''})
+        'before_and_after_analysis_days': before_and_after_analysis_days, 'results_tablename': results_tablename})
     df = df[[c for c in df.columns if c not in dims]].astype('float64')
     df = df[~df.isna().any(axis=1)]
 
@@ -188,12 +187,11 @@ def main_create_summary_results_table(results_tablename):
     min_daily_ad_requests = 1000
     before_and_after_analysis_days = 7
 
-    query = open(os.path.join(sys.path[0], f"query_main_summary_plots.sql"), "r").read()
+    query = open(os.path.join(sys.path[0], f"query_main_summary_table.sql"), "r").read()
     get_bq_data(query, {'dims': "ad_unit, country_code, device_category",
                         'min_daily_ad_requests': min_daily_ad_requests,
                         'before_and_after_analysis_days': before_and_after_analysis_days,
-                        'results_tablename': results_tablename,
-                        'create_table': f"CREATE OR REPLACE TABLE `{results_tablename}_summary` as "})
+                        'results_tablename': results_tablename})
 
 if __name__ == "__main__":
 
