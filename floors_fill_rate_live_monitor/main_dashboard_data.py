@@ -142,76 +142,66 @@ def do_scatterplot(x, y, c, ax_):
     ax_.plot([0, x_max], [0, x_max*coef], c)
     return coef
 
+def main_summary_plots_from_query(results_tablename):
 
-def main_summary_plots(results_tablename):
+    min_daily_ad_requests = 3000
+    before_and_after_analysis_days = 7
 
-    #dims = "ad_unit, date, country_code, device_category"
-    dims = "ad_unit, date"
+    dims = "ad_unit, country_code, device_category"
+    #dims = "ad_unit"
 
-    query = (f"select {dims}, min(fill_rate_model_enabled_date) fill_rate_model_enabled_date, "
-             "date_diff(date(date), PARSE_DATE('%Y-%m-%d', min(fill_rate_model_enabled_date)), day) days_after_fill_rate_model_enabled, ")
-
-    for c1 in ['cpm', 'cpma', 'fill_rate', ' ad_request_weighted_floor_price']:
-        for c2 in ['rm', 'fr']:
-            query += f'sum({c1}_{c2} * sum_ad_requests_{c2}) / sum(sum_ad_requests_{c2}) as {c1}_{c2}, '
-
-    query += f' from `{results_tablename}` group by {dims} order by {dims}'
-
-    df = get_bq_data(query)
-    val_cols = [c for c in df.columns if ('_rm' in c) or ('_fr' in c)]
-
-    ad_units = df['ad_unit'].unique()
-    results_list = []
-    for a in ad_units:
-        df_ad_unit = df[df['ad_unit'] == a]
-
-        T = df_ad_unit['days_after_fill_rate_model_enabled']
-
-        df_before = df_ad_unit[(-7 <= T) & (T <= -1)]
-        dict_before = df_before[val_cols].mean().rename(dict(zip(val_cols, [f'{c}_before' for c in val_cols])))
-        dict_before['N_before'] = len(df_before)
-
-        df_after = df_ad_unit[(1 <= T) & (T <= 7)]
-        dict_after = df_after[val_cols].mean().rename(dict(zip(val_cols, [f'{c}_after' for c in val_cols])))
-        dict_after['N_after'] = len(df_after)
-
-        results_list.append({**{'ad_unit': a,
-                                'fill_rate_model_enabled_date': df_ad_unit['fill_rate_model_enabled_date'].iloc[0]},
-                             **dict_before,
-                             **dict_after})
-
-    df_r = pd.DataFrame(results_list)
+    query = open(os.path.join(sys.path[0], f"query_main_summary_plots.sql"), "r").read()
+    df = get_bq_data(query, {'dims': dims, 'min_daily_ad_requests': min_daily_ad_requests,
+        'before_and_after_analysis_days': before_and_after_analysis_days, 'results_tablename': results_tablename,
+                             'create_table': ''})
+    df = df[[c for c in df.columns if c not in dims]].astype('float64')
+    df = df[~df.isna().any(axis=1)]
 
     plot_bases = [('ad_request_weighted_floor_price', 1, 1), ('fill_rate', 0.7, 0.8), ('cpm', 2.5, 2.5), ('cpma', 1.3, 1.3)]
     fig, ax = plt.subplots(figsize=(12, 9), ncols=2, nrows=2)
-    fig.suptitle('Fill-rate model analysis: blue: fill-rate model, red: cpma-max model, black: unity gradient line')
+    fig.suptitle(f'Fill-rate model analysis: blue: fill-rate model, red: cpma-max model, black: unity gradient line, {len(df)} points')
     ax = ax.flatten()
     for i, (pb, x_max, y_max) in enumerate(plot_bases):
         ax_ = ax[i]
-        coeff_fr = do_scatterplot(df_r[f'{pb}_fr_before'], df_r[f'{pb}_fr_after'], 'b', ax_)
-        coeff_rm = do_scatterplot(df_r[f'{pb}_rm_before'], df_r[f'{pb}_rm_after'], 'r', ax_)
+        coeff_fr = do_scatterplot(df[f'{pb}_fr_before'], df[f'{pb}_fr_after'], 'b', ax_)
+        coeff_rm = do_scatterplot(df[f'{pb}_rm_before'], df[f'{pb}_rm_after'], 'r', ax_)
 
         xy_max = min(x_max, y_max)
         ax_.plot([0, xy_max], [0, xy_max], 'k--')
         ax_.set_title(f'{pb}, coeff_rm: {coeff_rm:0.2f}, coeff_fr: {coeff_fr:0.2f}')
-        ax_.set_xlabel('before')
-        ax_.set_ylabel('after')
+        ax_.set_xlabel(f'average {before_and_after_analysis_days} days before')
+        ax_.set_ylabel(f'average {before_and_after_analysis_days} days after')
         ax_.set_xlim([0, x_max])
         ax_.set_ylim([0, y_max])
 
-    fig.savefig(f'plots/plot_1.png')
+    plotname = f'plots/plot_fill_rate_performance_{dims.replace(',', '_').replace(' ', '')}_{before_and_after_analysis_days}_{min_daily_ad_requests}'
+    fig.savefig(f'{plotname}_1.png')
 
-    fig, ax = plt.subplots(figsize=(12, 9))
-    ax.scatter(df_r['ad_request_weighted_floor_price_fr_after'], df_r['fill_rate_fr_after'])
+    fig, ax = plt.subplots(figsize=(9, 6))
+    ax.scatter(df['ad_request_weighted_floor_price_fr_after'], df['fill_rate_fr_after'])
     ax.set_xlabel('floor price')
     ax.set_ylabel('fill rate')
-    fig.savefig(f'plots/plot_2.png')
+    fig.savefig(f'{plotname}_2.png')
 
-    f = 0
+def main_create_summary_results_table(results_tablename):
+
+    min_daily_ad_requests = 1000
+    before_and_after_analysis_days = 7
+
+    query = open(os.path.join(sys.path[0], f"query_main_summary_plots.sql"), "r").read()
+    get_bq_data(query, {'dims': "ad_unit, country_code, device_category",
+                        'min_daily_ad_requests': min_daily_ad_requests,
+                        'before_and_after_analysis_days': before_and_after_analysis_days,
+                        'results_tablename': results_tablename,
+                        'create_table': f"CREATE OR REPLACE TABLE `{results_tablename}_summary` as "})
 
 if __name__ == "__main__":
 
     results_tablename = 'sublime-elixir-273810.training_fill_rate.fill-rate_results_for_performance_checking'
 
-    #main_dashboard_only(results_tablename)
-    main_summary_plots(results_tablename)
+#    main_dashboard_only(results_tablename, recreate_raw_data=True)
+#    main_summary_plots(results_tablename)
+#    main_summary_plots_from_query(results_tablename)
+
+    #    main_dashboard_only(results_tablename, recreate_raw_data=True)
+    main_create_summary_results_table(results_tablename)
