@@ -184,12 +184,10 @@ def main_summary_plots_from_query(results_tablename):
 
 def main_create_summary_results_table(results_tablename):
 
-    min_daily_ad_requests = 1000
     before_and_after_analysis_days = 7
 
     query = open(os.path.join(sys.path[0], f"query_main_summary_table.sql"), "r").read()
     get_bq_data(query, {'dims': "ad_unit, country_code, device_category",
-                        'min_daily_ad_requests': min_daily_ad_requests,
                         'before_and_after_analysis_days': before_and_after_analysis_days,
                         'results_tablename': results_tablename})
 
@@ -201,5 +199,5 @@ if __name__ == "__main__":
 #    main_summary_plots(results_tablename)
 #    main_summary_plots_from_query(results_tablename)
 
-    #    main_dashboard_only(results_tablename, recreate_raw_data=True)
+    #main_dashboard_only(results_tablename, recreate_raw_data=True)
     main_create_summary_results_table(results_tablename)

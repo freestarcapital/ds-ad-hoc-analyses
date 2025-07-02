@@ -58,39 +58,40 @@ combined_data as (
         least(sum_ad_requests_fr_before, sum_ad_requests_rm_before, sum_ad_requests_fr_after, sum_ad_requests_rm_after) min_daily_ad_requests
     from before
     join after using ({dims})
-    where least(sum_ad_requests_fr_before, sum_ad_requests_rm_before, sum_ad_requests_fr_after, sum_ad_requests_rm_after) > {min_daily_ad_requests}
-        and N_before = {before_and_after_analysis_days}
+        where N_before = {before_and_after_analysis_days}
         and N_after = {before_and_after_analysis_days}
 )
 
 select 'fill-rate' model, {dims},
-    sum_ad_requests_fr_before,
-    cpm_fr_before,
-    cpma_fr_before,
-    fill_rate_fr_before,
-    ad_request_weighted_floor_price_fr_before,
+    sum_ad_requests_fr_before ad_requests_before,
+    cpm_fr_before cpm_before,
+    cpma_fr_before cpma_before,
+    fill_rate_fr_before fill_rate_before,
+    ad_request_weighted_floor_price_fr_before floor_price_before,
     N_before,
-    sum_ad_requests_fr_after,
-    cpm_fr_after,
-    cpma_fr_after,
-    fill_rate_fr_after,
-    ad_request_weighted_floor_price_fr_after,
-N_after
+    sum_ad_requests_fr_after ad_requests_after,
+    cpm_fr_after cpm_after ,
+    cpma_fr_after cpma_after ,
+    fill_rate_fr_after fill_rate_after,
+    ad_request_weighted_floor_price_fr_after floor_price_after,
+    N_after,
+    min_daily_ad_requests
 from combined_data
 
 union all
 
 select 'cpma-max' model, {dims},
-    sum_ad_requests_rm_before,
-    cpm_rm_before,
-    cpma_rm_before,
-    fill_rate_rm_before,
-    ad_request_weighted_floor_price_rm_before,
+    sum_ad_requests_rm_before ad_requests_before,
+    cpm_rm_before cpm_before,
+    cpma_rm_before cpma_before,
+    fill_rate_rm_before fill_rate_before,
+    ad_request_weighted_floor_price_rm_before floor_price_before,
     N_before,
-    sum_ad_requests_rm_after,
-    cpm_rm_after,
-    cpma_rm_after,
-    fill_rate_rm_after,
-    ad_request_weighted_floor_price_rm_after,
-    N_after
+    sum_ad_requests_rm_after ad_requests_after,
+    cpm_rm_after cpm_after ,
+    cpma_rm_after cpma_after ,
+    fill_rate_rm_after fill_rate_after,
+    ad_request_weighted_floor_price_rm_after floor_price_after,
+    N_after,
+    min_daily_ad_requests
 from combined_data
