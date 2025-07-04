@@ -109,7 +109,7 @@ def main_dashboard_only(results_tablename, recreate_raw_data=False, print_refere
     first_row = True
     for _, (ad_unit, domain, working, fill_rate_model_enabled_date) in ad_units.iterrows():
 
-        create_or_insert_statement = f"CREATE OR REPLACE TABLE `{results_tablename}` as" if first_row else f"insert into `{results_tablename}`"
+        create_or_insert_statement = f"CREATE OR REPLACE TABLE `{results_tablename}_summary_2` as" if first_row else f"insert into `{results_tablename}_summary_2`"
         first_row = False
 
         if (',' in ad_unit) or ('test' in ad_unit) or not working:
@@ -147,8 +147,8 @@ def main_summary_plots_from_query(results_tablename):
     min_daily_ad_requests = 3000
     before_and_after_analysis_days = 7
 
-    dims = "ad_unit, country_code, device_category"
-    #dims = "ad_unit"
+    #dims = "ad_unit, country_code, device_category"
+    dims = "ad_unit"
 
     query = open(os.path.join(sys.path[0], f"query_main_summary_plots.sql"), "r").read()
     df = get_bq_data(query, {'dims': dims, 'min_daily_ad_requests': min_daily_ad_requests,
@@ -196,8 +196,7 @@ if __name__ == "__main__":
     results_tablename = 'sublime-elixir-273810.training_fill_rate.fill-rate_results_for_performance_checking'
 
 #    main_dashboard_only(results_tablename, recreate_raw_data=True)
-#    main_summary_plots(results_tablename)
-#    main_summary_plots_from_query(results_tablename)
+    main_summary_plots_from_query(results_tablename)
 
-    #main_dashboard_only(results_tablename, recreate_raw_data=True)
-    main_create_summary_results_table(results_tablename)
+    #main_dashboard_only(results_tablename, recreate_raw_data=False)
+    #main_create_summary_results_table(results_tablename)
