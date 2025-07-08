@@ -37,7 +37,7 @@ def get_data(query_filename, data_cache_filename, force_requery=False, repl_dict
     data_cache_filename_full = f'data_cache/{data_cache_filename}.pkl'
 
     if not force_requery and os.path.exists(data_cache_filename_full):
-        print(f'found existing data file, loading {data_cache_filename_full}')
+        print(f'found existing data_cache file, loading {data_cache_filename_full}')
         with open(data_cache_filename_full, 'rb') as f:
             df = pickle.load(f)
         return df
@@ -80,7 +80,7 @@ def main_ad_unit_filter(ad_unit_filter):
     plot_specs = [(['optimised_requests'], True), (['optimised_fill_rate'], False), (['optimised_cpm', 'optimised_cpma'], False)]
 
     fig, ax = plt.subplots(figsize=(16, 12), nrows=len(plot_specs))
-    fig.suptitle(f'Flooring data for: {repl_dict["ad_unit_filter"]}')
+    fig.suptitle(f'Flooring data_cache for: {repl_dict["ad_unit_filter"]}')
 
     for i, (cols, log_y) in enumerate(plot_specs):
         ax_i = ax[i]
@@ -1062,7 +1062,7 @@ def cum_plot(df, filename):
     df = df.sort_index().ffill().bfill()
 
     fig, ax = plt.subplots(figsize=(12, 9))
-    (100 * df).plot(xlim=[0, 2], ax=ax, ylabel='Cumulative percent of data', xlabel='Target floor price',
+    (100 * df).plot(xlim=[0, 2], ax=ax, ylabel='Cumulative percent of data_cache', xlabel='Target floor price',
                     title='CDF of target floor prices for different approaches')
     fig.savefig(f'plots_direct/{filename}.png')
     f = 0

@@ -75,7 +75,7 @@ def main_prediction():
     df_all = get_data_using_query(query, 'bidder_rps_1', 'date', force_calc=False, repl_dict=repl_dict, quiet=True)
 
     # with PdfPages(f'plots/predictions_rps.pdf') as pdf:
-    #     stats = main_prediction_country(query, repl_dict, pdf=pdf)
+    #     stats = main_prediction_country(queries, repl_dict, pdf=pdf)
     # print(stats)
 
     cc_dc_session_count = df_all[['country_code', 'device_category', 'session_count']].groupby(

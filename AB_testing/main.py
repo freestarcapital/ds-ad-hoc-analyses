@@ -44,8 +44,8 @@ def get_data(query_filename, data_cache_filename, force_requery=False, repl_dict
 
 
 def main():
-    # query = open(os.path.join(sys.path[0], f"query_current.sql"), "r").read()
-    # get_bq_data(query)
+    # queries = open(os.path.join(sys.path[0], f"query_current.sql"), "r").read()
+    # get_bq_data(queries)
 
     query = open(os.path.join(sys.path[0], f"query_with_pageview_raw.sql"), "r").read()
     get_bq_data(query)

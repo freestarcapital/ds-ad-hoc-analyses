@@ -1,4 +1,4 @@
- -- getting sessions that are within randomised controlled trials only - include all data with more dimension/metrics: SOV requirements
+ -- getting sessions that are within randomised controlled trials only - include all data_cache with more dimension/metrics: SOV requirements
 with auction_end_raw__test as
 ( select date(timestamp_trunc(_PARTITIONTIME, day)) as record_date__utc ,
 date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) as record_date__mst ,

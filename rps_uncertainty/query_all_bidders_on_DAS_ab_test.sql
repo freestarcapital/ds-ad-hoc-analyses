@@ -1,4 +1,4 @@
--- getting sessions that are within randomised controlled trials only - include all data with more dimension/metrics: SOV requirements
+-- getting sessions that are within randomised controlled trials only - include all data_cache with more dimension/metrics: SOV requirements
 
 CREATE OR REPLACE TABLE `streamamp-qa-239417.DAS_eventstream_session_data.DAS_ab_test`
     OPTIONS (

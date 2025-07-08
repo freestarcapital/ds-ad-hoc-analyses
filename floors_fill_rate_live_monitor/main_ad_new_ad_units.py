@@ -21,7 +21,7 @@ def main():
     for k, v in replacement_dict.items():
         query = query.replace("{" + k + "}", str(v))
 
-    print('Copy and paste the query into pgAdmin. If there are any NULL, you need to work out why, or remove them from the list. When you have no Nulls proceed to the nect step.')
+    print('Copy and paste the queries into pgAdmin. If there are any NULL, you need to work out why, or remove them from the list. When you have no Nulls proceed to the nect step.')
 
     p = 0
 
@@ -29,7 +29,7 @@ def main():
     for k, v in replacement_dict.items():
         query = query.replace("{" + k + "}", str(v))
 
-    print('Copy the query into pgadmin and run. Check what you see and if you want to insert the results into the db uncomment the first line.')
+    print('Copy the queries into pgadmin and run. Check what you see and if you want to insert the results into the db uncomment the first line.')
 
 
     p = 0

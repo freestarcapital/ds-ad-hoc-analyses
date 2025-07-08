@@ -234,7 +234,7 @@ order by 1
 -- ),
 --
 -- --select * from aggregated_base_data_with_continent;
--- -- could save this as base data if you want to try things out quickly
+-- -- could save this as base data_cache if you want to try things out quickly
 --
 -- qualifying_country_codes as (
 --     select date, country_code

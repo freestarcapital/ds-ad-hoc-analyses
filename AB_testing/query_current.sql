@@ -1,11 +1,11 @@
--- ab_test__prebid_a9_adx_ebda raw query without staging/int layer
+-- ab_test__prebid_a9_adx_ebda raw queries without staging/int layer
 
 DECLARE ddate DATE DEFAULT DATE('2024-11-22');
 
 CREATE OR REPLACE TABLE `streamamp-qa-239417.DAS_increment.AB_test_current` AS
 
 
--- prebid data
+-- prebid data_cache
 with bwr as (
 	select
 		date(TIMESTAMP_TRUNC(_PARTITIONTIME, DAY)) as record_date
@@ -25,7 +25,7 @@ with bwr as (
 	group by
 			1,2,3,4,5,6,7
 )
--- auction_end_raw data that have test_name present
+-- auction_end_raw data_cache that have test_name present
 -- required to get requests + test info for dtf dataset
 , aer as (
   select
@@ -117,7 +117,7 @@ with bwr as (
 
   group by 1,2,3
 )
--- amazon TAM + UAM data
+-- amazon TAM + UAM data_cache
 , a9 as (
 	select
         m.EventDateMST as record_date__mst

@@ -42,8 +42,8 @@ def main_create_bidder_domain_expt_session_stats(last_date, days):
     query = open(os.path.join(sys.path[0], 'queries/query_daily_bidder_domain_expt_session_stats.sql'), "r").read()
     get_bq_data(query, repl_dict)
 
-    # query = open(os.path.join(sys.path[0], 'queries/query_daily_opt_session_stats.sql'), "r").read()
-    # get_bq_data(query, repl_dict)
+    # queries = open(os.path.join(sys.path[0], 'queries/query_daily_opt_session_stats.sql'), "r").read()
+    # get_bq_data(queries, repl_dict)
 
 
 def main_create_daily_configs(last_date, days, do_plots=True):

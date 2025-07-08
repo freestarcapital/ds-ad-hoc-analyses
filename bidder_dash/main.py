@@ -58,11 +58,11 @@ def main_create_bidder_session_data_raw(last_date=datetime.date(2024, 9, 3), day
     query = open(os.path.join(sys.path[0], 'queries/query_bidder_session_data_raw_domain_day.sql'), "r").read()
     get_bq_data(query, repl_dict)
 
-    # query = open(os.path.join(sys.path[0], 'queries/query_bidder_session_data_raw.sql'), "r").read()
-    # get_bq_data(query, repl_dict)
+    # queries = open(os.path.join(sys.path[0], 'queries/query_bidder_session_data_raw.sql'), "r").read()
+    # get_bq_data(queries, repl_dict)
 
-    # query = open(os.path.join(sys.path[0], 'queries/query_bidder_session_data_raw_domain.sql'), "r").read()
-    # get_bq_data(query, repl_dict)
+    # queries = open(os.path.join(sys.path[0], 'queries/query_bidder_session_data_raw_domain.sql'), "r").read()
+    # get_bq_data(queries, repl_dict)
 
 def main_country_code(rolling_days=1):
 
