@@ -76,23 +76,32 @@ def main_plot():
 
 
 def main_dash():
+
+    version_number = 2
+
     datelist = pd.date_range(end=dt.datetime.today().date() - dt.timedelta(days=3), periods=10).tolist()
 
     first_row = True
     for date in datelist:
         print(f'date: {date}')
 
-        tablename = "`streamamp-qa-239417.DAS_increment.concurrent_test1`"
-        create_or_insert_statement = f"CREATE OR REPLACE TABLE {tablename} as" if first_row else f"insert into {tablename}"
+        tablename = f"streamamp-qa-239417.DAS_increment.concurrent_test_{version_number}_X"
+        create_or_insert_statement = f"CREATE OR REPLACE TABLE `{tablename}` as" if first_row else f"insert into `{tablename}`"
+        create_or_insert_statement_1 = f"CREATE OR REPLACE TABLE `{tablename}" if first_row else f"insert into `{tablename}"
+        create_or_insert_statement_2 = f"` as" if first_row else f"`"
         first_row = False
 
         START_UNIX_TIME_MS = str(int(dt.datetime.timestamp(date) * 1000))
         END_UNIX_TIME_MS = str(int(dt.datetime.timestamp(date + dt.timedelta(days=1)) * 1000))
 
+        print(f'{START_UNIX_TIME_MS} < server_time and server_time < {END_UNIX_TIME_MS}')
 
-        query = open(os.path.join(sys.path[0], "queries/query_price_pressure_dash.sql"), "r").read()
+        query = open(os.path.join(sys.path[0], f"queries/query_price_pressure_dash_{version_number}.sql"), "r").read()
         repl_dict = {'START_UNIX_TIME_MS': START_UNIX_TIME_MS, 'END_UNIX_TIME_MS': END_UNIX_TIME_MS,
-                     'date': date.strftime('%Y-%m-%d'), 'create_or_insert_statement': create_or_insert_statement}
+                     'date': date.strftime('%Y-%m-%d'),
+                     'create_or_insert_statement_1': create_or_insert_statement_1,
+                     'create_or_insert_statement_2': create_or_insert_statement_2,
+                     'create_or_insert_statement': create_or_insert_statement}
         get_bq_data(query, repl_dict)
 
 
