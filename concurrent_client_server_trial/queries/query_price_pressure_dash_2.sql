@@ -3,8 +3,8 @@ create temp table raw_data as
 with t1 as (
     select fs_auction_id, placement_id, fs_refresh_count, ad_unit_code, bidder, source, max(bid_cpm) bid_cpm
     from `freestar-157323.prod_eventstream.bidsresponse_raw`
-    where 1751065200000 < server_time and server_time < 1751068800000
-    --where {START_UNIX_TIME_MS} < server_time and server_time < {END_UNIX_TIME_MS}
+    --where 1751065200000 < server_time and server_time < 1751068800000
+    where {START_UNIX_TIME_MS} < server_time and server_time < {END_UNIX_TIME_MS}
         and fs_auction_id is not null
         and status_message = 'Bid available'
     group by 1, 2, 3, 4, 5, 6

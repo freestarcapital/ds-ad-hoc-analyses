@@ -4,8 +4,8 @@ with brr as (
     select  coalesce(NET.REG_DOMAIN(page_url), '__unknown') AS domain,
         fs_auction_id, placement_id, fs_refresh_count, ad_unit_code, bidder, source, max(bid_cpm) bid_cpm
     from `freestar-157323.prod_eventstream.bidsresponse_raw`
-    where 1751065200000 < server_time and server_time < 1751068800000
-    --where {START_UNIX_TIME_MS} < server_time and server_time < {END_UNIX_TIME_MS}
+    --where 1751065200000 < server_time and server_time < 1751068800000
+    where {START_UNIX_TIME_MS} < server_time and server_time < {END_UNIX_TIME_MS}
         and fs_auction_id is not null
         and status_message = 'Bid available'
     group by 1, 2, 3, 4, 5, 6, 7
@@ -71,21 +71,6 @@ results as (
     left join agg_auction_stats
     using (domain, bidder, source)
 )
-
--- results as (
---     select
---         domain,
---         bid_rank,
---         source,
---         bidder,
---         (select total from totals where domain = t3.domain) domain_total_auctions,
---         sum(bid_price_pressure) / (select total from totals where domain = t3.domain) price_pressure,
---         count(*) / (select total from totals where domain = t3.domain) bid_made,
---         countif(bid_rank = 1) / (select total from totals where domain = t3.domain) highest_bid,
---         countif(bid_price_pressure >= 0.8) / (select total from totals where domain = t3.domain) bid_within_20_perc_of_highest_bid,
---         countif(bid_price_pressure >= 0.5) / (select total from totals where domain = t3.domain) bid_within_50_perc_of_highest_bid
---     from t3
---     group by 1, 2, 3, 4
 
 select *
 from results;

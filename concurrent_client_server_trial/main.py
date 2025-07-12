@@ -75,9 +75,10 @@ def main_plot():
     fig.savefig('plots/prebid_price_price_presssure_bid_depth.png')
 
 
-def main_dash():
-
-    version_number = 2
+def main_dash(version_number=3):
+    query_filename = f"queries/query_price_pressure_dash_{version_number}.sql"
+    query = open(os.path.join(sys.path[0], query_filename), "r").read()
+    print(f'query_filename: {query_filename}')
 
     datelist = pd.date_range(end=dt.datetime.today().date() - dt.timedelta(days=3), periods=10).tolist()
 
@@ -96,7 +97,6 @@ def main_dash():
 
         print(f'{START_UNIX_TIME_MS} < server_time and server_time < {END_UNIX_TIME_MS}')
 
-        query = open(os.path.join(sys.path[0], f"queries/query_price_pressure_dash_{version_number}.sql"), "r").read()
         repl_dict = {'START_UNIX_TIME_MS': START_UNIX_TIME_MS, 'END_UNIX_TIME_MS': END_UNIX_TIME_MS,
                      'date': date.strftime('%Y-%m-%d'),
                      'create_or_insert_statement_1': create_or_insert_statement_1,
@@ -104,9 +104,8 @@ def main_dash():
                      'create_or_insert_statement': create_or_insert_statement}
         get_bq_data(query, repl_dict)
 
-        break
-
 if __name__ == "__main__":
     #main_plot()
 
-    main_dash()
+    main_dash(3)
+    main_dash(2)
