@@ -104,6 +104,7 @@ def main_dash():
                      'create_or_insert_statement': create_or_insert_statement}
         get_bq_data(query, repl_dict)
 
+        break
 
 if __name__ == "__main__":
     #main_plot()
