@@ -60,6 +60,12 @@ def main():
 
     results_df = pd.concat(results_list)
 
+    results_df['ad_prop'] = results_df['sessions_ad'] / (results_df['sessions_ad'] + results_df['sessions_no_ad'])
+    results_df['total_uplift'] = results_df['ad_prop'] * results_df['rps_uplift_ad_weighted']
+    total_uplift = (results_df['total_uplift'] * results_df['sessions_ad']).sum() / results_df['sessions_ad'].sum()
+
+    results_df.to_csv('fs_ad_product_uplift.csv')
+
     f = 0
 
 if __name__ == "__main__":

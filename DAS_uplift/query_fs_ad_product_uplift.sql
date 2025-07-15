@@ -25,7 +25,7 @@ with config_ad as (
 ), session_count_no_ad as (
     select date, {dims}, avg(all_bidder_session_count) sessions_no_ad
     from config_no_ad
-    inner join `streamamp-qa-239417.DAS_2_0.config_geo_{tablename_dims}_optimised_2025-07-11`
+    inner join  `streamamp-qa-239417.DAS_2_0.DAS_bidder_rps_geo_{tablename_dims}_optimised_2025-07-11`
     using (date, {dims}, bidder)
     group by date, {dims}
     having count(*) = 10
