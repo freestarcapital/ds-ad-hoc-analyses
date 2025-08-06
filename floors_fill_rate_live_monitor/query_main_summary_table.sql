@@ -1,4 +1,4 @@
-CREATE OR REPLACE TABLE `{results_tablename}_summary` as
+CREATE OR REPLACE TABLE `{summary_tablename}` as
 
 with t1 as (
     select {dims},
@@ -13,7 +13,7 @@ with t1 as (
         sum(fill_rate_fr * sum_ad_requests_fr) / sum(sum_ad_requests_fr) as fill_rate_fr,
         sum(ad_request_weighted_floor_price_rm * sum_ad_requests_rm) / sum(sum_ad_requests_rm) as  floor_price_rm,
         sum(ad_request_weighted_floor_price_fr * sum_ad_requests_fr) / sum(sum_ad_requests_fr) as  floor_price_fr
-    from `sublime-elixir-273810.training_fill_rate.fill-rate_results_for_performance_checking`
+    from `{results_tablename}`
     group by {dims}, days_past_fill_rate_model_enabled_date
 ),
 
@@ -31,7 +31,7 @@ before as (
         avg(floor_price_fr) floor_price_fr_before,
         count(distinct days_past_fill_rate_model_enabled_date) N_before
     from t1
-    where (-{before_and_after_analysis_days} <= days_past_fill_rate_model_enabled_date) and (days_past_fill_rate_model_enabled_date <= -1)
+    where (-{before_analysis_days} <= days_past_fill_rate_model_enabled_date) and (days_past_fill_rate_model_enabled_date <= -1)
     group by {dims}
 ),
 
@@ -49,7 +49,7 @@ after as (
         avg(floor_price_fr) floor_price_fr_after,
         count(distinct days_past_fill_rate_model_enabled_date) N_after
     from t1
-    where (1 <= days_past_fill_rate_model_enabled_date) and (days_past_fill_rate_model_enabled_date <= {before_and_after_analysis_days})
+    where ({start_after_analysis_days} <= days_past_fill_rate_model_enabled_date) and (days_past_fill_rate_model_enabled_date <= {end_after_analysis_days})
     group by {dims}
 ),
 
@@ -58,8 +58,8 @@ combined_data as (
         least(sum_ad_requests_fr_before, sum_ad_requests_rm_before, sum_ad_requests_fr_after, sum_ad_requests_rm_after) min_daily_ad_requests
     from before
     join after using ({dims})
-        where N_before = {before_and_after_analysis_days}
-        and N_after = {before_and_after_analysis_days}
+        where N_before = {before_analysis_days}
+        and N_after = {end_after_analysis_days} - {start_after_analysis_days} + 1
 )
 
 select 'fill-rate' model, {dims},

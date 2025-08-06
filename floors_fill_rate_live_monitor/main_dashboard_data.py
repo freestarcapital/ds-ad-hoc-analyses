@@ -25,80 +25,12 @@ def get_bq_data(query, replacement_dict={}):
         query = query.replace("{" + k + "}", str(v))
     return client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
 
-def main(recreate_raw_data=False):
-
-    if recreate_raw_data:
-        query = open(os.path.join(sys.path[0], f"query_create_raw_data.sql"), "r").read()
-        get_bq_data(query, {'table_name': 'sublime-elixir-273810.training_fill_rate.base_data_for_performance_checking'})
-    #return
-
-    results_tablename = 'sublime-elixir-273810.training_fill_rate.fill-rate_results_for_performance_checking'
-
-    query_plots = open(os.path.join(sys.path[0], f"query_get_perf_from_base_data_for_plots.sql"), "r").read()
-    query_dashboard = open(os.path.join(sys.path[0], f"query_get_perf_from_base_data_for_dashboard.sql"), "r").read()
-    query_reference_ad_units = open(os.path.join(sys.path[0], f"query_get_reference_ad_units.sql"), "r").read()
-
-    ad_units = pd.read_csv('fill-rate-ads.csv')
-
-    and_where = ""
-    #and_where = "and country_code = 'US' and device_category = 'Desktop'"
-
-    a_w_s = and_where.split("'")
-    title_extra = f"{len(ad_units)}"
-    if len(a_w_s) >= 4:
-        title_extra += ' ' + a_w_s[1] + ' ' + a_w_s[3]
-
-    with PdfPages(f'plots/fill-rate_results_{title_extra.replace(' ', '_')}.pdf') as pdf:
-
-        first_row = True
-        for _, (ad_unit, domain, working, fill_rate_model_enabled_date) in ad_units.iterrows():
-
-            create_or_insert_statement = f"CREATE OR REPLACE TABLE `{results_tablename}` as" if first_row else f"insert into `{results_tablename}`"
-            first_row = False
-
-            if (',' in ad_unit) or ('test' in ad_unit) or not working:
-                continue
-
-            print(f"ad_unit: {ad_unit}")
-
-            reference_ad_units_where = f"ad_unit_name like '{ad_unit.split('_')[0]}\\\\_%'"
-            for ad_unit_other in ad_units[ad_units['domain'] == domain]['ad_unit']:
-                reference_ad_units_where += f" and ad_unit_name != '{ad_unit_other}'"
-
-            repl_dict = {'ad_unit': ad_unit,
-                         'reference_ad_units_where': reference_ad_units_where,
-                         'and_where': and_where,
-                         'create_or_insert_statement': create_or_insert_statement,
-                         'start_date': "2025-05-10",
-                         'fill_rate_model_enabled_date': dt.datetime.strptime(fill_rate_model_enabled_date, '%d/%m/%Y').strftime('%Y-%m-%d')}
-
-            df_reference_ad_units = get_bq_data(query_reference_ad_units, repl_dict)
-            print (df_reference_ad_units)
-
-            get_bq_data(query_dashboard, repl_dict)
-
-
-
-            df = get_bq_data(query_plots, repl_dict)
-            if not df.empty:
-                df_p = df.set_index('date').astype('float64')
-                plot_cols = ['floor_price', 'fill_rate', 'cpma', 'revenue']
-                fig, ax = plt.subplots(figsize=(16, 12), nrows=len(plot_cols))
-                for i, col in enumerate(plot_cols):
-                    df_p[[c for c in df_p.columns if col in c]].plot(ax=ax[i])
-                fig.suptitle(f'{ad_unit}{title_extra}, number of reference ad_units: {len(df_reference_ad_units)}')
-                pdf.savefig()
-
-    fig, ax = plt.subplots(figsize=(12, 9))
-    df_p.plot(ax=ax)
-    fig.savefig(f'plot.png')
-
 
 def main_dashboard_only(results_tablename, recreate_raw_data=False, print_reference_units=False):
     if recreate_raw_data:
         query = open(os.path.join(sys.path[0], f"query_create_raw_data.sql"), "r").read()
-        get_bq_data(query,
-                    {'table_name': 'sublime-elixir-273810.training_fill_rate.base_data_for_performance_checking'})
+        get_bq_data(query,{'table_name': 'sublime-elixir-273810.training_fill_rate.base_data_for_performance_checking',
+                           'WINDOW_DAYS': 90})
     # return
 
     query_dashboard = open(os.path.join(sys.path[0], f"query_get_perf_from_base_data_for_dashboard.sql"), "r").read()
@@ -109,7 +41,7 @@ def main_dashboard_only(results_tablename, recreate_raw_data=False, print_refere
     first_row = True
     for _, (ad_unit, domain, working, fill_rate_model_enabled_date) in ad_units.iterrows():
 
-        create_or_insert_statement = f"CREATE OR REPLACE TABLE `{results_tablename}_summary_2` as" if first_row else f"insert into `{results_tablename}_summary_2`"
+        create_or_insert_statement = f"CREATE OR REPLACE TABLE `{results_tablename}` as" if first_row else f"insert into `{results_tablename}`"
         first_row = False
 
         if (',' in ad_unit) or ('test' in ad_unit) or not working:
@@ -124,7 +56,7 @@ def main_dashboard_only(results_tablename, recreate_raw_data=False, print_refere
         repl_dict = {'ad_unit': ad_unit,
                      'reference_ad_units_where': reference_ad_units_where,
                      'create_or_insert_statement': create_or_insert_statement,
-                     'start_date': "2025-05-10",
+                     'start_date': "2025-05-1",
                      'fill_rate_model_enabled_date': dt.datetime.strptime(fill_rate_model_enabled_date,
                                                                           '%d/%m/%Y').strftime('%Y-%m-%d')}
 
@@ -145,7 +77,7 @@ def do_scatterplot(x, y, c, ax_):
 def main_summary_plots_from_query(results_tablename):
 
     min_daily_ad_requests = 3000
-    before_and_after_analysis_days = 7
+    before_and_after_analysis_days = 28
 
     #dims = "ad_unit, country_code, device_category"
     dims = "ad_unit"
@@ -184,19 +116,25 @@ def main_summary_plots_from_query(results_tablename):
 
 def main_create_summary_results_table(results_tablename):
 
-    before_and_after_analysis_days = 7
+    before_analysis_days = 35
+    start_after_analysis_days = 1
+    end_after_analysis_days = before_analysis_days
 
     query = open(os.path.join(sys.path[0], f"query_main_summary_table.sql"), "r").read()
     get_bq_data(query, {'dims': "ad_unit, country_code, device_category",
-                        'before_and_after_analysis_days': before_and_after_analysis_days,
-                        'results_tablename': results_tablename})
+                        'before_analysis_days': before_analysis_days,
+                        'start_after_analysis_days': start_after_analysis_days,
+                        'end_after_analysis_days': end_after_analysis_days,
+                        'results_tablename': results_tablename,
+                        'summary_tablename': f'{results_tablename}_summary'})
+#                        'summary_tablename': f'{results_tablename}_summary_before_{before_analysis_days}_after_{start_after_analysis_days}_{end_after_analysis_days}'})
 
 if __name__ == "__main__":
 
+    print('hello')
+
     results_tablename = 'sublime-elixir-273810.training_fill_rate.fill-rate_results_for_performance_checking'
 
-#    main_dashboard_only(results_tablename, recreate_raw_data=True)
-    main_summary_plots_from_query(results_tablename)
-
-    #main_dashboard_only(results_tablename, recreate_raw_data=False)
-    #main_create_summary_results_table(results_tablename)
+    #main_dashboard_only(results_tablename, recreate_raw_data=True)
+    #main_summary_plots_from_query(results_tablename)
+    main_create_summary_results_table(results_tablename)
