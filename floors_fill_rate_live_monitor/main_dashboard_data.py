@@ -11,11 +11,7 @@ from sklearn.linear_model import LinearRegression
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 1000)
 
-config_path = '../config.ini'
-config = configparser.ConfigParser()
-config.read(config_path)
-
-project_id = "freestar-157323"
+project_id = "sublime-elixir-273810"
 client = bigquery.Client(project=project_id)
 bqstorageclient = bigquery_storage.BigQueryReadClient()
 
@@ -40,15 +36,18 @@ def main_dashboard_only(results_tablename, recreate_raw_data=False, print_refere
     print('read fill-rate-ads.csv')
 
     first_row = True
-    for i, (_, (ad_unit, domain, working, fill_rate_model_enabled_date)) in enumerate(ad_units.iterrows()):
+    for i, (_, (ad_unit, domain, working, fill_rate_model_enabled_date_str)) in enumerate(ad_units.iterrows()):
+
+        if (',' in ad_unit) or ('test' in ad_unit) or not working:
+            print(f'skipping: {ad_unit}')
+            continue
+
+        fill_rate_model_enabled_date = dt.datetime.strptime(fill_rate_model_enabled_date_str,'%d/%m/%Y').strftime('%Y-%m-%d')
 
         create_or_insert_statement = f"CREATE OR REPLACE TABLE `{results_tablename}` as" if first_row else f"insert into `{results_tablename}`"
         first_row = False
 
-        if (',' in ad_unit) or ('test' in ad_unit) or not working:
-            continue
-
-        print(f"ad_unit: {ad_unit}, {i} of {len(ad_units)}")
+        print(f"ad_unit: {ad_unit}, fill_rate_model_enabled_date: {fill_rate_model_enabled_date}, {i} of {len(ad_units)}")
 
         reference_ad_units_where = f"ad_unit_name like '{ad_unit.split('_')[0]}\\\\_%'"
         for ad_unit_other in ad_units[ad_units['domain'] == domain]['ad_unit']:
@@ -58,8 +57,7 @@ def main_dashboard_only(results_tablename, recreate_raw_data=False, print_refere
                      'reference_ad_units_where': reference_ad_units_where,
                      'create_or_insert_statement': create_or_insert_statement,
                      'start_date': "2025-05-1",
-                     'fill_rate_model_enabled_date': dt.datetime.strptime(fill_rate_model_enabled_date,
-                                                                          '%d/%m/%Y').strftime('%Y-%m-%d')}
+                     'fill_rate_model_enabled_date': fill_rate_model_enabled_date}
 
         if print_reference_units:
             df_reference_ad_units = get_bq_data(query_reference_ad_units, repl_dict)
@@ -117,7 +115,7 @@ def main_summary_plots_from_query(results_tablename):
 
 def main_create_summary_results_table(results_tablename):
 
-    before_analysis_days = 35
+    before_analysis_days = 42
     start_after_analysis_days = 1
     end_after_analysis_days = before_analysis_days
 
@@ -132,6 +130,6 @@ def main_create_summary_results_table(results_tablename):
 
 if __name__ == "__main__":
     results_tablename = 'sublime-elixir-273810.training_fill_rate.fill-rate_results_for_performance_checking'
-    #main_dashboard_only(results_tablename, recreate_raw_data=False)
+    main_dashboard_only(results_tablename, recreate_raw_data=False)
     #main_summary_plots_from_query(results_tablename)
-    main_create_summary_results_table(results_tablename)
+    #main_create_summary_results_table(results_tablename)
