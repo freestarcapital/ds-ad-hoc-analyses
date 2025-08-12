@@ -37,9 +37,10 @@ def main_dashboard_only(results_tablename, recreate_raw_data=False, print_refere
     query_reference_ad_units = open(os.path.join(sys.path[0], f"query_get_reference_ad_units.sql"), "r").read()
 
     ad_units = pd.read_csv('fill-rate-ads.csv')
+    print('read fill-rate-ads.csv')
 
     first_row = True
-    for _, (ad_unit, domain, working, fill_rate_model_enabled_date) in ad_units.iterrows():
+    for i, (_, (ad_unit, domain, working, fill_rate_model_enabled_date)) in enumerate(ad_units.iterrows()):
 
         create_or_insert_statement = f"CREATE OR REPLACE TABLE `{results_tablename}` as" if first_row else f"insert into `{results_tablename}`"
         first_row = False
@@ -47,7 +48,7 @@ def main_dashboard_only(results_tablename, recreate_raw_data=False, print_refere
         if (',' in ad_unit) or ('test' in ad_unit) or not working:
             continue
 
-        print(f"ad_unit: {ad_unit}")
+        print(f"ad_unit: {ad_unit}, {i} of {len(ad_units)}")
 
         reference_ad_units_where = f"ad_unit_name like '{ad_unit.split('_')[0]}\\\\_%'"
         for ad_unit_other in ad_units[ad_units['domain'] == domain]['ad_unit']:
@@ -130,11 +131,7 @@ def main_create_summary_results_table(results_tablename):
 #                        'summary_tablename': f'{results_tablename}_summary_before_{before_analysis_days}_after_{start_after_analysis_days}_{end_after_analysis_days}'})
 
 if __name__ == "__main__":
-
-    print('hello')
-
     results_tablename = 'sublime-elixir-273810.training_fill_rate.fill-rate_results_for_performance_checking'
-
-    #main_dashboard_only(results_tablename, recreate_raw_data=True)
+    #main_dashboard_only(results_tablename, recreate_raw_data=False)
     #main_summary_plots_from_query(results_tablename)
     main_create_summary_results_table(results_tablename)
