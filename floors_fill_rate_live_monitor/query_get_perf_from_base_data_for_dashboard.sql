@@ -39,7 +39,7 @@ select '{ad_unit}' ad_unit, *,
     safe_divide(sum_floor_price_ad_requests_fr, sum_ad_requests_fr) ad_request_weighted_floor_price_fr,
     if(date >= '{fill_rate_model_enabled_date}', 1, 0) fill_rate_model_enabled,
     '{fill_rate_model_enabled_date}' fill_rate_model_enabled_date
-from fill_rate join rev_max using (date, country_code, device_category)
+from fill_rate left join rev_max using (date, country_code, device_category)
 order by date
 
 -- for looker

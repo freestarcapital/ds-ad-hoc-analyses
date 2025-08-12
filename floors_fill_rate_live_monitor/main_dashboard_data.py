@@ -115,7 +115,7 @@ def main_summary_plots_from_query(results_tablename):
 
 def main_create_summary_results_table(results_tablename):
 
-    before_analysis_days = 42
+    before_analysis_days = 35
     start_after_analysis_days = 1
     end_after_analysis_days = before_analysis_days
 
@@ -130,6 +130,6 @@ def main_create_summary_results_table(results_tablename):
 
 if __name__ == "__main__":
     results_tablename = 'sublime-elixir-273810.training_fill_rate.fill-rate_results_for_performance_checking'
-    main_dashboard_only(results_tablename, recreate_raw_data=False)
+    main_dashboard_only(results_tablename, recreate_raw_data=True)
     #main_summary_plots_from_query(results_tablename)
     #main_create_summary_results_table(results_tablename)
