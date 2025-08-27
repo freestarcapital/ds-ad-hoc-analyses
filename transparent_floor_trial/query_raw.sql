@@ -24,6 +24,8 @@ auc_end AS (
         session_id,
         fs_auction_id,
         unfilled,
+        test_name,
+		test_group,
         (SELECT REGEXP_EXTRACT(kvps, "fs_clientservermask=(.*)") FROM UNNEST(auc_end.kvps) kvps WHERE kvps LIKE "%fs_clientservermask=%" LIMIT 1) AS  fs_clientservermask,
         (SELECT REGEXP_EXTRACT(kvps, "fs_testgroup=(.*)") FROM UNNEST(auc_end.kvps) kvps WHERE kvps LIKE "%fs_testgroup=%" LIMIT 1) AS fs_testgroup
     FROM
@@ -55,6 +57,8 @@ auc_end_w_bwr AS (
         auc_end.fs_auction_id,
         auc_end.placement_id,
         bwr.bidder winning_bidder,
+        auc_end.test_name,
+		auc_end.test_group,
         case when unfilled then 0 else 1 end impression,
         case when unfilled then 1 else 0 end unfilled,
         CAST(FORMAT('%.10f', COALESCE(ROUND((bwr.cpm), 0), 0) / 1e7) AS float64) AS revenue,
@@ -91,6 +95,7 @@ with expanded AS (
 bidder_raw_data as (
     select date, domain, country_code, device_category,
         session_id, fs_auction_id, placement_id,
+        test_name, test_group,
         winning_bidder, bidder, impression, unfilled, revenue
     from expanded
     LEFT JOIN `freestar-157323.ad_manager_dtf.lookup_bidders` bidders ON bidders.position = expanded.bidder_position
@@ -111,23 +116,44 @@ from bidder_raw_data brd
 left join brr using (fs_auction_id, placement_id, bidder);
 
 with t1 as  (
-  select fs_auction_id, placement_id, count(*) bidders_called, countif(bidder_responded) responses,
-    countif(bidder_responded) / count(*) bidder_participation_rate
-
-  from `streamamp-qa-239417.DAS_increment.transparent_raw_expanded`
-  group by 1, 2
-  having countif(bidder_responded) >= 1
+    select test_group, fs_auction_id, placement_id,
+        count(*) bidders_called, countif(bidder_responded) responses,
+        countif(bidder_responded) / count(*) bidder_participation_rate
+    from `streamamp-qa-239417.DAS_increment.transparent_raw_expanded`
+    where test_name = 'c4c21675-1f3f-4e6b-910a-9577f128c051'
+    group by 1, 2, 3
+    having countif(bidder_responded) >= 1
 )
-select avg(bidder_participation_rate) bidder_participation_rate
-from t1;
+select test_group, avg(bidder_participation_rate) bidder_participation_rate
+from t1
+group by 1;
+
+
 
 
 with t1 as (
 select *
 from `streamamp-qa-239417.DAS_increment.transparent_raw_expanded`
 qualify countif(bidder_responded) over (partition by fs_auction_id, placement_id) >= 1
-)
-select bidder, countif(bidder_responded)/count(*) bidder_participation_rate
+), t2 as (
+select bidder, test_group, countif(bidder_responded)/count(*) bidder_participation_rate
 from t1
-group by 1;
+where test_name = 'c4c21675-1f3f-4e6b-910a-9577f128c051'
+group by 1, 2
+), t3 as (
+select bidder, avg(if(test_group=0, bidder_participation_rate, null)) bidder_participation_rate_test_group_0,
+    avg(if(test_group=1, bidder_participation_rate, null)) bidder_participation_rate_test_group_1
+from t2
+group by 1
+)
+select *, 100*safe_divide(bidder_participation_rate_test_group_1-bidder_participation_rate_test_group_0, 0.5*(bidder_participation_rate_test_group_0+bidder_participation_rate_test_group_1)) delta_percent from t3
+order by 1;
 
+
+
+select test_group, approx_count_distinct(session_id) sessions, approx_count_distinct(fs_auction_id) auctions,
+    sum(impression) impressions, sum(revenue) revenue
+from `streamamp-qa-239417.DAS_increment.transparent_raw`
+where test_name = 'c4c21675-1f3f-4e6b-910a-9577f128c051'
+group by 1
+limit 100
