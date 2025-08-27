@@ -76,11 +76,11 @@ def main_plot():
 
 
 def main_dash(version_number=3):
-    # datelist = pd.date_range(end=dt.datetime.today().date() - dt.timedelta(days=3), periods=10)
-    # first_row = True
+    datelist = pd.date_range(end=dt.datetime.today().date() - dt.timedelta(days=10), periods=10)
+    first_row = True
 
-    datelist = pd.date_range(start=dt.date(2025, 7, 13), end=dt.date(2025, 7, 14))
-    first_row = False
+    # datelist = pd.date_range(start=dt.date(2025, 7, 13), end=dt.date(2025, 7, 14))
+    # first_row = False
 
     query_filename = f"queries/query_price_pressure_dash_{version_number}.sql"
     query = open(os.path.join(sys.path[0], query_filename), "r").read()
@@ -111,5 +111,5 @@ def main_dash(version_number=3):
 if __name__ == "__main__":
     #main_plot()
 
-    main_dash(3)
+    main_dash(4)
     #main_dash(2)
