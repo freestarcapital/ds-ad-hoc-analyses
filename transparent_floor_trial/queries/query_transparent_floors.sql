@@ -1,6 +1,4 @@
-DECLARE ddate DATE DEFAULT DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY);
-
-create or replace table `streamamp-qa-239417.DAS_increment.transparent_raw` as
+create or replace table `streamamp-qa-239417.DAS_increment.transparent_raw_{ddate}` as
 
 WITH device_class_cte AS (
     SELECT
@@ -10,7 +8,7 @@ WITH device_class_cte AS (
     FROM
         `freestar-157323.prod_eventstream.pagehits_raw`
     WHERE
-        _PARTITIONDATE = ddate
+        _PARTITIONDATE = '{ddate}'
     GROUP BY
         session_id
 ),
@@ -31,8 +29,8 @@ auc_end AS (
     FROM
         `freestar-157323.prod_eventstream.auction_end_raw` auc_end
     WHERE
-        _PARTITIONDATE = ddate
-        and NET.REG_DOMAIN(auc_end.page_url) = 'pro-football-reference.com'
+        _PARTITIONDATE = '{ddate}'
+        and NET.REG_DOMAIN(auc_end.page_url) in {domain_list}
         and iso is not null AND TRIM(iso) != ''
         AND (
             SELECT COUNT(1)
@@ -68,7 +66,7 @@ auc_end_w_bwr AS (
     ON
         bwr.fs_auction_id = auc_end.fs_auction_id
         AND bwr.placement_id = auc_end.placement_id
-        AND bwr._PARTITIONDATE = ddate
+        AND bwr._PARTITIONDATE = '{ddate}'
     LEFT JOIN
         device_class_cte
     ON
@@ -76,26 +74,24 @@ auc_end_w_bwr AS (
     WHERE fs_testgroup='experiment'
 )
 
-select * from auc_end_w_bwr;
+select * from auc_end_w_bwr
+where date = '{ddate}';
 
 
-
-DECLARE ddate DATE DEFAULT DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY);
-
-create or replace table `streamamp-qa-239417.DAS_increment.transparent_raw_expanded` as
+create or replace table `streamamp-qa-239417.DAS_increment.transparent_raw_expanded_{ddate}` as
 
 with expanded AS (
        SELECT offset+1 bidder_position, * except (arr, offset)
        FROM (
                 SELECT SPLIT(fs_clientservermask, '') as arr, *
-                FROM `streamamp-qa-239417.DAS_increment.transparent_raw`
+                FROM `streamamp-qa-239417.DAS_increment.transparent_raw_{ddate}`
             ) AS mask, mask.arr AS mask_value WITH OFFSET AS offset
 ),
 
 bidder_raw_data as (
     select date, domain, country_code, device_category,
         session_id, fs_auction_id, placement_id,
-        test_name, test_group,
+        coalesce(test_name, 'null') test_name_str, test_group,
         winning_bidder, bidder, impression, unfilled, revenue
     from expanded
     LEFT JOIN `freestar-157323.ad_manager_dtf.lookup_bidders` bidders ON bidders.position = expanded.bidder_position
@@ -107,53 +103,54 @@ bidder_raw_data as (
 brr as (
     select fs_auction_id, placement_id, bidder, bid_cpm
     from `freestar-157323.prod_eventstream.bidsresponse_raw`
-    WHERE _PARTITIONDATE = ddate
+    WHERE _PARTITIONDATE = '{ddate}'
         and status_message = 'Bid available' and source = 'client'
 )
 
 select brd.*, brr.bidder is not null as bidder_responded, coalesce(brr.bid_cpm, 0) bid_cpm
 from bidder_raw_data brd
-left join brr using (fs_auction_id, placement_id, bidder);
+left join brr using (fs_auction_id, placement_id, bidder)
+where date = '{ddate}';
 
-with t1 as  (
-    select test_group, fs_auction_id, placement_id,
-        count(*) bidders_called, countif(bidder_responded) responses,
-        countif(bidder_responded) / count(*) bidder_participation_rate
-    from `streamamp-qa-239417.DAS_increment.transparent_raw_expanded`
-    where test_name = 'c4c21675-1f3f-4e6b-910a-9577f128c051'
+
+{create_or_insert_statement}
+with test_requests as (
+    select date, domain, test_name_str, sum(impression) impressions
+    from `streamamp-qa-239417.DAS_increment.transparent_raw_expanded_{ddate}`
     group by 1, 2, 3
-    having countif(bidder_responded) >= 1
+),
+
+domain_primary_test as (
+    select date, domain, test_name_str
+    from test_requests
+    qualify impressions = max(impressions) over(partition by date, domain)
+),
+
+t1 as (
+    select *,
+    from `streamamp-qa-239417.DAS_increment.transparent_raw_expanded_{ddate}`
+    join domain_primary_test using (date, domain, test_name_str)
+    qualify countif(bidder_responded) over (partition by fs_auction_id, placement_id) >= 1
+),
+
+t2 as (
+    select domain, date, bidder, test_name_str, test_group,
+        countif(bidder_responded)/count(*) bidder_participation_rate,
+        sum(impression) impressions --, sum(unfilled) unfilled, sum(revenue) revenue, approx_count_distinct(session_id) sessions, approx_count_distinct(fs_auction_id) auctions
+    from t1
+    group by 1, 2, 3, 4, 5
+),
+
+t3 as (
+    select domain, date, test_name_str, bidder,
+        avg(if(test_group=0, bidder_participation_rate, null)) bidder_participation_rate_test_group_0,
+        avg(if(test_group=1, bidder_participation_rate, null)) bidder_participation_rate_test_group_1,
+        avg(if(test_group=0, impressions, null)) impressions_group_0,
+        avg(if(test_group=1, impressions, null)) impressions_group_1
+        from t2
+    group by 1, 2, 3, 4
 )
-select test_group, avg(bidder_participation_rate) bidder_participation_rate
-from t1
-group by 1;
 
-
-
-
-with t1 as (
-select *
-from `streamamp-qa-239417.DAS_increment.transparent_raw_expanded`
-qualify countif(bidder_responded) over (partition by fs_auction_id, placement_id) >= 1
-), t2 as (
-select bidder, test_group, countif(bidder_responded)/count(*) bidder_participation_rate
-from t1
-where test_name = 'c4c21675-1f3f-4e6b-910a-9577f128c051'
-group by 1, 2
-), t3 as (
-select bidder, avg(if(test_group=0, bidder_participation_rate, null)) bidder_participation_rate_test_group_0,
-    avg(if(test_group=1, bidder_participation_rate, null)) bidder_participation_rate_test_group_1
-from t2
-group by 1
-)
-select *, 100*safe_divide(bidder_participation_rate_test_group_1-bidder_participation_rate_test_group_0, 0.5*(bidder_participation_rate_test_group_0+bidder_participation_rate_test_group_1)) delta_percent from t3
-order by 1;
-
-
-
-select test_group, approx_count_distinct(session_id) sessions, approx_count_distinct(fs_auction_id) auctions,
-    sum(impression) impressions, sum(revenue) revenue
-from `streamamp-qa-239417.DAS_increment.transparent_raw`
-where test_name = 'c4c21675-1f3f-4e6b-910a-9577f128c051'
-group by 1
-limit 100
+select *, 100*safe_divide(bidder_participation_rate_test_group_1-bidder_participation_rate_test_group_0,
+    0.5*(bidder_participation_rate_test_group_0+bidder_participation_rate_test_group_1)) delta_percent
+from t3;
