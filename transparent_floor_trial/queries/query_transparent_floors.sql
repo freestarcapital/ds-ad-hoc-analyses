@@ -71,7 +71,7 @@ auc_end_w_bwr AS (
         device_class_cte
     ON
         auc_end.session_id = device_class_cte.session_id
-    WHERE fs_testgroup='experiment'
+    WHERE fs_testgroup = 'experiment'
 )
 
 select * from auc_end_w_bwr
@@ -143,10 +143,10 @@ t2 as (
 
 t3 as (
     select domain, date, test_name_str, bidder,
-        avg(if(test_group=0, bidder_participation_rate, null)) bidder_participation_rate_test_group_0,
-        avg(if(test_group=1, bidder_participation_rate, null)) bidder_participation_rate_test_group_1,
-        avg(if(test_group=0, impressions, null)) impressions_group_0,
-        avg(if(test_group=1, impressions, null)) impressions_group_1
+        sum(if(test_group=0, bidder_participation_rate, 0)) bidder_participation_rate_test_group_0,
+        sum(if(test_group=1, bidder_participation_rate, 0)) bidder_participation_rate_test_group_1,
+        sum(if(test_group=0, impressions, 0)) impressions_group_0,
+        sum(if(test_group=1, impressions, 0)) impressions_group_1
         from t2
     group by 1, 2, 3, 4
 )

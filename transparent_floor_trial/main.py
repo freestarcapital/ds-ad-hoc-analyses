@@ -50,7 +50,7 @@ def main_dash():
         'pro-football-reference.com',
         'baseball-reference.com',
         'deepai.org',
-        'signupgenius'
+        'signupgenius.com'
     ]
 
     tablename = f"streamamp-qa-239417.DAS_increment.transparent_bidder_participation"
