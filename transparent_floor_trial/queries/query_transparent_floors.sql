@@ -151,7 +151,7 @@ t2 as (
     select domain, date, bidder, test_name_str, test_group,
         countif(bidder_responded) / count(*) bidder_participation_rate,
        countif((winning_bidder is not null) and (winning_bidder = bidder)) / count(*) bidder_win_rate,
-       countif((winning_bidder is not null) and (winning_bidder = bidder)) / count(winning_bidder is not null) bidder_prebid_win_rate,
+       countif((winning_bidder is not null) and (winning_bidder = bidder)) / countif(winning_bidder is not null) bidder_prebid_win_rate,
         avg(sessions_day_domain_test_group) sessions_day_domain_test_group,
         avg(revenue_domain_test_group) revenue_domain_test_group,
         avg(rps_domain_test_group) rps_domain_test_group
