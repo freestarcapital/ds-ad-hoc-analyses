@@ -22,7 +22,7 @@ auc_end AS (
         session_id,
         fs_auction_id,
         unfilled,
-        test_name,
+        coalesce(test_name, 'null') test_name_str,
 		test_group,
         (SELECT REGEXP_EXTRACT(kvps, "fs_clientservermask=(.*)") FROM UNNEST(auc_end.kvps) kvps WHERE kvps LIKE "%fs_clientservermask=%" LIMIT 1) AS  fs_clientservermask,
         (SELECT REGEXP_EXTRACT(kvps, "fs_testgroup=(.*)") FROM UNNEST(auc_end.kvps) kvps WHERE kvps LIKE "%fs_testgroup=%" LIMIT 1) AS fs_testgroup
@@ -55,7 +55,7 @@ auc_end_w_bwr AS (
         auc_end.fs_auction_id,
         auc_end.placement_id,
         bwr.bidder winning_bidder,
-        auc_end.test_name,
+        auc_end.test_name_str,
 		auc_end.test_group,
         case when unfilled then 0 else 1 end impression,
         case when unfilled then 1 else 0 end unfilled,
@@ -91,7 +91,7 @@ with expanded AS (
 bidder_raw_data as (
     select date, domain, country_code, device_category,
         session_id, fs_auction_id, placement_id,
-        coalesce(test_name, 'null') test_name_str, test_group,
+        test_name_str, test_group,
         winning_bidder, bidder, impression, unfilled, revenue
     from expanded
     LEFT JOIN `freestar-157323.ad_manager_dtf.lookup_bidders` bidders ON bidders.position = expanded.bidder_position
@@ -114,43 +114,51 @@ where date = '{ddate}';
 
 
 {create_or_insert_statement}
+
+
+
 with test_requests as (
-    select date, domain, test_name_str, sum(impression) impressions
-    from `streamamp-qa-239417.DAS_increment.transparent_raw_expanded_{ddate}`
+    select date, domain, test_name_str, approx_count_distinct(session_id) sessions_day_domain_test
+    from `streamamp-qa-239417.DAS_increment.transparent_raw_{ddate}`
     group by 1, 2, 3
 ),
 
 domain_primary_test as (
-    select date, domain, test_name_str
+    select *
     from test_requests
-    qualify impressions = max(impressions) over(partition by date, domain)
+    qualify sessions_day_domain_test = max(sessions_day_domain_test) over(partition by date, domain)
+),
+
+domain_test_group as (
+
+    select date, domain, test_name_str, test_group,
+        count(distinct session_id) sessions_day_domain_test_group,
+        sum(revenue) revenue_domain_test_group,
+        safe_divide(sum(revenue) , count(distinct session_id)) * 1000 rps_domain_test_group
+    from `streamamp-qa-239417.DAS_increment.transparent_raw_{ddate}`
+    join domain_primary_test using (date, domain, test_name_str)
+    group by 1, 2, 3, 4
 ),
 
 t1 as (
-    select *,
+    select *
     from `streamamp-qa-239417.DAS_increment.transparent_raw_expanded_{ddate}`
-    join domain_primary_test using (date, domain, test_name_str)
+    join domain_test_group using (date, domain, test_name_str, test_group)
     qualify countif(bidder_responded) over (partition by fs_auction_id, placement_id) >= 1
 ),
 
 t2 as (
     select domain, date, bidder, test_name_str, test_group,
-        countif(bidder_responded)/count(*) bidder_participation_rate,
-        sum(impression) impressions --, sum(unfilled) unfilled, sum(revenue) revenue, approx_count_distinct(session_id) sessions, approx_count_distinct(fs_auction_id) auctions
+        countif(bidder_responded) / count(*) bidder_participation_rate,
+       countif((winning_bidder is not null) and (winning_bidder = bidder)) / count(*) bidder_win_rate,
+       countif((winning_bidder is not null) and (winning_bidder = bidder)) / count(winning_bidder is not null) bidder_prebid_win_rate,
+        avg(sessions_day_domain_test_group) sessions_day_domain_test_group,
+        avg(revenue_domain_test_group) revenue_domain_test_group,
+        avg(rps_domain_test_group) rps_domain_test_group
     from t1
     group by 1, 2, 3, 4, 5
-),
-
-t3 as (
-    select domain, date, test_name_str, bidder,
-        sum(if(test_group=0, bidder_participation_rate, 0)) bidder_participation_rate_test_group_0,
-        sum(if(test_group=1, bidder_participation_rate, 0)) bidder_participation_rate_test_group_1,
-        sum(if(test_group=0, impressions, 0)) impressions_group_0,
-        sum(if(test_group=1, impressions, 0)) impressions_group_1
-        from t2
-    group by 1, 2, 3, 4
 )
 
-select *, 100*safe_divide(bidder_participation_rate_test_group_1-bidder_participation_rate_test_group_0,
-    0.5*(bidder_participation_rate_test_group_0+bidder_participation_rate_test_group_1)) delta_percent
-from t3;
+select *
+from t2;
+--order by 1, 2, 3, 4, 5

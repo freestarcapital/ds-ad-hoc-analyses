@@ -56,8 +56,8 @@ def main_dash():
 
     tablename = f"streamamp-qa-239417.DAS_increment.transparent_bidder_participation"
 
-    datelist = pd.date_range(end=dt.datetime.today().date(), periods=28)
-    #datelist = pd.date_range(end=dt.date(2025, 8, 15), periods=2)
+    datelist = pd.date_range(end=dt.datetime.today().date(), periods=29)
+#    datelist = pd.date_range(end=dt.datetime.today().date(), periods=12)
     first_row = True
 
     query_filename = f"queries/query_transparent_floors.sql"
@@ -67,10 +67,9 @@ def main_dash():
     domain_list = f"({', '.join([f"'{d}'" for d in test_domains])})"
 
     for date in datelist.tolist():
-        print(f'date: {date}')
-
         create_or_insert_statement = f"CREATE OR REPLACE TABLE `{tablename}` as" if first_row else f"insert into `{tablename}`"
         first_row = False
+        print(f'date: {date}: {create_or_insert_statement}')
 
         repl_dict = {'ddate': date.strftime("%Y-%m-%d"),
                      'create_or_insert_statement': create_or_insert_statement,
