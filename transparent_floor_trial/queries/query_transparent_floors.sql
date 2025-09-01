@@ -134,6 +134,7 @@ domain_test_group as (
         safe_divide(sum(revenue) , count(distinct session_id)) * 1000 rps_domain_test_group,
         safe_divide(sum(revenue), approx_count_distinct(distinct fs_auction_id || placement_id)) * 1000 cpma_domain_test_group,
         approx_count_distinct(distinct fs_auction_id || placement_id) auctions_domain_test_group,
+        count(*) auctions_domain_test_group_2,
         countif(winning_bidder is not null) / count(*) prebid_win_rate_domain_test_group
     from `streamamp-qa-239417.DAS_increment.transparent_raw_{ddate}`
     join domain_primary_test using (date, domain, test_name_str)
@@ -167,6 +168,7 @@ select domain, date, bidder, test_name_str, test_group,
     avg(rps_domain_test_group) rps_domain_test_group,
     avg(prebid_win_rate_domain_test_group) prebid_win_rate_domain_test_group,
     avg(cpma_domain_test_group) cpma_domain_test_group,
+    avg(auctions_domain_test_group) auctions_domain_test_group_2,
     avg(prebid_wins) prebid_wins,
     avg(auctions_domain_test_group) auctions_domain_test_group
 from t1
