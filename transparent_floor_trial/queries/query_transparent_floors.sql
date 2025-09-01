@@ -132,7 +132,8 @@ domain_test_group as (
         count(distinct session_id) sessions_day_domain_test_group,
         sum(revenue) revenue_domain_test_group,
         safe_divide(sum(revenue) , count(distinct session_id)) * 1000 rps_domain_test_group,
-        countif(winning_bidder is not null) / count(*) prebid_win_rate
+        safe_divide(sum(revenue), approx_count_distinct(distinct fs_auction_id || placement_id)) * 1000 cpma_domain_test_group,
+        countif(winning_bidder is not null) / count(*) prebid_win_rate_domain_test_group
     from `streamamp-qa-239417.DAS_increment.transparent_raw_{ddate}`
     join domain_primary_test using (date, domain, test_name_str)
     group by 1, 2, 3, 4
@@ -140,16 +141,17 @@ domain_test_group as (
 
 t1 as (
     select *,
-        avg(if(winning_bidder = bidder, bid_cpm, null)) over(partition by fs_auction_id, placement_id) bid_cpm_winning_bidder
+        avg(if(winning_bidder = bidder, bid_cpm, null)) over(partition by fs_auction_id, placement_id) bid_cpm_winning_bidder,
+        max(if(winning_bidder is not null, 1, 0)) over(partition by fs_auction_id, placement_id) prebid_wins,
     from `streamamp-qa-239417.DAS_increment.transparent_raw_expanded_{ddate}`
     join domain_test_group using (date, domain, test_name_str, test_group)
     qualify countif(bidder_responded) over (partition by fs_auction_id, placement_id) >= 1
 )
 
 select domain, date, bidder, test_name_str, test_group,
-    countif(bidder_responded) / count(*) bidder_participation_rate,
-    countif((winning_bidder is not null) and (winning_bidder = bidder)) / count(*) bidder_win_rate,
-    countif((winning_bidder is not null) and (winning_bidder = bidder)) / countif(winning_bidder is not null) bidder_prebid_win_rate,
+    safe_divide(countif(bidder_responded), count(*)) bidder_participation_rate,
+    safe_divide(countif((winning_bidder is not null) and (winning_bidder = bidder)), count(*)) bidder_win_rate,
+    safe_divide(countif((winning_bidder is not null) and (winning_bidder = bidder)), countif(winning_bidder is not null)) bidder_prebid_win_rate,
     avg(if(bidder_responded, bid_cpm, null)) bidder_cpm_when_bids,
     avg(if(bidder_responded and (winning_bidder = bidder), bid_cpm, null)) bidder_cpm_when_wins,
     avg(if(winning_bidder is not null, safe_divide(bid_cpm, bid_cpm_winning_bidder), null)) bidder_price_pressure_include_non_bids,
@@ -162,6 +164,8 @@ select domain, date, bidder, test_name_str, test_group,
     avg(sessions_day_domain_test_group) sessions_day_domain_test_group,
     avg(revenue_domain_test_group) revenue_domain_test_group,
     avg(rps_domain_test_group) rps_domain_test_group,
-    avg(prebid_win_rate) prebid_win_rate
+    avg(prebid_win_rate_domain_test_group) prebid_win_rate_domain_test_group,
+    avg(cpma_domain_test_group) cpma_domain_test_group,
+    avg(prebid_wins) prebid_wins
 from t1
 group by 1, 2, 3, 4, 5
