@@ -96,7 +96,7 @@ bidder_raw_data as (
     from expanded
     LEFT JOIN `freestar-157323.ad_manager_dtf.lookup_bidders` bidders ON bidders.position = expanded.bidder_position
     LEFT JOIN `freestar-157323.ad_manager_dtf.lookup_mask` mask_lookup ON mask_lookup.mask_value = expanded.mask_value
-    where status = 'client'
+    where status in ('client', 'server')
         and bidder not in ('amazon', 'preGAMAuction')
 ),
 
@@ -104,7 +104,7 @@ brr as (
     select fs_auction_id, placement_id, bidder, bid_cpm
     from `freestar-157323.prod_eventstream.bidsresponse_raw`
     WHERE _PARTITIONDATE = '{ddate}'
-        and status_message = 'Bid available' and source = 'client'
+        and status_message = 'Bid available' and source in ('client', 'server')
 )
 
 select brd.*, brr.bidder is not null as bidder_responded, coalesce(brr.bid_cpm, 0) bid_cpm
@@ -114,8 +114,6 @@ where date = '{ddate}';
 
 
 {create_or_insert_statement}
-
-
 
 with test_requests as (
     select date, domain, test_name_str, approx_count_distinct(session_id) sessions_day_domain_test
@@ -130,35 +128,40 @@ domain_primary_test as (
 ),
 
 domain_test_group as (
-
     select date, domain, test_name_str, test_group,
         count(distinct session_id) sessions_day_domain_test_group,
         sum(revenue) revenue_domain_test_group,
-        safe_divide(sum(revenue) , count(distinct session_id)) * 1000 rps_domain_test_group
+        safe_divide(sum(revenue) , count(distinct session_id)) * 1000 rps_domain_test_group,
+        countif(winning_bidder is not null) / count(*) prebid_win_rate
     from `streamamp-qa-239417.DAS_increment.transparent_raw_{ddate}`
     join domain_primary_test using (date, domain, test_name_str)
     group by 1, 2, 3, 4
 ),
 
 t1 as (
-    select *
+    select *,
+        avg(if(winning_bidder = bidder, bid_cpm, null)) over(partition by fs_auction_id, placement_id) bid_cpm_winning_bidder
     from `streamamp-qa-239417.DAS_increment.transparent_raw_expanded_{ddate}`
     join domain_test_group using (date, domain, test_name_str, test_group)
     qualify countif(bidder_responded) over (partition by fs_auction_id, placement_id) >= 1
-),
-
-t2 as (
-    select domain, date, bidder, test_name_str, test_group,
-        countif(bidder_responded) / count(*) bidder_participation_rate,
-       countif((winning_bidder is not null) and (winning_bidder = bidder)) / count(*) bidder_win_rate,
-       countif((winning_bidder is not null) and (winning_bidder = bidder)) / countif(winning_bidder is not null) bidder_prebid_win_rate,
-        avg(sessions_day_domain_test_group) sessions_day_domain_test_group,
-        avg(revenue_domain_test_group) revenue_domain_test_group,
-        avg(rps_domain_test_group) rps_domain_test_group
-    from t1
-    group by 1, 2, 3, 4, 5
 )
 
-select *
-from t2;
---order by 1, 2, 3, 4, 5
+select domain, date, bidder, test_name_str, test_group,
+    countif(bidder_responded) / count(*) bidder_participation_rate,
+    countif((winning_bidder is not null) and (winning_bidder = bidder)) / count(*) bidder_win_rate,
+    countif((winning_bidder is not null) and (winning_bidder = bidder)) / count(winning_bidder is not null) bidder_prebid_win_rate,
+    avg(if(bidder_responded, bid_cpm, null)) bidder_cpm_when_bids,
+    avg(if(bidder_responded and (winning_bidder = bidder), bid_cpm, null)) bidder_cpm_when_wins,
+    avg(if(winning_bidder is not null, safe_divide(bid_cpm, bid_cpm_winning_bidder), null)) bidder_price_pressure_include_non_bids,
+    avg(if((winning_bidder is not null) and bidder_responded, safe_divide(bid_cpm, bid_cpm_winning_bidder), null)) bidder_price_pressure_bids,
+    avg(if((winning_bidder is not null) and bidder_responded and bidder = winning_bidder, safe_divide(bid_cpm, bid_cpm_winning_bidder), null)) bidder_price_pressure_wins,
+    avg(if(winning_bidder is not null, if(bid_cpm >= 0.8 * bid_cpm_winning_bidder, 1, 0), null)) bidder_within_20perc_include_non_bids,
+    avg(if((winning_bidder is not null) and bidder_responded, if(bid_cpm >= 0.8 * bid_cpm_winning_bidder, 1, 0), null)) bidder_within_20perc_bids,
+    avg(if(winning_bidder is not null, if(bid_cpm >= 0.5 * bid_cpm_winning_bidder, 1, 0), null)) bidder_within_50perc_include_non_bids,
+    avg(if((winning_bidder is not null) and bidder_responded, if(bid_cpm >= 0.5 * bid_cpm_winning_bidder, 1, 0), null)) bidder_within_50perc_bids,
+    avg(sessions_day_domain_test_group) sessions_day_domain_test_group,
+    avg(revenue_domain_test_group) revenue_domain_test_group,
+    avg(rps_domain_test_group) rps_domain_test_group,
+    avg(prebid_win_rate) prebid_win_rate
+from t1
+group by 1, 2, 3, 4, 5

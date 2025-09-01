@@ -56,8 +56,8 @@ def main_dash():
 
     tablename = f"streamamp-qa-239417.DAS_increment.transparent_bidder_participation"
 
-    datelist = pd.date_range(end=dt.datetime.today().date(), periods=29)
-#    datelist = pd.date_range(end=dt.datetime.today().date(), periods=12)
+#    datelist = pd.date_range(end=dt.datetime.today().date(), periods=29)
+    datelist = pd.date_range(end=dt.datetime.today().date(), periods=32)
     first_row = True
 
     query_filename = f"queries/query_transparent_floors.sql"
