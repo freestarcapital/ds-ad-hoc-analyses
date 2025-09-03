@@ -1,0 +1,197 @@
+create or replace table `streamamp-qa-239417.DAS_increment.BI_AB_raw_{ddate}` as
+
+with site_id_to_domain_mapping as (
+    select domain, site_id from
+        (
+        select
+                NET.REG_DOMAIN(page_url) AS domain,
+                site_id,
+                count(*) requests
+            from `freestar-157323.prod_eventstream.auction_end_raw`
+            where _PARTITIONDATE >= date_sub('{ddate}', interval 1 day)
+                and _PARTITIONDATE <= date_add('{ddate}', interval 1 day)
+                and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) = '{ddate}'
+                and NET.REG_DOMAIN(page_url) in {domain_list}
+            group by 1, 2
+        )
+        qualify row_number() over(partition by domain, site_id order by requests desc) = 1
+),
+
+auction_end_raw__test as (
+    select
+        NET.REG_DOMAIN(page_url) AS domain,
+        test_name,
+        test_group,
+        session_id,
+        count(*) as requests,
+        countif(unfilled) prebid_unfilled,
+        countif(not unfilled) prebid_requests,
+        countif(auction_type = 'GAM') auction_type_GAM_requests,
+        countif((auction_type = 'GAM') and unfilled) auction_type_GAM_requests_unfilled,
+        countif((auction_type = 'GAM') and not unfilled) auction_type_GAM_requests_filled
+    from `freestar-157323.prod_eventstream.auction_end_raw`
+    where _PARTITIONDATE >= date_sub('{ddate}', interval 1 day)
+        and _PARTITIONDATE <= date_add('{ddate}', interval 1 day)
+        and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) = '{ddate}'
+        and NET.REG_DOMAIN(page_url) in {domain_list}
+    group by 1, 2, 3, 4
+    qualify count(distinct test_group) over(partition by test_name, session_id) = 1
+),
+
+-- prebid only tests
+bwr_tests as (
+   select
+        NET.REG_DOMAIN(page_url) AS domain,
+        test_name,
+        test_group,
+        session_id,
+        sum(cpm / 1e7) as prebid_revenue,
+        count(*) as prebid_impressions
+    from `freestar-157323.prod_eventstream.bidswon_raw`
+    where _PARTITIONDATE >= date_sub('{ddate}', interval 1 day)
+        and _PARTITIONDATE <= date_add('{ddate}', interval 1 day)
+        and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) = '{ddate}'
+        and NET.REG_DOMAIN(page_url) in {domain_list}
+    group by 1, 2, 3, 4
+),
+
+bwr_test__cte as (
+    select * --, 'prebid' as inventory_platform
+    from auction_end_raw__test
+    left join bwr_tests using (domain, test_name, test_group, session_id)
+),
+
+-- US GAM tests only (for A9/amazon, AdX, EBDA requests only) using dtf
+us_gam_dtf as (
+    select
+        AdUnitId as adunit_id,
+        fs_session_id as session_id,
+        sum(impression) as gam_impressions,
+        sum(unfilled) as gam_unfilled,
+        sum(case when l.CostType="CPM" then l.CostPerUnitInNetworkCurrency/1000 else 0 end) as gam_revenue
+    from `freestar-prod.data_transfer.NetworkImpressions` m
+    left join `freestar-prod.data_transfer.match_line_item_15184186` l
+        on l.Id = m.LineItemId and l.date = m.EventDateMST
+    where m.EventDateMST = '{ddate}'
+        and fs_session_id is not null
+        and (LineItemID = 0 or REGEXP_CONTAINS(l.Name, 'A9 '))
+    group by 1, 2
+
+    union all
+
+    select
+        AdUnitId as adunit_id,
+        fs_session_id as session_id,
+        sum(impression) as gam_impressions,
+        sum(unfilled) as gam_unfilled,
+        sum(EstimatedBackfillRevenue) as gam_revenue
+    from `freestar-prod.data_transfer.NetworkBackfillImpressions`
+    where EventDateMST = '{ddate}'
+    group by 1, 2
+),
+
+-- getting site_id from uk and us gam mapping table - null site_id are AMP/APP
+-- note: same session can be seen across many different ad units
+us_gam_dtf_cte as (
+    select
+        dm.domain,
+        aer.test_name,
+        aer.test_group,
+        m.session_id,
+        --'us_gam_dtf__amazon_adx_ebda' as inventory_platform,
+        sum(gam_unfilled) as gam_requests,
+        sum(gam_impressions) as gam_impressions,
+        sum(gam_revenue) as gam_revenue
+    from us_gam_dtf m
+    left join `freestar-prod.data_transfer.match_ad_unit_15184186` a
+        on a.Id = m.adunit_id and a.date = '{ddate}'
+    left join `freestar-prod.NDR_resources.gam_ad_units_map` am
+        on am.ad_unit_name = (case when a.Name like '%jcpenney%' then 'jcpenney' else a.Name end)
+    join auction_end_raw__test aer
+        on aer.session_id = m.session_id
+    join site_id_to_domain_mapping dm
+        on am.site_id = dm.site_id
+    group by 1, 2, 3, 4 --, 5
+),
+
+full_session_data as (
+    select * from
+    bwr_test__cte
+    full outer join
+    us_gam_dtf_cte using (domain, test_name, test_group, session_id)
+)
+
+select domain, test_name, test_group, 
+    count(*) sessions, 
+    safe_divide(sum(coalesce(prebid_revenue, 0) + coalesce(gam_revenue, 0)), count(*)) * 1000 rps
+from full_session_data
+group by 1, 2, 3
+
+-- ,
+--
+-- -- union both bwr and dtf
+-- bwr_us_gam_dtf__test as (
+--     select
+--         , site_id
+--     , test_name
+--     , test_group
+--     , inventory_platform
+--     , requests
+--     , session_id
+--     , impressions
+--     , gross_revenue
+--
+--   from us_gam_dtf_cte
+--
+--   union all
+--
+--   select
+--     record_date__mst
+--     , site_id
+--     , test_name
+--     , test_group
+--     , inventory_platform
+--     , requests
+--     , session_id
+--     , impressions
+--     , gross_revenue
+--
+--   from bwr_test__cte
+--
+-- )
+--
+-- -- select sum(gross_revenue) from bwr_us_gam_dtf__test
+-- -- where test_name='f43c68e0-298e-4da9-8650-fa834da87146'
+-- -- and site_id=6062
+--
+-- -- including collection_id and methodology from test_name and aggregating session_id
+-- , final as (
+-- select
+--     m.record_date__mst
+--     , m.site_id
+--     , m.test_name
+--     , m.test_group
+--     , ab.collection_id
+--     , ab.methodology
+--     , m.inventory_platform
+--     , m.requests
+--     , m.impressions
+--     , m.gross_revenue
+--     , count(distinct m.session_id) as sessions
+--
+-- from bwr_us_gam_dtf__test m
+--   left join `freestar-157323.dashboard.pubfig_ab_test` ab on ab.id = m.test_name
+--
+-- group by 1,2,3,4,5,6,7,8,9,10
+--
+-- )
+--
+-- select inventory_platform,record_date__mst,site_id,test_group,
+-- sum(sessions) sessions,
+-- sum(impressions) impression,
+-- sum(requests) requests,
+-- sum(gross_revenue) revenue
+-- from final
+-- where site_id = 6062
+-- -- and test_name='f43c68e0-298e-4da9-8650-fa834da87146'
+-- group by 1,2,3,4

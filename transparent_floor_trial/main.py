@@ -46,6 +46,10 @@ def get_bq_data(query, replacement_dict={}):
     return client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
 
 def main_dash():
+
+    #query_filename = 'query_transparent_floors'
+    query_filename = 'query_BI_AB_test_original'
+
     test_domains = [
         'pro-football-reference.com',
         'baseball-reference.com',
@@ -61,8 +65,7 @@ def main_dash():
 
     first_row = True
 
-    query_filename = f"queries/query_transparent_floors.sql"
-    query = open(os.path.join(sys.path[0], query_filename), "r").read()
+    query = open(os.path.join(sys.path[0], f"queries/{query_filename}.sql"), "r").read()
     print(f'query_filename: {query_filename}')
 
     domain_list = f"({', '.join([f"'{d}'" for d in test_domains])})"
@@ -76,6 +79,7 @@ def main_dash():
                      'create_or_insert_statement': create_or_insert_statement,
                      'domain_list': domain_list}
         get_bq_data(query, repl_dict)
+
 
 if __name__ == "__main__":
 
