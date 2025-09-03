@@ -1,6 +1,6 @@
---create or replace table `streamamp-qa-239417.DAS_increment.transparent_raw_{ddate}` as
+-- create or replace table `streamamp-qa-239417.DAS_increment.transparent_raw_{ddate}` as
 --
---WITH device_class_cte AS (
+-- WITH device_class_cte AS (
 --    SELECT
 --        session_id,
 --        min(device_class) device_class,
@@ -11,9 +11,9 @@
 --        _PARTITIONDATE = '{ddate}'
 --    GROUP BY
 --        session_id
---),
+-- ),
 --
---auc_end AS (
+-- auc_end AS (
 --    SELECT
 --        placement_id,
 --        DATE(TIMESTAMP_TRUNC(TIMESTAMP_MILLIS(server_time), DAY)) AS date,
@@ -23,7 +23,7 @@
 --        fs_auction_id,
 --        unfilled,
 --        coalesce(test_name, 'null') test_name_str,
---		test_group,
+-- 		test_group,
 --        (SELECT REGEXP_EXTRACT(kvps, "fs_clientservermask=(.*)") FROM UNNEST(auc_end.kvps) kvps WHERE kvps LIKE "%fs_clientservermask=%" LIMIT 1) AS  fs_clientservermask,
 --        (SELECT REGEXP_EXTRACT(kvps, "fs_testgroup=(.*)") FROM UNNEST(auc_end.kvps) kvps WHERE kvps LIKE "%fs_testgroup=%" LIMIT 1) AS fs_testgroup
 --    FROM
@@ -41,9 +41,9 @@
 --        ) >= 2
 --    and fs_auction_id is not null
 --    and auction_type != 'GAM'
---),
+-- ),
 --
---auc_end_w_bwr AS (
+-- auc_end_w_bwr AS (
 --    SELECT
 --        auc_end.date,
 --        auc_end.country_code,
@@ -56,7 +56,7 @@
 --        auc_end.placement_id,
 --        bwr.bidder winning_bidder,
 --        auc_end.test_name_str,
---		auc_end.test_group,
+-- 		auc_end.test_group,
 --        case when unfilled then 0 else 1 end impression,
 --        case when unfilled then 1 else 0 end unfilled,
 --        CAST(FORMAT('%.10f', COALESCE(ROUND((bwr.cpm), 0), 0) / 1e7) AS float64) AS revenue,
@@ -72,45 +72,45 @@
 --    ON
 --        auc_end.session_id = device_class_cte.session_id
 --    WHERE fs_testgroup = 'experiment'
---)
+-- )
 --
---select * from auc_end_w_bwr
---where date = '{ddate}';
-
-
-create or replace table `streamamp-qa-239417.DAS_increment.transparent_raw_expanded_{ddate}` as
-
-with expanded AS (
-       SELECT offset+1 bidder_position, * except (arr, offset)
-       FROM (
-                SELECT SPLIT(fs_clientservermask, '') as arr, *
-                FROM `streamamp-qa-239417.DAS_increment.transparent_raw_{ddate}`
-            ) AS mask, mask.arr AS mask_value WITH OFFSET AS offset
-),
-
-bidder_raw_data as (
-    select date, domain, country_code, device_category,
-        session_id, fs_auction_id, placement_id,
-        test_name_str, test_group,
-        winning_bidder, bidder, impression, unfilled, revenue
-    from expanded
-    LEFT JOIN `freestar-157323.ad_manager_dtf.lookup_bidders` bidders ON bidders.position = expanded.bidder_position
-    LEFT JOIN `freestar-157323.ad_manager_dtf.lookup_mask` mask_lookup ON mask_lookup.mask_value = expanded.mask_value
-    where status in ('client', 'server')
-        and bidder not in ('amazon', 'preGAMAuction')
-),
-
-brr as (
-    select fs_auction_id, placement_id, bidder, bid_cpm
-    from `freestar-157323.prod_eventstream.bidsresponse_raw`
-    WHERE _PARTITIONDATE = '{ddate}'
-        and status_message = 'Bid available' and source in ('client', 'server')
-)
-
-select brd.*, brr.bidder is not null as bidder_responded, coalesce(brr.bid_cpm, 0) bid_cpm
-from bidder_raw_data brd
-left join brr using (fs_auction_id, placement_id, bidder)
-where date = '{ddate}';
+-- select * from auc_end_w_bwr
+-- where date = '{ddate}';
+--
+--
+-- create or replace table `streamamp-qa-239417.DAS_increment.transparent_raw_expanded_{ddate}` as
+--
+-- with expanded AS (
+--        SELECT offset+1 bidder_position, * except (arr, offset)
+--        FROM (
+--                 SELECT SPLIT(fs_clientservermask, '') as arr, *
+--                 FROM `streamamp-qa-239417.DAS_increment.transparent_raw_{ddate}`
+--             ) AS mask, mask.arr AS mask_value WITH OFFSET AS offset
+-- ),
+--
+-- bidder_raw_data as (
+--     select date, domain, country_code, device_category,
+--         session_id, fs_auction_id, placement_id,
+--         test_name_str, test_group,
+--         winning_bidder, bidder, impression, unfilled, revenue
+--     from expanded
+--     LEFT JOIN `freestar-157323.ad_manager_dtf.lookup_bidders` bidders ON bidders.position = expanded.bidder_position
+--     LEFT JOIN `freestar-157323.ad_manager_dtf.lookup_mask` mask_lookup ON mask_lookup.mask_value = expanded.mask_value
+--     where status in ('client', 'server')
+--         and bidder not in ('amazon', 'preGAMAuction')
+-- ),
+--
+-- brr as (
+--     select fs_auction_id, placement_id, bidder, bid_cpm
+--     from `freestar-157323.prod_eventstream.bidsresponse_raw`
+--     WHERE _PARTITIONDATE = '{ddate}'
+--         and status_message = 'Bid available' and source in ('client', 'server')
+-- )
+--
+-- select brd.*, brr.bidder is not null as bidder_responded, coalesce(brr.bid_cpm, 0) bid_cpm
+-- from bidder_raw_data brd
+-- left join brr using (fs_auction_id, placement_id, bidder)
+-- where date = '{ddate}';
 
 
 {create_or_insert_statement}
@@ -145,7 +145,8 @@ t1 as (
     select *,
         least(1, safe_divide(bid_cpm, avg(if(winning_bidder = bidder, bid_cpm, null)) over(partition by fs_auction_id, placement_id))) bid_pressure,
         max(if(winning_bidder is not null, 1, 0)) over(partition by fs_auction_id, placement_id) prebid_wins,
-        countif(bidder_responded) over (partition by fs_auction_id, placement_id) >= 1 bidder_response_known
+        countif(bidder_responded) over (partition by fs_auction_id, placement_id) >= 1 bidder_response_known,
+        countif(bidder_responded) over (partition by fs_auction_id, placement_id) count_of_bidder_responses
     from `streamamp-qa-239417.DAS_increment.transparent_raw_expanded_{ddate}`
     join domain_test_group using (date, domain, test_name_str, test_group)
 )
@@ -154,6 +155,7 @@ select domain, date, bidder, test_name_str, test_group,
     safe_divide(countif(bidder_responded and bidder_response_known), countif(bidder_response_known)) bidder_participation_rate,
     safe_divide(countif((winning_bidder is not null) and (winning_bidder = bidder)), count(*)) bidder_win_rate,
     safe_divide(countif((winning_bidder is not null) and (winning_bidder = bidder)), countif(winning_bidder is not null)) bidder_prebid_win_rate,
+    avg(if(bidder_response_known, count_of_bidder_responses, null)) count_of_bidder_responses,
     avg(if(bidder_response_known and bidder_responded, bid_cpm, null)) bidder_cpm_when_bids,
     avg(if(bidder_response_known and bidder_responded and (winning_bidder = bidder), bid_cpm, null)) bidder_cpm_when_wins,
     avg(if((winning_bidder is not null) and bidder_response_known, bid_pressure, null)) bidder_price_pressure_include_non_bids,
