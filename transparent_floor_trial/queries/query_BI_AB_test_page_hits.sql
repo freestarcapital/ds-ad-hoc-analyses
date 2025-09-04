@@ -157,6 +157,7 @@ full_session_data as (
 --select * from full_session_data;
 
 select '{ddate}' date, domain, test_name_str, test_group,
+    sum(coalesce(prebid_revenue, 0) + coalesce(gam_revenue, 0)) revenue,
     count(*) sessions,
     safe_divide(sum(coalesce(prebid_revenue, 0) + coalesce(gam_revenue, 0)), count(*)) * 1000 rps
 from full_session_data

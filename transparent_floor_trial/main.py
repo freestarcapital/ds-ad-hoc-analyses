@@ -79,22 +79,22 @@ def main_dash():
     #query_filename = 'query_transparent_floors'
     #tablename = f"streamamp-qa-239417.DAS_increment.transparent_bidder_participation"
 
-    query_filename = 'query_BI_AB_test_original'
-    #query_filename = 'query_BI_AB_test_page_hits'
+    #query_filename = 'query_BI_AB_test_original'
+    query_filename = 'query_BI_AB_test_page_hits'
 
-    datelist = pd.date_range(start=dt.date(2025,8,26), end=dt.date(2025,9,1))
-    name = 'timeouts'
-    test_domains = get_domains_from_collection_ids(['9c42ef7c-2115-4da9-8a22-bd9c36cdb8b4'])
+    # datelist = pd.date_range(start=dt.date(2025,8,26), end=dt.date(2025,9,1))
+    # name = 'timeouts'
+    # test_domains = get_domains_from_collection_ids(['9c42ef7c-2115-4da9-8a22-bd9c36cdb8b4'])
 
-    # datelist = pd.date_range(end=dt.datetime.today().date(), periods=32)
-    # name = 'transparent_floors'
-    # test_domains = [
-    #     'pro-football-reference.com',
-    #     'baseball-reference.com',
-    #     'deepai.org',
-    #     'signupgenius.com',
-    #     'perchance.org'
-    # ]
+    datelist = pd.date_range(end=dt.datetime.today().date(), periods=32)
+    name = 'transparent_floors'
+    test_domains = [
+        'pro-football-reference.com',
+        'baseball-reference.com',
+        'deepai.org',
+        'signupgenius.com',
+        'perchance.org'
+    ]
 
     tablename = f"streamamp-qa-239417.DAS_increment.{query_filename.replace('query_', '')}_results_{name}"
     first_row = True

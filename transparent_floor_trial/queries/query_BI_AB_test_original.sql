@@ -133,10 +133,12 @@ full_session_data as (
 )
 
 select '{ddate}' date, domain, test_name_str, test_group,
-    count(*) sessions, 
+    sum(coalesce(prebid_revenue, 0) + coalesce(gam_revenue, 0)) revenue,
+    count(*) sessions,
     safe_divide(sum(coalesce(prebid_revenue, 0) + coalesce(gam_revenue, 0)), count(*)) * 1000 rps
 from full_session_data
 group by 1, 2, 3, 4;
+
 
 -- ,
 --
@@ -224,6 +226,6 @@ domain_primary_test as
     qualify sessions = max(sessions) over(partition by domain, date)
 )
 
-select * 
+select *
 from `streamamp-qa-239417.DAS_increment.BI_AB_raw_{name}_{ddate}`
 join domain_primary_test using (date, domain, test_name_str);
