@@ -1,4 +1,4 @@
-create or replace table `streamamp-qa-239417.DAS_increment.BI_AB_raw_{name}_{ddate}` as
+create or replace table `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}` as
 
 with
 
@@ -6,6 +6,16 @@ auction_end_raw as
 (
     select * except (test_name), coalesce(test_name, 'null') test_name_str
     from `freestar-157323.prod_eventstream.auction_end_raw`
+    where _PARTITIONDATE >= date_sub('{ddate}', interval 1 day)
+        and _PARTITIONDATE <= date_add('{ddate}', interval 1 day)
+        and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) = '{ddate}'
+        and NET.REG_DOMAIN(page_url) in {domain_list}
+),
+
+pagehits_raw as
+(
+    select * except (test_name), coalesce(test_name, 'null') test_name_str
+    from `freestar-157323.prod_eventstream.pagehits_raw`
     where _PARTITIONDATE >= date_sub('{ddate}', interval 1 day)
         and _PARTITIONDATE <= date_add('{ddate}', interval 1 day)
         and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) = '{ddate}'
@@ -25,15 +35,26 @@ bidswon_raw as
 site_id_to_domain_mapping as
 (
     select domain, site_id from
-        (
+    (
         select
-                NET.REG_DOMAIN(page_url) AS domain,
-                site_id,
-                count(*) requests
-            from auction_end_raw
-            group by 1, 2
-        )
-        qualify row_number() over(partition by domain, site_id order by requests desc) = 1
+            NET.REG_DOMAIN(page_url) AS domain,
+            site_id,
+            count(*) requests
+        from auction_end_raw
+        group by 1, 2
+    )
+    qualify row_number() over(partition by domain, site_id order by requests desc) = 1
+),
+
+page_hits_cte as
+(
+    select distinct 
+        NET.REG_DOMAIN(page_url) AS domain,
+        test_name_str,
+        test_group,
+        session_id
+    from pagehits_raw
+    qualify count(distinct test_group) over(partition by test_name_str, session_id) = 1
 ),
 
 auction_end_raw__test as (
@@ -55,7 +76,7 @@ auction_end_raw__test as (
 
 -- prebid only tests
 bwr_tests as (
-   select
+    select
         NET.REG_DOMAIN(page_url) AS domain,
         test_name_str,
         test_group,
@@ -68,7 +89,8 @@ bwr_tests as (
 
 bwr_test__cte as (
     select * --, 'prebid' as inventory_platform
-    from auction_end_raw__test
+    from page_hits_cte
+    left join auction_end_raw__test using (domain, test_name_str, test_group, session_id)
     left join bwr_tests using (domain, test_name_str, test_group, session_id)
 ),
 
@@ -132,8 +154,10 @@ full_session_data as (
     us_gam_dtf_cte using (domain, test_name_str, test_group, session_id)
 )
 
+--select * from full_session_data;
+
 select '{ddate}' date, domain, test_name_str, test_group,
-    count(*) sessions, 
+    count(*) sessions,
     safe_divide(sum(coalesce(prebid_revenue, 0) + coalesce(gam_revenue, 0)), count(*)) * 1000 rps
 from full_session_data
 group by 1, 2, 3, 4;
@@ -212,8 +236,8 @@ group by 1, 2, 3, 4;
 
 with domain_test_sessions as
 (
-    select date, domain, test_name_str, sum(sessions) sessions 
-    from `streamamp-qa-239417.DAS_increment.BI_AB_raw_{name}_{ddate}`
+    select date, domain, test_name_str, sum(sessions) sessions
+    from `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}`
     group by 1, 2, 3
 ),
 
@@ -224,6 +248,6 @@ domain_primary_test as
     qualify sessions = max(sessions) over(partition by domain, date)
 )
 
-select * 
-from `streamamp-qa-239417.DAS_increment.BI_AB_raw_{name}_{ddate}`
+select *
+from `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}`
 join domain_primary_test using (date, domain, test_name_str);
