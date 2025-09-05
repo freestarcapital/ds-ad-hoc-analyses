@@ -124,11 +124,11 @@ domain_aggregates as (
 ),
 
 das_rps_uplift AS (
-    select date_trunc(date, month) as date, domain,
+    select date_trunc(date, month) as date, REGEXP_REPLACE(domain, r'\.+$', '') domain,
         (safe_divide(sum(proportion * rps_das), sum(proportion * rps_base)) - 1) * 100 as estimated_das_revenue_uplift_percent,
         sum(proportion * rps_das) as estimated_das_rps,
         sum(proportion * rps_base) as estimated_base_rps
-    from `sublime-elixir-273810.das_1_9.das_traffic_uplift_dashboarding_detail_optimised`
+    from `sublime-elixir-273810.das_2_0.das_traffic_uplift_dashboarding_detail_optimised`
     group by 1, 2
 ),
 
