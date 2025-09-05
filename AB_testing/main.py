@@ -86,7 +86,8 @@ def main_dash():
     # name = 'timeouts'
     # test_domains = get_domains_from_collection_ids(['9c42ef7c-2115-4da9-8a22-bd9c36cdb8b4'])
 
-    datelist = pd.date_range(end=dt.datetime.today().date(), periods=32)
+    #datelist = pd.date_range(end=dt.datetime.today().date(), periods=32)
+    datelist = pd.date_range(start=dt.date(2025,8,22), end=dt.date(2025,8,22))
     name = 'transparent_floors'
     test_domains = [
         'pro-football-reference.com',
@@ -115,6 +116,34 @@ def main_dash():
         get_bq_data(query, repl_dict)
 
 
+def data_analysis():
+
+    data_list = []
+
+    for aer_requests_null_status in ['not', '']:
+        for bwr_impressions_null_status in ['not', '']:
+            for gam_revenue_null_status in ['not', '']:
+                query = (f"select * from `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_transparent_floors_2025-08-22_full` "
+                         f"where aer_requests is {aer_requests_null_status} null "
+                         f"and bwr_impressions is {bwr_impressions_null_status} null "
+                         f"and gam_revenue is {gam_revenue_null_status} null")
+
+                print(query)
+
+                df = get_bq_data(query)
+                df = df[[c for c in df.columns if c not in ['domain', 'test_name_str', 'test_group', 'session_id']]]
+
+                data = df.sum()
+                data['aer_requests_null_status'] = aer_requests_null_status
+                data['bwr_impressions_null_status'] = bwr_impressions_null_status
+                data['gam_revenue_null_status'] = gam_revenue_null_status
+                data_list.append(data)
+
+    df = pd.DataFrame(data_list)
+
+    f = 0
+
 if __name__ == "__main__":
 
-    main_dash()
+    #main_dash()
+    data_analysis()

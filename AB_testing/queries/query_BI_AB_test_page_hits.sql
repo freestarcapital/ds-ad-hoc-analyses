@@ -1,4 +1,4 @@
-create or replace table `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}` as
+create or replace table `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}_full` as
 
 with
 
@@ -63,12 +63,13 @@ auction_end_raw__test as (
         test_name_str,
         test_group,
         session_id,
-        count(*) as requests,
-        countif(unfilled) prebid_unfilled,
-        countif(not unfilled) prebid_requests,
-        countif(auction_type = 'GAM') auction_type_GAM_requests,
-        countif((auction_type = 'GAM') and unfilled) auction_type_GAM_requests_unfilled,
-        countif((auction_type = 'GAM') and not unfilled) auction_type_GAM_requests_filled
+        count(*) as aer_requests,
+        countif(unfilled) aer_unfilled,
+        countif(auction_type = 'PREBID-GAM') aer_PREDBID_GAM_requests,
+        countif(auction_type = 'PREBID') aer_PREBID_requests,
+        countif(auction_type = 'GAM') aer_GAM_requests,
+        countif(is_native_render) aer_native_render_requests,
+        countif(is_gam_bypass) aer_gam_bypass_requests
     from auction_end_raw
     group by 1, 2, 3, 4
     qualify count(distinct test_group) over(partition by test_name_str, session_id) = 1
@@ -81,8 +82,10 @@ bwr_tests as (
         test_name_str,
         test_group,
         session_id,
-        sum(cpm / 1e7) as prebid_revenue,
-        count(*) as prebid_impressions
+        sum(cpm / 1e7) as bwr_revenue,
+        count(*) as bwr_impressions,
+        countif(is_native_render) bwr_native_render_impressions,
+        countif(is_gam_bypass) bwr_gam_bypass_impressions
     from bidswon_raw
     group by 1, 2, 3, 4
 ),
@@ -132,7 +135,7 @@ us_gam_dtf_cte as (
         aer.test_group,
         m.session_id,
         --'us_gam_dtf__amazon_adx_ebda' as inventory_platform,
-        sum(gam_unfilled) as gam_requests,
+        sum(gam_unfilled) as gam_unfilled,
         sum(gam_impressions) as gam_impressions,
         sum(gam_revenue) as gam_revenue
     from us_gam_dtf m
@@ -154,14 +157,14 @@ full_session_data as (
     us_gam_dtf_cte using (domain, test_name_str, test_group, session_id)
 )
 
---select * from full_session_data;
+select * from full_session_data;
 
-select '{ddate}' date, domain, test_name_str, test_group,
-    sum(coalesce(prebid_revenue, 0) + coalesce(gam_revenue, 0)) revenue,
-    count(*) sessions,
-    safe_divide(sum(coalesce(prebid_revenue, 0) + coalesce(gam_revenue, 0)), count(*)) * 1000 rps
-from full_session_data
-group by 1, 2, 3, 4;
+-- select '{ddate}' date, domain, test_name_str, test_group,
+--     sum(coalesce(prebid_revenue, 0) + coalesce(gam_revenue, 0)) revenue,
+--     count(*) sessions,
+--     safe_divide(sum(coalesce(prebid_revenue, 0) + coalesce(gam_revenue, 0)), count(*)) * 1000 rps
+-- from full_session_data
+-- group by 1, 2, 3, 4;
 
 -- ,
 --
@@ -233,22 +236,22 @@ group by 1, 2, 3, 4;
 -- group by 1,2,3,4;
 
 
-{create_or_insert_statement}
-
-with domain_test_sessions as
-(
-    select date, domain, test_name_str, sum(sessions) sessions
-    from `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}`
-    group by 1, 2, 3
-),
-
-domain_primary_test as
-(
-    select date, domain, test_name_str
-    from domain_test_sessions
-    qualify sessions = max(sessions) over(partition by domain, date)
-)
-
-select *
-from `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}`
-join domain_primary_test using (date, domain, test_name_str);
+-- {create_or_insert_statement}
+--
+-- with domain_test_sessions as
+-- (
+--     select date, domain, test_name_str, sum(sessions) sessions
+--     from `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}`
+--     group by 1, 2, 3
+-- ),
+--
+-- domain_primary_test as
+-- (
+--     select date, domain, test_name_str
+--     from domain_test_sessions
+--     qualify sessions = max(sessions) over(partition by domain, date)
+-- )
+--
+-- select *
+-- from `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}`
+-- join domain_primary_test using (date, domain, test_name_str);
