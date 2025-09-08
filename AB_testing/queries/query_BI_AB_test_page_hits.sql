@@ -103,8 +103,8 @@ us_gam_dtf as (
     select
         AdUnitId as adunit_id,
         fs_session_id as session_id,
-        sum(impression) as gam_house_impression, -- reported as impression, but really unfilled because house -- maybe even separate 'house_impression'
-        0 as impression,
+        sum(impression) as gam_house_impressions, -- reported as impression, but really unfilled because house -- maybe even separate 'house_impression'
+        0 as gam_impressions,
         0 as gam_unfilled,
         0 as gam_revenue
     from `freestar-prod.data_transfer.NetworkImpressions` m
@@ -120,7 +120,7 @@ us_gam_dtf as (
     select
         AdUnitId as adunit_id,
         fs_session_id as session_id,
-        0 as gam_house_impression,
+        0 as gam_house_impressions,
         sum(impression) as gam_impressions,
         sum(unfilled) as gam_unfilled,
         sum(case when l.CostType="CPM" then l.CostPerUnitInNetworkCurrency/1000 else 0 end) as gam_revenue
@@ -137,7 +137,7 @@ us_gam_dtf as (
     select
         AdUnitId as adunit_id,
         fs_session_id as session_id,
-        0 as gam_house_impression,
+        0 as gam_house_impressions,
         sum(impression) as gam_impressions,
         sum(unfilled) as gam_unfilled,
         sum(EstimatedBackfillRevenue) as gam_revenue
@@ -155,7 +155,7 @@ us_gam_dtf_cte as (
         aer.test_group,
         m.session_id,
         --'us_gam_dtf__amazon_adx_ebda' as inventory_platform,
-        sum(gam_house_impression) as gam_house_impression,
+        sum(gam_house_impressions) as gam_house_impressions,
         sum(gam_unfilled) as gam_unfilled,
         sum(gam_impressions) as gam_impressions,
         sum(gam_revenue) as gam_revenue
