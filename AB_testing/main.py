@@ -146,5 +146,5 @@ def data_analysis():
 
 if __name__ == "__main__":
 
-    #main_dash()
-    data_analysis()
+    main_dash()
+    #data_analysis()
