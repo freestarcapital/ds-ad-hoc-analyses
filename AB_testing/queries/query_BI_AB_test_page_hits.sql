@@ -99,6 +99,23 @@ bwr_test__cte as (
 
 -- US GAM tests only (for A9/amazon, AdX, EBDA requests only) using dtf
 us_gam_dtf as (
+
+--     select
+--         AdUnitId as adunit_id,
+--         fs_session_id as session_id,
+--         sum(impression) as gam_unfilled, -- reported as impression, but really unfilled because house -- maybe even separate 'house_impression'
+--         0 as gam_unfilled,
+--         0 as gam_revenue
+--     from `freestar-prod.data_transfer.NetworkImpressions` m
+--     left join `freestar-prod.data_transfer.match_line_item_15184186` l
+--         on l.Id = m.LineItemId and l.date = m.EventDateMST
+--     where m.EventDateMST = '{ddate}'
+--         and fs_session_id is not null
+--         and lineitemtype='HOUSE'
+--     group by 1, 2
+--
+--     union all
+
     select
         AdUnitId as adunit_id,
         fs_session_id as session_id,

@@ -140,6 +140,7 @@ def data_analysis():
                 data_list.append(data)
 
     df = pd.DataFrame(data_list)
+    df.transpose().to_csv('AB_data.csv')
 
     f = 0
 
