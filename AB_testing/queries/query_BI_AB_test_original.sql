@@ -229,3 +229,5 @@ domain_primary_test as
 select *
 from `streamamp-qa-239417.DAS_increment.BI_AB_raw_{name}_{ddate}`
 join domain_primary_test using (date, domain, test_name_str);
+
+drop table `streamamp-qa-239417.DAS_increment.BI_AB_raw_{name}_{ddate}`;

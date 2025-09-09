@@ -1,4 +1,5 @@
-create or replace table `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}_full` as
+--create or replace table `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}_full` as
+create or replace table `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}` as
 
 with
 
@@ -266,14 +267,14 @@ full_session_data as (
     us_gam_dtf_cte using (domain, test_name_str, test_group, session_id)
 )
 
-select * from full_session_data;
+--select * from full_session_data;
 
--- select '{ddate}' date, domain, test_name_str, test_group,
---     sum(coalesce(prebid_revenue, 0) + coalesce(gam_revenue, 0)) revenue,
---     count(*) sessions,
---     safe_divide(sum(coalesce(prebid_revenue, 0) + coalesce(gam_revenue, 0)), count(*)) * 1000 rps
--- from full_session_data
--- group by 1, 2, 3, 4;
+select '{ddate}' date, domain, test_name_str, test_group,
+    sum(coalesce(bwr_revenue, 0) + coalesce(gam_A9_revenue, 0) + coalesce(gam_NBF_revenue, 0)) revenue,
+    count(*) sessions,
+    safe_divide(sum(coalesce(bwr_revenue, 0) + coalesce(gam_A9_revenue, 0) + coalesce(gam_NBF_revenue, 0)), count(*)) * 1000 rps
+from full_session_data
+group by 1, 2, 3, 4;
 
 -- ,
 --
@@ -345,22 +346,24 @@ select * from full_session_data;
 -- group by 1,2,3,4;
 
 
--- {create_or_insert_statement}
---
--- with domain_test_sessions as
--- (
---     select date, domain, test_name_str, sum(sessions) sessions
---     from `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}`
---     group by 1, 2, 3
--- ),
---
--- domain_primary_test as
--- (
---     select date, domain, test_name_str
---     from domain_test_sessions
---     qualify sessions = max(sessions) over(partition by domain, date)
--- )
---
--- select *
--- from `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}`
--- join domain_primary_test using (date, domain, test_name_str);
+{create_or_insert_statement}
+
+with domain_test_sessions as
+(
+    select date, domain, test_name_str, sum(sessions) sessions
+    from `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}`
+    group by 1, 2, 3
+),
+
+domain_primary_test as
+(
+    select date, domain, test_name_str
+    from domain_test_sessions
+    qualify sessions = max(sessions) over(partition by domain, date)
+)
+
+select *
+from `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}`
+join domain_primary_test using (date, domain, test_name_str);
+
+drop table `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}`;

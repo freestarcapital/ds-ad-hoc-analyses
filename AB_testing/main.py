@@ -18,6 +18,7 @@ config = configparser.ConfigParser()
 config.read(config_path)
 
 project_id = "streamamp-qa-239417"
+dataset_name = 'DAS_increment'
 client = bigquery.Client(project=project_id)
 bqstorageclient = bigquery_storage.BigQueryReadClient()
 
@@ -74,11 +75,17 @@ def get_domains_from_test_names(test_names, start_date=dt.date.today()-dt.timede
     return df['domain'].unique().to_list()
 
 
-def main():
+def does_table_exist(tablename):
+    query = f"select count(*) from DAS_increment.INFORMATION_SCHEMA.TABLES where table_catalog || '.' || table_schema || '.' || table_name = '{tablename}'"
+    df = get_bq_data(query)
+    return bool(df.values[0, 0] > 0)
+
+
+def main(force_recreate_table=False):
     #QUERIES
     # query_filename = 'query_BI_AB_test_original'
-    # query_filename = 'query_BI_AB_test_page_hits'
-    query_filename = 'query_bidder_impact'
+    query_filename = 'query_BI_AB_test_page_hits'
+    #query_filename = 'query_bidder_impact'
 
     #TIMEOUTS stuff
     # name = 'timeouts'
@@ -103,16 +110,19 @@ def main():
     ]
 
     #END OF SETUP
-    tablename = f"streamamp-qa-239417.DAS_increment.{query_filename.replace('query_', '')}_results_{name}"
-    first_row = False
+    tablename = f"{project_id}.{dataset_name}.{query_filename.replace('query_', '')}_results_{name}"
+    first_row = force_recreate_table or (not does_table_exist(tablename))
 
     domain_list = f"('{"', '".join(test_domains)}')"
     query = open(os.path.join(sys.path[0], f"queries/{query_filename}.sql"), "r").read()
     print(f'query_filename: {query_filename} for domain_list: {domain_list}')
 
     for date in datelist.tolist():
-        create_or_insert_statement = f"CREATE OR REPLACE TABLE `{tablename}` as" if first_row else f"insert into `{tablename}`"
+        create_or_insert_statement = f"delete from `{tablename}` where date = '{date.strftime("%Y-%m-%d")}'; insert into `{tablename}`"
+        if first_row:
+            create_or_insert_statement = f"CREATE OR REPLACE TABLE `{tablename}` as"
         first_row = False
+
         print(f'date: {date}: {create_or_insert_statement}')
 
         repl_dict = {'ddate': date.strftime("%Y-%m-%d"),
@@ -129,7 +139,7 @@ def data_analysis():
     for aer_null_status in ['not null', 'null']:
         for bwr_null_status in ['not null', 'null']:
             for gam_null_status in ['not null', 'null']:
-                query = (f"select * from `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_transparent_floors_2025-08-22_full` "
+                query = (f"select * from `{project_id}.{dataset_name}.BI_AB_raw_page_hits_transparent_floors_2025-08-22_full` "
                          f"where aer_requests is {aer_null_status} "
                          f"and bwr_impressions is {bwr_null_status} "
                          f"and gam_LIID0_revenue is {gam_null_status}")
