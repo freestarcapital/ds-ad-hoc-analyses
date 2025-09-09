@@ -104,15 +104,24 @@ us_gam_dtf as (
         AdUnitId as adunit_id,
         fs_session_id as session_id,
         sum(impression) as gam_house_impressions, -- reported as impression, but really unfilled because house -- maybe even separate 'house_impression'
-        0 as gam_impressions,
-        0 as gam_unfilled,
-        0 as gam_revenue
+        0 as gam_LIID0_impressions,
+        0 as gam_LIID0_unfilled,
+        0 as gam_LIID0_revenue,
+        0 as gam_A9_impressions,
+        0 as gam_A9_unfilled,
+        0 as gam_A9_revenue,
+        0 as gam_NBF_impressions,
+        0 as gam_NBF_unfilled,
+        0 as gam_NBF_revenue,
+        0 as gam_prebid_impressions,
+        0 as gam_prebid_unfilled,
+        0 as gam_prebid_revenue
     from `freestar-prod.data_transfer.NetworkImpressions` m
     left join `freestar-prod.data_transfer.match_line_item_15184186` l
         on l.Id = m.LineItemId and l.date = m.EventDateMST
     where m.EventDateMST = '{ddate}'
         and fs_session_id is not null
-        and lineitemtype='HOUSE'
+        and lineitemtype = 'HOUSE'
     group by 1, 2
 
     union all
@@ -121,15 +130,24 @@ us_gam_dtf as (
         AdUnitId as adunit_id,
         fs_session_id as session_id,
         0 as gam_house_impressions,
-        sum(impression) as gam_impressions,
-        sum(unfilled) as gam_unfilled,
-        sum(case when l.CostType="CPM" then l.CostPerUnitInNetworkCurrency/1000 else 0 end) as gam_revenue
+        sum(impression) as gam_LIID0_impressions,
+        sum(unfilled) as gam_LIID0_unfilled,
+        sum(case when l.CostType="CPM" then l.CostPerUnitInNetworkCurrency/1000 else 0 end) as gam_LIID0_revenue,
+        0 as gam_A9_impressions,
+        0 as gam_A9_unfilled,
+        0 as gam_A9_revenue,
+        0 as gam_NBF_impressions,
+        0 as gam_NBF_unfilled,
+        0 as gam_NBF_revenue,
+        0 as gam_prebid_impressions,
+        0 as gam_prebid_unfilled,
+        0 as gam_prebid_revenue
     from `freestar-prod.data_transfer.NetworkImpressions` m
     left join `freestar-prod.data_transfer.match_line_item_15184186` l
         on l.Id = m.LineItemId and l.date = m.EventDateMST
     where m.EventDateMST = '{ddate}'
         and fs_session_id is not null
-        and (LineItemID = 0 or REGEXP_CONTAINS(l.Name, 'A9 '))
+        and (LineItemID = 0)
     group by 1, 2
 
     union all
@@ -138,9 +156,70 @@ us_gam_dtf as (
         AdUnitId as adunit_id,
         fs_session_id as session_id,
         0 as gam_house_impressions,
-        sum(impression) as gam_impressions,
-        sum(unfilled) as gam_unfilled,
-        sum(EstimatedBackfillRevenue) as gam_revenue
+        0 as gam_LIID0_impressions,
+        0 as gam_LIID0_unfilled,
+        0 as gam_LIID0_revenue,
+        sum(impression) as gam_A9_impressions,
+        sum(unfilled) as gam_A9_unfilled,
+        sum(case when l.CostType="CPM" then l.CostPerUnitInNetworkCurrency/1000 else 0 end) as gam_A9_revenue,
+        0 as gam_NBF_impressions,
+        0 as gam_NBF_unfilled,
+        0 as gam_NBF_revenue,
+        0 as gam_prebid_impressions,
+        0 as gam_prebid_unfilled,
+        0 as gam_prebid_revenue
+    from `freestar-prod.data_transfer.NetworkImpressions` m
+    left join `freestar-prod.data_transfer.match_line_item_15184186` l
+        on l.Id = m.LineItemId and l.date = m.EventDateMST
+    where m.EventDateMST = '{ddate}'
+        and fs_session_id is not null
+        and REGEXP_CONTAINS(l.Name, 'A9 ')
+    group by 1, 2
+
+    union all
+
+    select
+        AdUnitId as adunit_id,
+        fs_session_id as session_id,
+        0 as gam_house_impressions,
+        0 as gam_LIID0_impressions,
+        0 as gam_LIID0_unfilled,
+        0 as gam_LIID0_revenue,
+        0 as gam_A9_impressions,
+        0 as gam_A9_unfilled,
+        0 as gam_A9_revenue,
+        0 as gam_NBF_impressions,
+        0 as gam_NBF_unfilled,
+        0 as gam_NBF_revenue,
+        sum(impression) as gam_prebid_impressions,
+        sum(unfilled) as gam_prebid_unfilled,
+        sum(case when l.CostType="CPM" then l.CostPerUnitInNetworkCurrency/1000 else 0 end) as gam_prebid_revenue
+    from `freestar-prod.data_transfer.NetworkImpressions` m
+    left join `freestar-prod.data_transfer.match_line_item_15184186` l
+        on l.Id = m.LineItemId and l.date = m.EventDateMST
+    where m.EventDateMST = '{ddate}'
+        and fs_session_id is not null
+        and NOT (REGEXP_CONTAINS(l.Name, 'A9 ') or (LineItemID = 0) or (lineitemtype='HOUSE'))
+    group by 1, 2
+
+    union all
+
+    select
+        AdUnitId as adunit_id,
+        fs_session_id as session_id,
+        0 as gam_house_impressions,
+        0 as gam_LIID0_impressions,
+        0 as gam_LIID0_unfilled,
+        0 as gam_LIID0_revenue,
+        0 as gam_A9_impressions,
+        0 as gam_A9_unfilled,
+        0 as gam_A9_revenue,
+        sum(impression) as gam_NBF_impressions,
+        sum(unfilled) as gam_NBF_unfilled,
+        sum(EstimatedBackfillRevenue) as gam_NBF_revenue,
+        0 as gam_prebid_impressions,
+        0 as gam_prebid_unfilled,
+        0 as gam_prebid_revenue
     from `freestar-prod.data_transfer.NetworkBackfillImpressions`
     where EventDateMST = '{ddate}'
     group by 1, 2
@@ -156,9 +235,18 @@ us_gam_dtf_cte as (
         m.session_id,
         --'us_gam_dtf__amazon_adx_ebda' as inventory_platform,
         sum(gam_house_impressions) as gam_house_impressions,
-        sum(gam_unfilled) as gam_unfilled,
-        sum(gam_impressions) as gam_impressions,
-        sum(gam_revenue) as gam_revenue
+        sum(gam_LIID0_impressions) as gam_LIID0_impressions,
+        sum(gam_LIID0_unfilled) as gam_LIID0_unfilled,
+        sum(gam_LIID0_revenue) as gam_LIID0_revenue,
+        sum(gam_A9_impressions) as gam_A9_impressions,
+        sum(gam_A9_unfilled) as gam_A9_unfilled,
+        sum(gam_A9_revenue) as gam_A9_revenue,
+        sum(gam_NBF_impressions) as gam_NBF_impressions,
+        sum(gam_NBF_unfilled) as gam_NBF_unfilled,
+        sum(gam_NBF_revenue) as gam_NBF_revenue,
+        sum(gam_prebid_impressions) as gam_prebid_impressions,
+        sum(gam_prebid_unfilled) as gam_prebid_unfilled,
+        sum(gam_prebid_revenue) as gam_prebid_revenue
     from us_gam_dtf m
     left join `freestar-prod.data_transfer.match_ad_unit_15184186` a
         on a.Id = m.adunit_id and a.date = '{ddate}'

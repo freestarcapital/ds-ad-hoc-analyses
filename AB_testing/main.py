@@ -120,13 +120,13 @@ def data_analysis():
 
     data_list = []
 
-    for aer_requests_null_status in ['not', '']:
-        for bwr_impressions_null_status in ['not', '']:
-            for gam_revenue_null_status in ['not', '']:
+    for aer_null_status in ['not null', 'null']:
+        for bwr_null_status in ['not null', 'null']:
+            for gam_null_status in ['not null', 'null']:
                 query = (f"select * from `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_transparent_floors_2025-08-22_full` "
-                         f"where aer_requests is {aer_requests_null_status} null "
-                         f"and bwr_impressions is {bwr_impressions_null_status} null "
-                         f"and gam_revenue is {gam_revenue_null_status} null")
+                         f"where aer_requests is {aer_null_status} "
+                         f"and bwr_impressions is {bwr_null_status} "
+                         f"and gam_LIID0_revenue is {gam_null_status}")
 
                 print(query)
 
@@ -134,17 +134,17 @@ def data_analysis():
                 df = df[[c for c in df.columns if c not in ['domain', 'test_name_str', 'test_group', 'session_id']]]
 
                 data = df.sum()
-                data['aer_requests_null_status'] = aer_requests_null_status
-                data['bwr_impressions_null_status'] = bwr_impressions_null_status
-                data['gam_revenue_null_status'] = gam_revenue_null_status
+                data['aer_requests_null_status'] = aer_null_status
+                data['bwr_impressions_null_status'] = bwr_null_status
+                data['gam_LIID0_revenue_null_status'] = gam_null_status
                 data_list.append(data)
 
     df = pd.DataFrame(data_list)
-    df.transpose().to_csv('AB_data.csv')
+    df.transpose().to_csv('AB_data_3.csv')
 
     f = 0
 
 if __name__ == "__main__":
 
     main_dash()
-    #data_analysis()
+    data_analysis()

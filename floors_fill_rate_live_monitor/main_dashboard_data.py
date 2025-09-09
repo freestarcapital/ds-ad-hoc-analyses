@@ -26,7 +26,7 @@ def main_dashboard_only(results_tablename, recreate_raw_data=False, print_refere
     if recreate_raw_data:
         query = open(os.path.join(sys.path[0], f"query_create_raw_data.sql"), "r").read()
         get_bq_data(query,{'table_name': 'sublime-elixir-273810.training_fill_rate.base_data_for_performance_checking',
-                           'WINDOW_DAYS': 90})
+                           'WINDOW_DAYS': 20})
     # return
 
     query_dashboard = open(os.path.join(sys.path[0], f"query_get_perf_from_base_data_for_dashboard.sql"), "r").read()
