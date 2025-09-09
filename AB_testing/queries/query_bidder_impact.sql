@@ -1,4 +1,4 @@
-create or replace table `streamamp-qa-239417.DAS_increment.transparent_raw_{ddate}` as
+create or replace table `streamamp-qa-239417.DAS_increment.TF_raw_{name}_{ddate}` as
 
 WITH device_class_cte AS (
    SELECT
@@ -60,6 +60,7 @@ auc_end_w_bwr AS (
        case when unfilled then 0 else 1 end impression,
        case when unfilled then 1 else 0 end unfilled,
        CAST(FORMAT('%.10f', COALESCE(ROUND((bwr.cpm), 0), 0) / 1e7) AS float64) AS revenue,
+
    FROM
        auc_end
    LEFT JOIN  `freestar-157323.prod_eventstream.bidswon_raw` bwr
@@ -78,13 +79,13 @@ select * from auc_end_w_bwr
 where date = '{ddate}';
 
 
-create or replace table `streamamp-qa-239417.DAS_increment.transparent_raw_expanded_{ddate}` as
+create or replace table `streamamp-qa-239417.DAS_increment.TF_raw_expanded_{name}_{ddate}` as
 
 with expanded AS (
        SELECT offset+1 bidder_position, * except (arr, offset)
        FROM (
                 SELECT SPLIT(fs_clientservermask, '') as arr, *
-                FROM `streamamp-qa-239417.DAS_increment.transparent_raw_{ddate}`
+                FROM `streamamp-qa-239417.DAS_increment.TF_raw_{name}_{ddate}`
             ) AS mask, mask.arr AS mask_value WITH OFFSET AS offset
 ),
 
@@ -98,6 +99,14 @@ bidder_raw_data as (
     LEFT JOIN `freestar-157323.ad_manager_dtf.lookup_mask` mask_lookup ON mask_lookup.mask_value = expanded.mask_value
     where status in ('client', 'server')
         and bidder not in ('amazon', 'preGAMAuction')
+
+    union all
+
+    select date, domain, country_code, device_category,
+        session_id, fs_auction_id, placement_id,
+        test_name_str, test_group,
+        winning_bidder, 'ttd' bidder, impression, unfilled, revenue
+    FROM `streamamp-qa-239417.DAS_increment.TF_raw_{name}_{ddate}`
 ),
 
 brr as (
@@ -117,7 +126,7 @@ where date = '{ddate}';
 
 with test_requests as (
     select date, domain, test_name_str, approx_count_distinct(session_id) sessions_day_domain_test
-    from `streamamp-qa-239417.DAS_increment.transparent_raw_{ddate}`
+    from `streamamp-qa-239417.DAS_increment.TF_raw_{name}_{ddate}`
     group by 1, 2, 3
 ),
 
@@ -136,7 +145,7 @@ domain_test_group as (
         approx_count_distinct(distinct fs_auction_id || placement_id) auctions_domain_test_group,
         count(*) auctions_domain_test_group_2,
         countif(winning_bidder is not null) / count(*) prebid_win_rate_domain_test_group
-    from `streamamp-qa-239417.DAS_increment.transparent_raw_{ddate}`
+    from `streamamp-qa-239417.DAS_increment.TF_raw_{name}_{ddate}`
     join domain_primary_test using (date, domain, test_name_str)
     group by 1, 2, 3, 4
 ),
@@ -147,7 +156,7 @@ t1 as (
         max(if(winning_bidder is not null, 1, 0)) over(partition by fs_auction_id, placement_id) prebid_wins,
         countif(bidder_responded) over (partition by fs_auction_id, placement_id) >= 1 bidder_response_known,
         countif(bidder_responded) over (partition by fs_auction_id, placement_id) count_of_bidder_responses
-    from `streamamp-qa-239417.DAS_increment.transparent_raw_expanded_{ddate}`
+    from `streamamp-qa-239417.DAS_increment.TF_raw_expanded_{name}_{ddate}`
     join domain_test_group using (date, domain, test_name_str, test_group)
 )
 

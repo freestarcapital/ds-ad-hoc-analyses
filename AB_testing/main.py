@@ -74,31 +74,37 @@ def get_domains_from_test_names(test_names, start_date=dt.date.today()-dt.timede
     return df['domain'].unique().to_list()
 
 
-def main_dash():
+def main():
+    #QUERIES
+    # query_filename = 'query_BI_AB_test_original'
+    # query_filename = 'query_BI_AB_test_page_hits'
+    query_filename = 'query_bidder_impact'
 
-    #query_filename = 'query_transparent_floors'
-    #tablename = f"streamamp-qa-239417.DAS_increment.transparent_bidder_participation"
-
-    #query_filename = 'query_BI_AB_test_original'
-    query_filename = 'query_BI_AB_test_page_hits'
-
-    # datelist = pd.date_range(start=dt.date(2025,8,26), end=dt.date(2025,9,1))
+    #TIMEOUTS stuff
     # name = 'timeouts'
+    # datelist = pd.date_range(start=dt.date(2025,8,26), end=dt.date(2025,9,1))
     # test_domains = get_domains_from_collection_ids(['9c42ef7c-2115-4da9-8a22-bd9c36cdb8b4'])
 
-    #datelist = pd.date_range(end=dt.datetime.today().date(), periods=32)
-    datelist = pd.date_range(start=dt.date(2025,8,22), end=dt.date(2025,8,22))
+    #TRANSPARENT FLOORS
     name = 'transparent_floors'
+    datelist = pd.date_range(end=dt.datetime.today().date(), periods=30)
+    #datelist = pd.date_range(start=dt.date(2025,8,1), end=dt.date(2025,8,11))
     test_domains = [
         'pro-football-reference.com',
         'baseball-reference.com',
         'deepai.org',
         'signupgenius.com',
-        'perchance.org'
+        'perchance.org',
+        'worldofsolitaire.com',
+        'fantasypros.com',
+        'deckshop.pro',
+        'tunein.com',
+        'adsbexchange.com'
     ]
 
+    #END OF SETUP
     tablename = f"streamamp-qa-239417.DAS_increment.{query_filename.replace('query_', '')}_results_{name}"
-    first_row = True
+    first_row = False
 
     domain_list = f"('{"', '".join(test_domains)}')"
     query = open(os.path.join(sys.path[0], f"queries/{query_filename}.sql"), "r").read()
@@ -146,5 +152,7 @@ def data_analysis():
 
 if __name__ == "__main__":
 
-    main_dash()
-    data_analysis()
+    main()
+
+
+    # data_analysis()
