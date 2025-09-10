@@ -227,10 +227,6 @@ us_gam_dtf_cte as (
         sum(gam_prebid_unfilled) as gam_prebid_unfilled,
         sum(gam_prebid_revenue) as gam_prebid_revenue
     from us_gam_dtf m
---     left join `freestar-prod.data_transfer.match_ad_unit_15184186` a
---         on a.Id = m.adunit_id and a.date = '{ddate}'
---     left join `freestar-prod.NDR_resources.gam_ad_units_map` am
---         on am.ad_unit_name = (case when a.Name like '%jcpenney%' then 'jcpenney' else a.Name end)
     group by 1
 ),
 

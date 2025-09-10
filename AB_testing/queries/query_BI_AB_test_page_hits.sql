@@ -114,7 +114,7 @@ bwr_tests as (
 ),
 
 bwr_test__cte as (
-    select * --, 'prebid' as inventory_platform
+    select *
     from page_hits_cte
     left join auction_start_raw__test using (domain, test_name_str, test_group, session_id)
     left join auction_end_raw__test using (domain, test_name_str, test_group, session_id)
@@ -255,7 +255,6 @@ us_gam_dtf_cte as (
         aer.test_name_str,
         aer.test_group,
         m.session_id,
-        --'us_gam_dtf__amazon_adx_ebda' as inventory_platform,
         sum(gam_house_impressions) as gam_house_impressions,
         sum(gam_LIID0_impressions) as gam_LIID0_impressions,
         sum(gam_LIID0_unfilled) as gam_LIID0_unfilled,
