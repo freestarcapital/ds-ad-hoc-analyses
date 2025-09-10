@@ -1,4 +1,4 @@
-create or replace table `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}` as
+create or replace table `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_all_sites_{ddate}_explore` as
 
 with
 
@@ -9,7 +9,6 @@ auction_end_raw as
     where _PARTITIONDATE >= date_sub('{ddate}', interval 1 day)
         and _PARTITIONDATE <= date_add('{ddate}', interval 1 day)
         and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) = '{ddate}'
-        and NET.REG_DOMAIN(page_url) in {domain_list}
 ),
 
 auction_start_raw as
@@ -19,7 +18,6 @@ auction_start_raw as
     where _PARTITIONDATE >= date_sub('{ddate}', interval 1 day)
         and _PARTITIONDATE <= date_add('{ddate}', interval 1 day)
         and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) = '{ddate}'
-        and NET.REG_DOMAIN(page_url) in {domain_list}
 ),
 
 pagehits_raw as
@@ -29,7 +27,6 @@ pagehits_raw as
     where _PARTITIONDATE >= date_sub('{ddate}', interval 1 day)
         and _PARTITIONDATE <= date_add('{ddate}', interval 1 day)
         and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) = '{ddate}'
-        and NET.REG_DOMAIN(page_url) in {domain_list}
 ),
 
 bidswon_raw as
@@ -39,39 +36,16 @@ bidswon_raw as
     where _PARTITIONDATE >= date_sub('{ddate}', interval 1 day)
         and _PARTITIONDATE <= date_add('{ddate}', interval 1 day)
         and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) = '{ddate}'
-        and NET.REG_DOMAIN(page_url) in {domain_list}
-),
-
-site_id_to_domain_mapping as
-(
-    select domain, site_id from
-    (
-        select
-            NET.REG_DOMAIN(page_url) AS domain,
-            site_id,
-            count(*) requests
-        from auction_end_raw
-        group by 1, 2
-    )
-    qualify row_number() over(partition by domain, site_id order by requests desc) = 1
 ),
 
 page_hits_cte as
 (
-    select distinct 
-        NET.REG_DOMAIN(page_url) AS domain,
-        test_name_str,
-        test_group,
-        session_id
+    select distinct session_id
     from pagehits_raw
-    qualify count(distinct test_group) over(partition by test_name_str, session_id) = 1
 ),
 
 auction_end_raw__test as (
     select
-        NET.REG_DOMAIN(page_url) AS domain,
-        test_name_str,
-        test_group,
         session_id,
         count(*) as aer_requests,
         countif(unfilled) aer_unfilled,
@@ -82,50 +56,41 @@ auction_end_raw__test as (
         countif(is_native_render) aer_native_render_requests,
         countif(is_gam_bypass) aer_gam_bypass_requests
     from auction_end_raw
-    group by 1, 2, 3, 4
-    qualify count(distinct test_group) over(partition by test_name_str, session_id) = 1
+    group by 1
 ),
 
 auction_start_raw__test as (
     select
-        NET.REG_DOMAIN(page_url) AS domain,
-        test_name_str,
-        test_group,
         session_id,
         count(*) as asr_requests
     from auction_start_raw
-    group by 1, 2, 3, 4
-    qualify count(distinct test_group) over(partition by test_name_str, session_id) = 1
+    group by 1
 ),
 
 -- prebid only tests
 bwr_tests as (
     select
-        NET.REG_DOMAIN(page_url) AS domain,
-        test_name_str,
-        test_group,
         session_id,
         sum(cpm / 1e7) as bwr_revenue,
         count(*) as bwr_impressions,
         countif(is_native_render) bwr_native_render_impressions,
         countif(is_gam_bypass) bwr_gam_bypass_impressions
     from bidswon_raw
-    group by 1, 2, 3, 4
+    group by 1
 ),
 
 bwr_test__cte as (
     select * --, 'prebid' as inventory_platform
     from page_hits_cte
-    left join auction_start_raw__test using (domain, test_name_str, test_group, session_id)
-    left join auction_end_raw__test using (domain, test_name_str, test_group, session_id)
-    left join bwr_tests using (domain, test_name_str, test_group, session_id)
+    left join auction_start_raw__test using (session_id)
+    left join auction_end_raw__test using (session_id)
+    left join bwr_tests using (session_id)
 ),
 
 -- US GAM tests only (for A9/amazon, AdX, EBDA requests only) using dtf
 us_gam_dtf as (
 
     select
-        AdUnitId as adunit_id,
         fs_session_id as session_id,
         sum(impression) as gam_house_impressions, -- reported as impression, but really unfilled because house -- maybe even separate 'house_impression'
         0 as gam_LIID0_impressions,
@@ -145,13 +110,12 @@ us_gam_dtf as (
         on l.Id = m.LineItemId and l.date = m.EventDateMST
     where m.EventDateMST = '{ddate}'
         and fs_session_id is not null
-        and lineitemtype = 'HOUSE'
-    group by 1, 2
+        and l.lineitemtype = 'HOUSE'
+    group by 1
 
     union all
 
     select
-        AdUnitId as adunit_id,
         fs_session_id as session_id,
         0 as gam_house_impressions,
         sum(impression) as gam_LIID0_impressions,
@@ -169,13 +133,12 @@ us_gam_dtf as (
     from `freestar-prod.data_transfer.NetworkImpressions` m
     where m.EventDateMST = '{ddate}'
         and fs_session_id is not null
-        and (LineItemID = 0)
-    group by 1, 2
+        and LineItemID = 0
+    group by 1
 
     union all
 
     select
-        AdUnitId as adunit_id,
         fs_session_id as session_id,
         0 as gam_house_impressions,
         0 as gam_LIID0_impressions,
@@ -196,12 +159,11 @@ us_gam_dtf as (
     where m.EventDateMST = '{ddate}'
         and fs_session_id is not null
         and REGEXP_CONTAINS(l.Name, 'A9 ')
-    group by 1, 2
+    group by 1
 
     union all
 
     select
-        AdUnitId as adunit_id,
         fs_session_id as session_id,
         0 as gam_house_impressions,
         0 as gam_LIID0_impressions,
@@ -222,12 +184,11 @@ us_gam_dtf as (
     where m.EventDateMST = '{ddate}'
         and fs_session_id is not null
         and NOT (REGEXP_CONTAINS(l.Name, 'A9 ') or (LineItemID = 0) or (lineitemtype='HOUSE'))
-    group by 1, 2
+    group by 1
 
     union all
 
     select
-        AdUnitId as adunit_id,
         fs_session_id as session_id,
         0 as gam_house_impressions,
         0 as gam_LIID0_impressions,
@@ -251,11 +212,7 @@ us_gam_dtf as (
 -- note: same session can be seen across many different ad units
 us_gam_dtf_cte as (
     select
-        dm.domain,
-        aer.test_name_str,
-        aer.test_group,
         m.session_id,
-        --'us_gam_dtf__amazon_adx_ebda' as inventory_platform,
         sum(gam_house_impressions) as gam_house_impressions,
         sum(gam_LIID0_impressions) as gam_LIID0_impressions,
         sum(gam_LIID0_unfilled) as gam_LIID0_unfilled,
@@ -270,50 +227,55 @@ us_gam_dtf_cte as (
         sum(gam_prebid_unfilled) as gam_prebid_unfilled,
         sum(gam_prebid_revenue) as gam_prebid_revenue
     from us_gam_dtf m
-    left join `freestar-prod.data_transfer.match_ad_unit_15184186` a
-        on a.Id = m.adunit_id and a.date = '{ddate}'
-    left join `freestar-prod.NDR_resources.gam_ad_units_map` am
-        on am.ad_unit_name = (case when a.Name like '%jcpenney%' then 'jcpenney' else a.Name end)
-    join auction_end_raw__test aer
-        on aer.session_id = m.session_id
-    join site_id_to_domain_mapping dm
-        on am.site_id = dm.site_id
-    group by 1, 2, 3, 4
+--     left join `freestar-prod.data_transfer.match_ad_unit_15184186` a
+--         on a.Id = m.adunit_id and a.date = '{ddate}'
+--     left join `freestar-prod.NDR_resources.gam_ad_units_map` am
+--         on am.ad_unit_name = (case when a.Name like '%jcpenney%' then 'jcpenney' else a.Name end)
+    group by 1
 ),
 
 full_session_data as (
     select * from
     bwr_test__cte
     full outer join
-    us_gam_dtf_cte using (domain, test_name_str, test_group, session_id)
+    us_gam_dtf_cte using (session_id)
 )
 
-select '{ddate}' date, domain, test_name_str, test_group,
-    sum(coalesce(bwr_revenue, 0) + coalesce(gam_A9_revenue, 0) + coalesce(gam_NBF_revenue, 0)) revenue,
-    count(*) sessions,
-    safe_divide(sum(coalesce(bwr_revenue, 0) + coalesce(gam_A9_revenue, 0) + coalesce(gam_NBF_revenue, 0)), count(*)) * 1000 rps
+select
+    asr_requests is not null as asr_data,
+    aer_requests is not null as aer_data,
+    bwr_impressions is not null as bwr_data,
+    gam_NBF_impressions is not null as gam_data,
+    count(*) as sessions,
+    sum(asr_requests) as asr_requests,
+    sum(aer_requests) as aer_requests,
+    sum(aer_unfilled) as aer_unfilled,
+    sum(aer_is_empty) as aer_is_empty,
+    sum(aer_PREDBID_GAM_requests) as aer_PREDBID_GAM_requests,
+    sum(aer_PREBID_requests) as aer_PREBID_requests,
+    sum(aer_GAM_requests) as aer_GAM_requests,
+    sum(aer_native_render_requests) as aer_native_render_requests,
+    sum(aer_gam_bypass_requests) as aer_gam_bypass_requests,
+    sum(bwr_revenue) as bwr_revenue,
+    sum(bwr_impressions) as bwr_impressions,
+    sum(bwr_native_render_impressions) as bwr_native_render_impressions,
+    sum(bwr_gam_bypass_impressions) as bwr_gam_bypass_impressions,
+    sum(gam_house_impressions) as gam_house_impressions,
+    sum(gam_LIID0_impressions) as gam_LIID0_impressions,
+    sum(gam_LIID0_unfilled) as gam_LIID0_unfilled,
+    sum(gam_LIID0_revenue) as gam_LIID0_revenue,
+    sum(gam_A9_impressions) as gam_A9_impressions,
+    sum(gam_A9_unfilled) as gam_A9_unfilled,
+    sum(gam_A9_revenue) as gam_A9_revenue,
+    sum(gam_NBF_impressions) as gam_NBF_impressions,
+    sum(gam_NBF_unfilled) as gam_NBF_unfilled,
+    sum(gam_NBF_revenue) as gam_NBF_revenue,
+    sum(gam_prebid_impressions) as gam_prebid_impressions,
+    sum(gam_prebid_unfilled) as gam_prebid_unfilled,
+    sum(gam_prebid_revenue) as gam_prebid_revenue
 from full_session_data
 group by 1, 2, 3, 4;
 
 
-{create_or_insert_statement}
-
-with domain_test_sessions as
-(
-    select date, domain, test_name_str, sum(sessions) sessions
-    from `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}`
-    group by 1, 2, 3
-),
-
-domain_primary_test as
-(
-    select date, domain, test_name_str
-    from domain_test_sessions
-    qualify sessions = max(sessions) over(partition by domain, date)
-)
-
-select *
-from `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}`
-join domain_primary_test using (date, domain, test_name_str);
-
-drop table `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}`;
+select * from  `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_all_sites_{ddate}_explore`
+order by 1, 2, 3, 4

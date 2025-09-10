@@ -84,18 +84,18 @@ def does_table_exist(tablename):
 def main(force_recreate_table=False):
     #QUERIES
     # query_filename = 'query_BI_AB_test_original'
-    query_filename = 'query_BI_AB_test_page_hits'
-    #query_filename = 'query_bidder_impact'
+    #query_filename = 'query_BI_AB_test_page_hits'
+    query_filename = 'query_bidder_impact'
 
-    #TIMEOUTS stuff
+    #TIMEOUTS
     # name = 'timeouts'
     # datelist = pd.date_range(start=dt.date(2025,8,26), end=dt.date(2025,9,1))
     # test_domains = get_domains_from_collection_ids(['9c42ef7c-2115-4da9-8a22-bd9c36cdb8b4'])
 
     #TRANSPARENT FLOORS
     name = 'transparent_floors'
-    datelist = pd.date_range(end=dt.datetime.today().date(), periods=30)
-    #datelist = pd.date_range(start=dt.date(2025,8,1), end=dt.date(2025,8,11))
+    #datelist = pd.date_range(end=dt.datetime.today().date(), periods=30)
+    datelist = pd.date_range(start=dt.date(2025,9,9), end=dt.date(2025,9,9))
     test_domains = [
         'pro-football-reference.com',
         'baseball-reference.com',
@@ -132,37 +132,20 @@ def main(force_recreate_table=False):
         get_bq_data(query, repl_dict)
 
 
-def data_analysis():
+def main_data_explore():
+    query_filename = 'query_BI_AB_test_page_hits_data_explore'
+    date = dt.date(2025,8,20)
 
-    data_list = []
+    repl_dict = {'ddate': date.strftime("%Y-%m-%d")}
+    query = open(os.path.join(sys.path[0], f"queries/{query_filename}.sql"), "r").read()
+    df = get_bq_data(query, repl_dict)
+    df.transpose().to_csv('AB_data_4.csv')
 
-    for aer_null_status in ['not null', 'null']:
-        for bwr_null_status in ['not null', 'null']:
-            for gam_null_status in ['not null', 'null']:
-                query = (f"select * from `{project_id}.{dataset_name}.BI_AB_raw_page_hits_transparent_floors_2025-08-22_full` "
-                         f"where aer_requests is {aer_null_status} "
-                         f"and bwr_impressions is {bwr_null_status} "
-                         f"and gam_LIID0_revenue is {gam_null_status}")
+    p = 0
 
-                print(query)
-
-                df = get_bq_data(query)
-                df = df[[c for c in df.columns if c not in ['domain', 'test_name_str', 'test_group', 'session_id']]]
-
-                data = df.sum()
-                data['aer_requests_null_status'] = aer_null_status
-                data['bwr_impressions_null_status'] = bwr_null_status
-                data['gam_LIID0_revenue_null_status'] = gam_null_status
-                data_list.append(data)
-
-    df = pd.DataFrame(data_list)
-    df.transpose().to_csv('AB_data_3.csv')
-
-    f = 0
 
 if __name__ == "__main__":
 
     main()
 
-
-    # data_analysis()
+#    main_data_explore()
