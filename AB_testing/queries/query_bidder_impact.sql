@@ -24,8 +24,8 @@ auc_end AS (
        unfilled,
        coalesce(test_name, 'null') test_name_str,
 		test_group,
-       (SELECT REGEXP_EXTRACT(kvps, "fs_clientservermask=(.*)") FROM UNNEST(auc_end.kvps) kvps WHERE kvps LIKE "%fs_clientservermask=%" LIMIT 1) AS  fs_clientservermask,
-       (SELECT REGEXP_EXTRACT(kvps, "fs_testgroup=(.*)") FROM UNNEST(auc_end.kvps) kvps WHERE kvps LIKE "%fs_testgroup=%" LIMIT 1) AS fs_testgroup
+       (SELECT REGEXP_EXTRACT(kvps, "fs_clientservermask=(.*)") FROM UNNEST(auc_end.kvps) kvps WHERE kvps LIKE "%fs_clientservermask=%" LIMIT 1) AS  fs_clientservermask--,
+       --(SELECT REGEXP_EXTRACT(kvps, "fs_testgroup=(.*)") FROM UNNEST(auc_end.kvps) kvps WHERE kvps LIKE "%fs_testgroup=%" LIMIT 1) AS fs_testgroup
    FROM
        `freestar-157323.prod_eventstream.auction_end_raw` auc_end
    WHERE
@@ -36,11 +36,12 @@ auc_end AS (
            SELECT COUNT(1)
            FROM UNNEST(auc_end.kvps) kvpss
            WHERE
-               kvpss LIKE "fs_testgroup=%"
-               OR kvpss LIKE "fs_clientservermask=%"
-       ) >= 2
+               --kvpss LIKE "fs_testgroup=%"
+               --OR
+               kvpss LIKE "fs_clientservermask=%"
+       ) >= 1 --2
    and fs_auction_id is not null
-   and auction_type != 'GAM'
+   --and auction_type != 'GAM'
 ),
 
 auc_end_w_bwr AS (
@@ -50,7 +51,7 @@ auc_end_w_bwr AS (
        `freestar-157323.ad_manager_dtf`.device_category_eventstream(device_class, os) AS device_category,
        auc_end.domain,
        auc_end.fs_clientservermask,
-       auc_end.fs_testgroup,
+       --auc_end.fs_testgroup,
        auc_end.session_id,
        auc_end.fs_auction_id,
        auc_end.placement_id,
@@ -72,7 +73,7 @@ auc_end_w_bwr AS (
        device_class_cte
    ON
        auc_end.session_id = device_class_cte.session_id
-   WHERE fs_testgroup = 'experiment'
+   --WHERE fs_testgroup = 'experiment'
 )
 
 select * from auc_end_w_bwr
@@ -155,7 +156,7 @@ t1 as (
         least(1, safe_divide(bid_cpm, avg(if(winning_bidder = bidder, bid_cpm, null)) over(partition by fs_auction_id, placement_id))) bid_pressure,
         max(if(winning_bidder is not null, 1, 0)) over(partition by fs_auction_id, placement_id) prebid_wins,
         countif(bidder_responded) over (partition by fs_auction_id, placement_id) >= 1 bidder_response_known,
-        countif(bidder_responded) over (partition by fs_auction_id, placement_id) count_of_bidder_responses
+        count(distinct if(bidder_responded, bidder, null)) over (partition by fs_auction_id, placement_id) count_of_bidder_responses
     from `streamamp-qa-239417.DAS_increment.bidder_impact_raw_expanded_{name}_{ddate}`
     join domain_test_group using (date, domain, test_name_str, test_group)
 )

@@ -1,4 +1,4 @@
-create or replace table `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_all_sites_{ddate}_explore` as
+create or replace table `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_all_sites_2025-08-20_explore` as
 
 with
 
@@ -6,36 +6,36 @@ auction_end_raw as
 (
     select * except (test_name), coalesce(test_name, 'null') test_name_str
     from `freestar-157323.prod_eventstream.auction_end_raw`
-    where _PARTITIONDATE >= date_sub('{ddate}', interval 1 day)
-        and _PARTITIONDATE <= date_add('{ddate}', interval 1 day)
-        and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) = '{ddate}'
+    where _PARTITIONDATE >= date_sub('2025-08-20', interval 1 day)
+        and _PARTITIONDATE <= date_add('2025-08-20', interval 1 day)
+        and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) = '2025-08-20'
 ),
 
 auction_start_raw as
 (
     select * except (test_name), coalesce(test_name, 'null') test_name_str
     from `freestar-157323.prod_eventstream.auction_start_raw`
-    where _PARTITIONDATE >= date_sub('{ddate}', interval 1 day)
-        and _PARTITIONDATE <= date_add('{ddate}', interval 1 day)
-        and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) = '{ddate}'
+    where _PARTITIONDATE >= date_sub('2025-08-20', interval 1 day)
+        and _PARTITIONDATE <= date_add('2025-08-20', interval 1 day)
+        and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) = '2025-08-20'
 ),
 
 pagehits_raw as
 (
     select * except (test_name), coalesce(test_name, 'null') test_name_str
     from `freestar-157323.prod_eventstream.pagehits_raw`
-    where _PARTITIONDATE >= date_sub('{ddate}', interval 1 day)
-        and _PARTITIONDATE <= date_add('{ddate}', interval 1 day)
-        and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) = '{ddate}'
+    where _PARTITIONDATE >= date_sub('2025-08-20', interval 1 day)
+        and _PARTITIONDATE <= date_add('2025-08-20', interval 1 day)
+        and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) = '2025-08-20'
 ),
 
 bidswon_raw as
 (
     select * except (test_name), coalesce(test_name, 'null') test_name_str
     from `freestar-157323.prod_eventstream.bidswon_raw`
-    where _PARTITIONDATE >= date_sub('{ddate}', interval 1 day)
-        and _PARTITIONDATE <= date_add('{ddate}', interval 1 day)
-        and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) = '{ddate}'
+    where _PARTITIONDATE >= date_sub('2025-08-20', interval 1 day)
+        and _PARTITIONDATE <= date_add('2025-08-20', interval 1 day)
+        and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) = '2025-08-20'
 ),
 
 page_hits_cte as
@@ -108,7 +108,7 @@ us_gam_dtf as (
     from `freestar-prod.data_transfer.NetworkImpressions` m
     join `freestar-prod.data_transfer.match_line_item_15184186` l
         on l.Id = m.LineItemId and l.date = m.EventDateMST
-    where m.EventDateMST = '{ddate}'
+    where m.EventDateMST = '2025-08-20'
         and fs_session_id is not null
         and l.lineitemtype = 'HOUSE'
     group by 1
@@ -131,7 +131,7 @@ us_gam_dtf as (
         0 as gam_prebid_unfilled,
         0 as gam_prebid_revenue
     from `freestar-prod.data_transfer.NetworkImpressions` m
-    where m.EventDateMST = '{ddate}'
+    where m.EventDateMST = '2025-08-20'
         and fs_session_id is not null
         and LineItemID = 0
     group by 1
@@ -156,7 +156,7 @@ us_gam_dtf as (
     from `freestar-prod.data_transfer.NetworkImpressions` m
     join `freestar-prod.data_transfer.match_line_item_15184186` l
         on l.Id = m.LineItemId and l.date = m.EventDateMST
-    where m.EventDateMST = '{ddate}'
+    where m.EventDateMST = '2025-08-20'
         and fs_session_id is not null
         and REGEXP_CONTAINS(l.Name, 'A9 ')
     group by 1
@@ -181,7 +181,7 @@ us_gam_dtf as (
     from `freestar-prod.data_transfer.NetworkImpressions` m
     join `freestar-prod.data_transfer.match_line_item_15184186` l
         on l.Id = m.LineItemId and l.date = m.EventDateMST
-    where m.EventDateMST = '{ddate}'
+    where m.EventDateMST = '2025-08-20'
         and fs_session_id is not null
         and NOT (REGEXP_CONTAINS(l.Name, 'A9 ') or (LineItemID = 0) or (lineitemtype='HOUSE'))
     group by 1
@@ -204,7 +204,7 @@ us_gam_dtf as (
         0 as gam_prebid_unfilled,
         0 as gam_prebid_revenue
     from `freestar-prod.data_transfer.NetworkBackfillImpressions`
-    where EventDateMST = '{ddate}'
+    where EventDateMST = '2025-08-20'
     group by 1, 2
 ),
 
@@ -273,5 +273,5 @@ from full_session_data
 group by 1, 2, 3, 4;
 
 
-select * from  `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_all_sites_{ddate}_explore`
+select * from  `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_all_sites_2025-08-20_explore`
 order by 1, 2, 3, 4

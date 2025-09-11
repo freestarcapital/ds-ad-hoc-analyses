@@ -288,7 +288,9 @@ full_session_data as (
 )
 
 select '{ddate}' date, domain, test_name_str, test_group,
+    sum(coalesce(bwr_revenue, 0)) prebid_revenue,
     sum(coalesce(bwr_revenue, 0) + coalesce(gam_A9_revenue, 0) + coalesce(gam_NBF_revenue, 0)) revenue,
+    safe_divide(sum(coalesce(bwr_revenue, 0)), sum(coalesce(bwr_revenue, 0) + coalesce(gam_A9_revenue, 0) + coalesce(gam_NBF_revenue, 0))) prebid_prop_of_revenue,
     count(*) sessions,
     safe_divide(sum(coalesce(bwr_revenue, 0) + coalesce(gam_A9_revenue, 0) + coalesce(gam_NBF_revenue, 0)), count(*)) * 1000 rps
 from full_session_data

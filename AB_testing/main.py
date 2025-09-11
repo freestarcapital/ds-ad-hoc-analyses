@@ -84,8 +84,8 @@ def does_table_exist(tablename):
 def main(force_recreate_table=False):
     #QUERIES
     # query_filename = 'query_BI_AB_test_original'
-    #query_filename = 'query_BI_AB_test_page_hits'
-    query_filename = 'query_bidder_impact'
+    query_filename = 'query_BI_AB_test_page_hits'
+    #query_filename = 'query_bidder_impact'
 
     #TIMEOUTS
     # name = 'timeouts'
@@ -94,8 +94,8 @@ def main(force_recreate_table=False):
 
     #TRANSPARENT FLOORS
     name = 'transparent_floors'
-    #datelist = pd.date_range(end=dt.datetime.today().date(), periods=30)
-    datelist = pd.date_range(start=dt.date(2025,9,9), end=dt.date(2025,9,9))
+    datelist = pd.date_range(end=dt.datetime.today().date(), periods=30)
+    #datelist = pd.date_range(start=dt.date(2025, 9, 10), end=dt.date(2025, 9, 10))
     test_domains = [
         'pro-football-reference.com',
         'baseball-reference.com',
@@ -134,11 +134,9 @@ def main(force_recreate_table=False):
 
 def main_data_explore():
     query_filename = 'query_BI_AB_test_page_hits_data_explore'
-    date = dt.date(2025,8,20)
 
-    repl_dict = {'ddate': date.strftime("%Y-%m-%d")}
     query = open(os.path.join(sys.path[0], f"queries/{query_filename}.sql"), "r").read()
-    df = get_bq_data(query, repl_dict)
+    df = get_bq_data(query)
     df.transpose().to_csv('AB_data_4.csv')
 
     p = 0
