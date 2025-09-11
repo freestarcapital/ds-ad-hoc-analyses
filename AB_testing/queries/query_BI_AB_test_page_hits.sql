@@ -106,6 +106,8 @@ bwr_tests as (
         test_group,
         session_id,
         sum(cpm / 1e7) as bwr_revenue,
+        sum(if(is_native_render, cpm / 1e7, 0)) as bwr_native_render_revenue,
+        sum(if(is_gam_bypass, cpm / 1e7, 0)) as bwr_gam_bypass_revenue,
         count(*) as bwr_impressions,
         countif(is_native_render) bwr_native_render_impressions,
         countif(is_gam_bypass) bwr_gam_bypass_impressions
@@ -289,6 +291,7 @@ full_session_data as (
 
 select '{ddate}' date, domain, test_name_str, test_group,
     sum(coalesce(bwr_revenue, 0)) prebid_revenue,
+    sum(coalesce(gam_A9_revenue, 0)) amazon_A9_revenue,
     sum(coalesce(bwr_revenue, 0) + coalesce(gam_A9_revenue, 0) + coalesce(gam_NBF_revenue, 0)) revenue,
     safe_divide(sum(coalesce(bwr_revenue, 0)), sum(coalesce(bwr_revenue, 0) + coalesce(gam_A9_revenue, 0) + coalesce(gam_NBF_revenue, 0))) prebid_prop_of_revenue,
     count(*) sessions,

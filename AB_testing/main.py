@@ -95,7 +95,7 @@ def main(force_recreate_table=False):
     #TRANSPARENT FLOORS
     name = 'transparent_floors'
     datelist = pd.date_range(end=dt.datetime.today().date(), periods=30)
-    #datelist = pd.date_range(start=dt.date(2025, 9, 10), end=dt.date(2025, 9, 10))
+    #datelist = pd.date_range(start=dt.date(2025, 8, 6), end=dt.date(2025, 9, 1))
     test_domains = [
         'pro-football-reference.com',
         'baseball-reference.com',
@@ -137,7 +137,7 @@ def main_data_explore():
 
     query = open(os.path.join(sys.path[0], f"queries/{query_filename}.sql"), "r").read()
     df = get_bq_data(query)
-    df.transpose().to_csv('AB_data_4.csv')
+    df.transpose().to_csv('AB_data_5.csv')
 
     p = 0
 
@@ -146,4 +146,4 @@ if __name__ == "__main__":
 
     main()
 
-#    main_data_explore()
+    #main_data_explore()

@@ -72,6 +72,8 @@ bwr_tests as (
     select
         session_id,
         sum(cpm / 1e7) as bwr_revenue,
+        sum(if(is_native_render, cpm / 1e7, 0)) as bwr_native_render_revenue,
+        sum(if(is_gam_bypass, cpm / 1e7, 0)) as bwr_gam_bypass_revenue,
         count(*) as bwr_impressions,
         countif(is_native_render) bwr_native_render_impressions,
         countif(is_gam_bypass) bwr_gam_bypass_impressions
@@ -253,6 +255,8 @@ select
     sum(aer_native_render_requests) as aer_native_render_requests,
     sum(aer_gam_bypass_requests) as aer_gam_bypass_requests,
     sum(bwr_revenue) as bwr_revenue,
+    sum(bwr_native_render_revenue) bwr_native_render_revenue,
+    sum(bwr_gam_bypass_revenue) bwr_gam_bypass_revenue,
     sum(bwr_impressions) as bwr_impressions,
     sum(bwr_native_render_impressions) as bwr_native_render_impressions,
     sum(bwr_gam_bypass_impressions) as bwr_gam_bypass_impressions,
