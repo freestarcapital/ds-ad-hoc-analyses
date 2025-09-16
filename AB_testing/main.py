@@ -88,26 +88,26 @@ def main(force_recreate_table=False):
     #query_filename = 'query_bidder_impact'
 
     #TIMEOUTS
-    # name = 'timeouts'
-    # datelist = pd.date_range(start=dt.date(2025,8,26), end=dt.date(2025,9,1))
-    # test_domains = get_domains_from_collection_ids(['9c42ef7c-2115-4da9-8a22-bd9c36cdb8b4'])
+    name = 'timeouts'
+    datelist = pd.date_range(start=dt.date(2025,8,26), end=dt.date(2025,9,15))
+    test_domains = get_domains_from_collection_ids(['9c42ef7c-2115-4da9-8a22-bd9c36cdb8b4', '5b60cd25-34e3-4f29-b217-aba2452e89a5'])
 
     #TRANSPARENT FLOORS
-    name = 'transparent_floors'
-    datelist = pd.date_range(end=dt.datetime.today().date(), periods=35)
-    #datelist = pd.date_range(start=dt.date(2025, 8, 6), end=dt.date(2025, 9, 1))
-    test_domains = [
-        'pro-football-reference.com',
-        'baseball-reference.com',
-        'deepai.org',
-        'signupgenius.com',
-        'perchance.org',
-        'worldofsolitaire.com',
-        'fantasypros.com',
-        'deckshop.pro',
-        'tunein.com',
-        'adsbexchange.com'
-    ]
+    # name = 'transparent_floors'
+    # datelist = pd.date_range(end=dt.datetime.today().date(), periods=35)
+    # #datelist = pd.date_range(start=dt.date(2025, 8, 6), end=dt.date(2025, 9, 1))
+    # test_domains = [
+    #     'pro-football-reference.com',
+    #     'baseball-reference.com',
+    #     'deepai.org',
+    #     'signupgenius.com',
+    #     'perchance.org',
+    #     'worldofsolitaire.com',
+    #     'fantasypros.com',
+    #     'deckshop.pro',
+    #     'tunein.com',
+    #     'adsbexchange.com'
+    # ]
 
     #END OF SETUP
     tablename = f"{project_id}.{dataset_name}.{query_filename.replace('query_', '')}_results_{name}"
@@ -144,6 +144,6 @@ def main_data_explore():
 
 if __name__ == "__main__":
 
-    #main()
+    main()
 
-    main_data_explore()
+    #main_data_explore()

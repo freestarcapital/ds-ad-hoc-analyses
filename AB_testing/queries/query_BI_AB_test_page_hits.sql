@@ -282,7 +282,7 @@ us_gam_dtf_cte as (
     group by 1, 2, 3, 4
 ),
 
-full_session_data as (
+joined_session_data as (
     select *,
         case
             when bwr_impressions is not null then 'bwr_avail'
@@ -297,58 +297,70 @@ full_session_data as (
     full outer join
     us_gam_dtf_cte
     using (domain, test_name_str, test_group, session_id)
-)
+),
 
-select '{ddate}' date, domain, test_name_str, test_group,
-    count(*) sessions,
+full_session_data as (
+    select *,
 
     CASE data_status
-        WHEN 'bwr_avail' THEN sum(coalesce(bwr_revenue, 0) + coalesce(gam_A9_revenue, 0) + coalesce(gam_NBF_revenue, 0))
-        WHEN 'GAM_avail' THEN sum(coalesce(gam_prebid_revenue, 0) + coalesce(gam_A9_revenue, 0) + coalesce(gam_NBF_revenue, 0))
+        WHEN 'bwr_avail' THEN coalesce(bwr_revenue, 0) + coalesce(gam_A9_revenue, 0) + coalesce(gam_NBF_revenue, 0)
+        WHEN 'GAM_avail' THEN coalesce(gam_prebid_revenue, 0) + coalesce(gam_A9_revenue, 0) + coalesce(gam_NBF_revenue, 0)
         ELSE 0
         END as revenue,
 
     CASE data_status
-        WHEN 'bwr_avail' THEN sum(coalesce(bwr_revenue, 0))
-        WHEN 'GAM_avail' THEN sum(coalesce(gam_prebid_revenue, 0))
+        WHEN 'bwr_avail' THEN coalesce(bwr_revenue, 0)
+        WHEN 'GAM_avail' THEN coalesce(gam_prebid_revenue, 0)
         ELSE 0
         END as prebid_revenue,
 
     CASE data_status
-        WHEN 'bwr_avail' THEN sum(coalesce(bwr_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0) - coalesce(gam_house_impressions, 0))
-        WHEN 'GAM_avail' THEN sum(coalesce(gam_prebid_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0) - coalesce(gam_house_impressions, 0))
-        WHEN 'aer_avail' THEN sum(coalesce(aer_requests, 0) - coalesce(aer_unfilled, 0))
+        WHEN 'bwr_avail' THEN coalesce(bwr_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0) - coalesce(gam_house_impressions, 0)
+        WHEN 'GAM_avail' THEN coalesce(gam_prebid_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0) - coalesce(gam_house_impressions, 0)
+        WHEN 'aer_avail' THEN coalesce(aer_requests, 0) - coalesce(aer_unfilled, 0)
         ELSE 0
         END as impressions,
 
     CASE data_status
-        WHEN 'bwr_avail' THEN sum(coalesce(bwr_impressions, 0))
-        WHEN 'GAM_avail' THEN sum(coalesce(gam_prebid_impressions, 0))
-        WHEN 'aer_avail' THEN sum(coalesce(aer_requests, 0) - coalesce(aer_unfilled, 0))
+        WHEN 'bwr_avail' THEN coalesce(bwr_impressions, 0)
+        WHEN 'GAM_avail' THEN coalesce(gam_prebid_impressions, 0)
+        WHEN 'aer_avail' THEN coalesce(aer_requests, 0) - coalesce(aer_unfilled, 0)
         ELSE 0
         END as prebid_impressions,
 
     CASE data_status
-        WHEN 'bwr_avail' THEN sum(coalesce(aer_unfilled, 0) + coalesce(gam_house_impressions, 0))
-        WHEN 'GAM_avail' THEN sum(coalesce(gam_LIID0_unfilled, 0) + coalesce(gam_house_impressions, 0))
+        WHEN 'bwr_avail' THEN coalesce(aer_unfilled, 0) + coalesce(gam_house_impressions, 0)
+        WHEN 'GAM_avail' THEN coalesce(gam_LIID0_unfilled, 0) + coalesce(gam_house_impressions, 0)
         WHEN 'aer_avail' THEN coalesce(aer_unfilled, 0)
         WHEN 'asr_avail' THEN coalesce(asr_requests, 0)
         ELSE 0
         END as unfilled,
 
     CASE data_status
-        WHEN 'bwr_avail' THEN sum(coalesce(bwr_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0) + coalesce(aer_unfilled, 0))
-        WHEN 'GAM_avail' THEN sum(coalesce(gam_prebid_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0) + coalesce(gam_LIID0_unfilled, 0))
+        WHEN 'bwr_avail' THEN coalesce(bwr_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0) + coalesce(aer_unfilled, 0)
+        WHEN 'GAM_avail' THEN coalesce(gam_prebid_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0) + coalesce(gam_LIID0_unfilled, 0)
         WHEN 'aer_avail' THEN coalesce(aer_requests, 0)
         WHEN 'asr_avail' THEN coalesce(asr_requests, 0)
         ELSE 0
         END as requests,
 
     CASE data_status
-        WHEN 'unknown' THEN count(*)
+        WHEN 'unknown' THEN 1
         ELSE 0
-        END as unknown_data_status_count,
+        END as unknown_data_status,
 
+    from joined_session_data
+)
+
+select '{ddate}' date, domain, test_name_str, test_group,
+    count(*) sessions,
+    sum(revenue) revenue,
+    sum(prebid_revenue) prebid_revenue,
+    sum(impressions) impressions,
+    sum(prebid_impressions) prebid_impressions,
+    sum(unfilled) unfilled,
+    sum(requests) requests,
+    sum(unknown_data_status) unknown_data_status,
     sum(coalesce(gam_A9_revenue, 0)) gam_amazon_A9_revenue,
     sum(coalesce(gam_NBF_revenue, 0)) gam_NBF_revenue,
     sum(coalesce(gam_A9_impressions, 0)) gam_amazon_A9_impressions,
@@ -359,7 +371,6 @@ select '{ddate}' date, domain, test_name_str, test_group,
 
 from full_session_data
 group by 1, 2, 3, 4;
-
 
 {create_or_insert_statement}
 
