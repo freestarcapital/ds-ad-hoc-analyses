@@ -115,7 +115,7 @@ bwr_tests as (
     group by 1, 2, 3, 4
 ),
 
-bwr_test__cte as (
+prebid__cte as (
     select *
     from page_hits_cte
     left join auction_start_raw__test using (domain, test_name_str, test_group, session_id)
@@ -283,19 +283,80 @@ us_gam_dtf_cte as (
 ),
 
 full_session_data as (
-    select * from
-    bwr_test__cte
+    select *,
+        case
+            when bwr_impressions is not null then 'bwr_avail'
+            when gam_NBF_impressions is not null then 'GAM_avail'
+            when aer_requests is not null then  'aer_avail'
+            when asr_requests is not null then 'asr_avail'
+            when (asr_requests is NULL) AND (aer_requests is NULL) AND (bwr_impressions is NULL) AND (gam_NBF_impressions is NULL) then 'nothing_avail'
+            else 'unknown'
+            end as data_status
+    from
+    prebid__cte
     full outer join
-    us_gam_dtf_cte using (domain, test_name_str, test_group, session_id)
+    us_gam_dtf_cte
+    using (domain, test_name_str, test_group, session_id)
 )
 
 select '{ddate}' date, domain, test_name_str, test_group,
-    sum(coalesce(bwr_revenue, 0)) prebid_revenue,
-    sum(coalesce(gam_A9_revenue, 0)) amazon_A9_revenue,
-    sum(coalesce(bwr_revenue, 0) + coalesce(gam_A9_revenue, 0) + coalesce(gam_NBF_revenue, 0)) revenue,
-    safe_divide(sum(coalesce(bwr_revenue, 0)), sum(coalesce(bwr_revenue, 0) + coalesce(gam_A9_revenue, 0) + coalesce(gam_NBF_revenue, 0))) prebid_prop_of_revenue,
     count(*) sessions,
-    safe_divide(sum(coalesce(bwr_revenue, 0) + coalesce(gam_A9_revenue, 0) + coalesce(gam_NBF_revenue, 0)), count(*)) * 1000 rps
+
+    CASE data_status
+        WHEN 'bwr_avail' THEN sum(coalesce(bwr_revenue, 0) + coalesce(gam_A9_revenue, 0) + coalesce(gam_NBF_revenue, 0))
+        WHEN 'GAM_avail' THEN sum(coalesce(gam_prebid_revenue, 0) + coalesce(gam_A9_revenue, 0) + coalesce(gam_NBF_revenue, 0))
+        ELSE 0
+        END as revenue,
+
+    CASE data_status
+        WHEN 'bwr_avail' THEN sum(coalesce(bwr_revenue, 0))
+        WHEN 'GAM_avail' THEN sum(coalesce(gam_prebid_revenue, 0))
+        ELSE 0
+        END as prebid_revenue,
+
+    CASE data_status
+        WHEN 'bwr_avail' THEN sum(coalesce(bwr_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0) - coalesce(gam_house_impressions, 0))
+        WHEN 'GAM_avail' THEN sum(coalesce(gam_prebid_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0) - coalesce(gam_house_impressions, 0))
+        WHEN 'aer_avail' THEN sum(coalesce(aer_requests, 0) - coalesce(aer_unfilled, 0))
+        ELSE 0
+        END as impressions,
+
+    CASE data_status
+        WHEN 'bwr_avail' THEN sum(coalesce(bwr_impressions, 0))
+        WHEN 'GAM_avail' THEN sum(coalesce(gam_prebid_impressions, 0))
+        WHEN 'aer_avail' THEN sum(coalesce(aer_requests, 0) - coalesce(aer_unfilled, 0))
+        ELSE 0
+        END as prebid_impressions,
+
+    CASE data_status
+        WHEN 'bwr_avail' THEN sum(coalesce(aer_unfilled, 0) + coalesce(gam_house_impressions, 0))
+        WHEN 'GAM_avail' THEN sum(coalesce(gam_LIID0_unfilled, 0) + coalesce(gam_house_impressions, 0))
+        WHEN 'aer_avail' THEN coalesce(aer_unfilled, 0)
+        WHEN 'asr_avail' THEN coalesce(asr_requests, 0)
+        ELSE 0
+        END as unfilled,
+
+    CASE data_status
+        WHEN 'bwr_avail' THEN sum(coalesce(bwr_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0) + coalesce(aer_unfilled, 0))
+        WHEN 'GAM_avail' THEN sum(coalesce(gam_prebid_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0) + coalesce(gam_LIID0_unfilled, 0))
+        WHEN 'aer_avail' THEN coalesce(aer_requests, 0)
+        WHEN 'asr_avail' THEN coalesce(asr_requests, 0)
+        ELSE 0
+        END as requests,
+
+    CASE data_status
+        WHEN 'unknown' THEN count(*)
+        ELSE 0
+        END as unknown_data_status_count,
+
+    sum(coalesce(gam_A9_revenue, 0)) gam_amazon_A9_revenue,
+    sum(coalesce(gam_NBF_revenue, 0)) gam_NBF_revenue,
+    sum(coalesce(gam_A9_impressions, 0)) gam_amazon_A9_impressions,
+    sum(coalesce(gam_NBF_impressions, 0)) gam_NBF_impressions,
+    sum(coalesce(bwr_native_render_revenue, 0)) bwr_native_render_revenue,
+    sum(coalesce(bwr_native_render_impressions, 0)) bwr_native_render_impressions,
+    sum(coalesce(gam_house_impressions, 0)) gam_house_impressions
+
 from full_session_data
 group by 1, 2, 3, 4;
 
