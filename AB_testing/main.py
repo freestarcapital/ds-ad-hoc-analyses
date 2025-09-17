@@ -183,7 +183,7 @@ def main_process_csv():
     df_uplift = df[index_cols].copy()
     df_uplift.columns = pd.Index(['domain', 'date', 'test_name'], dtype='object')
     for c in val_cols:
-        df_uplift[c] = df[c][1].astype('float64') / df[c][0].astype('float64') - 1
+        df_uplift[c] = (df[c][1].astype('float64') - df[c][0].astype('float64')) / (0.5*(df[c][1].astype('float64') + df[c][0].astype('float64')))
     df_uplift = df_uplift.fillna(0)
 
     summary_mean = create_table_summary(df, val_cols)
