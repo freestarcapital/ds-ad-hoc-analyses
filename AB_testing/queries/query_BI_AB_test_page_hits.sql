@@ -354,6 +354,10 @@ full_session_data as (
 
 select '{ddate}' date, domain, test_name_str, test_group,
     count(*) sessions,
+    count(asr_requests) sessions_asr_data,
+    count(aer_requests) sessions_aer_data,
+    count(bwr_revenue) sessions_bwr_data,
+    count(gam_NBF_impressions) sessions_gam_data,
     sum(revenue) revenue,
     sum(prebid_revenue) prebid_revenue,
     sum(impressions) impressions,
@@ -361,6 +365,7 @@ select '{ddate}' date, domain, test_name_str, test_group,
     sum(unfilled) unfilled,
     sum(requests) requests,
     sum(unknown_data_status) unknown_data_status,
+    sum(coalesce(asr_requests, 0)) asr_requests,
     sum(coalesce(gam_A9_revenue, 0)) gam_amazon_A9_revenue,
     sum(coalesce(gam_NBF_revenue, 0)) gam_NBF_revenue,
     sum(coalesce(gam_A9_impressions, 0)) gam_amazon_A9_impressions,
@@ -376,7 +381,7 @@ group by 1, 2, 3, 4;
 
 with domain_test_sessions as
 (
-    select date, domain, test_name_str, sum(sessions) sessions
+    select date, domain, test_name_str, sum(sessions) sessions, sum(sessions_gam_data) sessions_gam_data
     from `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}`
     group by 1, 2, 3
 ),
@@ -385,7 +390,8 @@ domain_primary_test as
 (
     select date, domain, test_name_str
     from domain_test_sessions
-    qualify sessions = max(sessions) over(partition by domain, date)
+    qualify (sessions = max(sessions) over(partition by domain, date))
+       and (safe_divide(sum(sessions_gam_data) over (partition by domain, date), sum(sessions) over (partition by domain, date)) > 0.5)
 )
 
 select *

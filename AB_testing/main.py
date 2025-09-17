@@ -44,7 +44,9 @@ def get_data(query_filename, data_cache_filename=None, force_requery=False, repl
 def get_bq_data(query, replacement_dict={}):
     for k, v in replacement_dict.items():
         query = query.replace("{" + k + "}", str(v))
-    return client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
+
+    df = client.query(query).result().to_dataframe(bqstorage_client=bqstorageclient, progress_bar_type='tqdm')
+    return df
 
 
 def get_domains_from_collection_ids(collection_ids, start_date=dt.date.today()-dt.timedelta(days=21), end_date=dt.date.today()):
@@ -81,33 +83,32 @@ def does_table_exist(tablename):
     return bool(df.values[0, 0] > 0)
 
 
-def main(force_recreate_table=False):
+def main(force_recreate_table=True):
     #QUERIES
-    # query_filename = 'query_BI_AB_test_original'
     query_filename = 'query_BI_AB_test_page_hits'
     #query_filename = 'query_bidder_impact'
 
     #TIMEOUTS
-    name = 'timeouts'
-    datelist = pd.date_range(start=dt.date(2025,8,26), end=dt.date(2025,9,15))
-    test_domains = get_domains_from_collection_ids(['9c42ef7c-2115-4da9-8a22-bd9c36cdb8b4', '5b60cd25-34e3-4f29-b217-aba2452e89a5'])
+    # name = 'timeouts'
+    # datelist = pd.date_range(start=dt.date(2025,8,26), end=dt.date(2025,9,15))
+    # test_domains = get_domains_from_collection_ids(['9c42ef7c-2115-4da9-8a22-bd9c36cdb8b4', '5b60cd25-34e3-4f29-b217-aba2452e89a5'])
 
     #TRANSPARENT FLOORS
-    # name = 'transparent_floors'
-    # datelist = pd.date_range(end=dt.datetime.today().date(), periods=35)
-    # #datelist = pd.date_range(start=dt.date(2025, 8, 6), end=dt.date(2025, 9, 1))
-    # test_domains = [
-    #     'pro-football-reference.com',
-    #     'baseball-reference.com',
-    #     'deepai.org',
-    #     'signupgenius.com',
-    #     'perchance.org',
-    #     'worldofsolitaire.com',
-    #     'fantasypros.com',
-    #     'deckshop.pro',
-    #     'tunein.com',
-    #     'adsbexchange.com'
-    # ]
+    name = 'transparent_floors'
+    datelist = pd.date_range(end=dt.datetime.today().date(), periods=30)
+    #datelist = pd.date_range(start=dt.date(2025, 8, 6), end=dt.date(2025, 9, 1))
+    test_domains = [
+        'pro-football-reference.com',
+        'baseball-reference.com',
+        'deepai.org',
+        'signupgenius.com',
+        'perchance.org',
+        'worldofsolitaire.com',
+        'fantasypros.com',
+        'deckshop.pro',
+        'tunein.com',
+        'adsbexchange.com'
+    ]
 
     #END OF SETUP
     tablename = f"{project_id}.{dataset_name}.{query_filename.replace('query_', '')}_results_{name}"
@@ -141,9 +142,60 @@ def main_data_explore():
 
     p = 0
 
+def add_date_cols(df_summary_in, df, val_cols):
+    df_summary = df_summary_in.copy()
+    for ag in ['min', 'max', 'count']:
+        df_summary[f'date_{ag}'] = df[['domain', 'date']].groupby(['domain']).agg(ag)
+    df_summary = df_summary[['date_min', 'date_max', 'date_count'] + val_cols]
+    return df_summary
+
+def create_table_summary(df, val_cols):
+
+    df_summary_mean = df[['domain'] + val_cols].groupby(['domain']).agg('mean')
+    df_summary_mean_with_dates = add_date_cols(df_summary_mean, df, val_cols)
+
+    df_summary_std = df[['domain'] + val_cols].groupby(['domain']).agg('std')
+    df_summary_std_with_dates = add_date_cols(df_summary_std, df, val_cols)
+
+    summary_mean_error_dict = {}
+    for d in df_summary_mean.index:
+        summary_mean_error_dict[d] = df_summary_std.loc[d][val_cols] / np.sqrt(df_summary_mean_with_dates.loc[d]['date_count'].astype('float64') - 1)
+    df_summary_mean_error = pd.DataFrame(summary_mean_error_dict).transpose()
+    df_summary_mean_error_with_dates = add_date_cols(df_summary_mean_error, df, val_cols)
+
+    df_summary_t_stats = df_summary_mean / df_summary_mean_error
+    df_summary_t_stats_with_dates = add_date_cols(df_summary_t_stats, df, val_cols)
+
+    return df_summary_mean_with_dates, df_summary_mean_error_with_dates, df_summary_t_stats_with_dates
+
+def main_process_csv():
+    query_filename = 'query_get_AB_test_results_for_csv'
+    query = open(os.path.join(sys.path[0], f"queries/{query_filename}.sql"), "r").read()
+    df_raw = get_bq_data(query)
+
+    index_cols = ['domain', 'date', 'test_name']
+    #val_cols = ['session_prop_gam_data']
+    val_cols = [c for c in df_raw.columns if c not in index_cols + ['test_group']]
+    df = df_raw.pivot(index=index_cols, columns=['test_group'], values=val_cols).reset_index()
+
+    df_uplift = df[index_cols].copy()
+    df_uplift.columns = pd.Index(['domain', 'date', 'test_name'], dtype='object')
+    for c in val_cols:
+        df_uplift[c] = df[c][1].astype('float64') / df[c][0].astype('float64') - 1
+    df_uplift = df_uplift.fillna(0)
+
+    summary_mean, summary_error, summary_t_stats = create_table_summary(df, val_cols)
+    summary_uplift_mean, summary_uplift_error, summary_uplift_t_stats = create_table_summary(df_uplift, val_cols)
+
+
+
+
+    h = 0
 
 if __name__ == "__main__":
 
-    main()
+    #main()
+
+    main_process_csv()
 
     #main_data_explore()
