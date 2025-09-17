@@ -149,13 +149,15 @@ def add_date_cols(df_summary_in, df, val_cols):
     df_summary = df_summary[['date_min', 'date_max', 'date_count'] + val_cols]
     return df_summary
 
-def create_table_summary(df, val_cols):
+def create_table_summary(df, val_cols, calculate_errors_and_t_stats=False):
 
     df_summary_mean = df[['domain'] + val_cols].groupby(['domain']).agg('mean')
     df_summary_mean_with_dates = add_date_cols(df_summary_mean, df, val_cols)
 
+    if not calculate_errors_and_t_stats:
+        return df_summary_mean_with_dates
+
     df_summary_std = df[['domain'] + val_cols].groupby(['domain']).agg('std')
-    df_summary_std_with_dates = add_date_cols(df_summary_std, df, val_cols)
 
     summary_mean_error_dict = {}
     for d in df_summary_mean.index:
@@ -184,11 +186,14 @@ def main_process_csv():
         df_uplift[c] = df[c][1].astype('float64') / df[c][0].astype('float64') - 1
     df_uplift = df_uplift.fillna(0)
 
-    summary_mean, summary_error, summary_t_stats = create_table_summary(df, val_cols)
-    summary_uplift_mean, summary_uplift_error, summary_uplift_t_stats = create_table_summary(df_uplift, val_cols)
+    summary_mean = create_table_summary(df, val_cols)
+    summary_uplift_mean, summary_uplift_error, summary_uplift_t_stats = create_table_summary(df_uplift, val_cols, True)
 
-
-
+    df.to_csv('results/details.csv')
+    summary_mean.transpose().to_csv('results/summary_mean.csv')
+    summary_uplift_mean.transpose().to_csv('results/summary_uplift_mean.csv')
+    summary_uplift_error.transpose().to_csv('results/summary_uplift_error.csv')
+    summary_uplift_t_stats.transpose().to_csv('results/summary_uplift_t_stats.csv')
 
     h = 0
 
