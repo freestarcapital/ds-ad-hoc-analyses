@@ -8,6 +8,7 @@ import datetime as dt
 import pickle
 import numpy as np
 import xlsxwriter
+from matplotlib.pyplot import inferno
 from xlsxwriter.color import Color
 
 pd.set_option('display.max_columns', None)
@@ -140,8 +141,6 @@ def main_data_explore():
     df = get_bq_data(query)
     df.transpose().to_csv('AB_data_6.csv')
 
-    p = 0
-
 def add_date_cols(df_summary_in, df, val_cols):
     df_summary = df_summary_in.copy()
     for ag in ['min', 'max', 'count']:
@@ -170,13 +169,60 @@ def create_table_summary(df, val_cols, calculate_errors_and_t_stats=False):
 
     return df_summary_mean_with_dates.transpose(), df_summary_mean_error_with_dates.transpose(), df_summary_t_stats_with_dates.transpose()
 
+def format_worksheet(writer, sheetname, df, cell_format_number_str='0%', max_color_lowest_value=None, max_color_highest_value=None):
+
+    df.to_excel(writer, sheet_name=sheetname)
+
+    worksheet = writer.sheets[sheetname]
+
+    if cell_format_number_str is None:
+        worksheet.autofit()
+        return
+
+    if (max_color_lowest_value is None) or (max_color_highest_value is None):
+        max = abs(df.iloc[3:, ]).max().max()
+        max_color_lowest_value = -max
+        max_color_highest_value = max
+
+    workbook = writer.book
+
+    cell_range = f'B5:{chr(66 + len(df.columns) - 1)}{len(df) + 1}'
+
+    V = 5
+    v = np.append(np.arange(-V, 0), np.arange(1, V+1))
+    boundaries = np.arange(len(v)+1) / len(v) * (max_color_highest_value - max_color_lowest_value) + max_color_lowest_value
+    boundaries[0] = -1e6
+    boundaries[-1] = 1e6
+    for i, vi in enumerate(v):
+        #print(f'{int(abs(vi))}, {boundaries[i]} : {boundaries[i+1]}')
+        cell_format = workbook.add_format()
+        cell_format.set_bg_color(Color.theme(5 if vi < 0 else 6, int(abs(vi))))
+        cell_format.set_locked(False)
+        worksheet.conditional_format(
+            cell_range,
+            {
+                "type": "cell",
+                "criteria": "between",
+                "minimum": boundaries[i],
+                "maximum": boundaries[i+1],
+                "format": cell_format,
+            },
+        )
+
+    cell_format_number = workbook.add_format()
+    cell_format_number.set_num_format(cell_format_number_str)
+    cell_format_number.set_locked(False)
+    worksheet.conditional_format(cell_range, {'type': 'no_errors', 'format': cell_format_number})
+
+    worksheet.autofit()
+
+
 def main_process_csv():
     query_filename = 'query_get_AB_test_results_for_csv'
     query = open(os.path.join(sys.path[0], f"queries/{query_filename}.sql"), "r").read()
     df_raw = get_bq_data(query)
 
     index_cols = ['domain', 'date', 'test_name']
-    #val_cols = ['session_prop_gam_data']
     val_cols = [c for c in df_raw.columns if c not in index_cols + ['test_group']]
     df = df_raw.pivot(index=index_cols, columns=['test_group'], values=val_cols).reset_index()
 
@@ -190,98 +236,13 @@ def main_process_csv():
     summary_uplift_mean, summary_uplift_error, summary_uplift_t_stats = create_table_summary(df_uplift, val_cols, True)
 
     writer = pd.ExcelWriter('results/test.xlsx', engine='xlsxwriter')
-    summary_uplift_mean.to_excel(writer, sheet_name='summary_uplift_mean')
-    # summary_uplift_error.to_excel(writer, sheet_name='summary_uplift_error')
-    # summary_uplift_t_stats.to_excel(writer, sheet_name='summary_uplift_t_stats')
-    # summary_mean.to_excel(writer, sheet_name='summary_mean')
-    # df.to_excel(writer, sheet_name='raw_data')
-
-    workbook = writer.book
-    worksheet = writer.sheets['summary_uplift_mean']
-    worksheet.autofit()
-
-    cell_format_percent = workbook.add_format()
-    cell_format_percent.set_num_format('0%')
-
-    cell_range = f'B5:{chr(66 + len(summary_uplift_mean.columns) - 1)}{len(summary_uplift_mean) + 1}'
-
-    worksheet.conditional_format(cell_range, {'type': 'no_errors', 'format': cell_format_percent})
-
-    h1 = workbook.add_format()
-    h2 = workbook.add_format()
-    l1 = workbook.add_format()
-    l2 = workbook.add_format()
-
-    h2.set_font_color(Color((5, 4)))
-    h1.set_font_color(Color((5, 2)))
-    l2.set_font_color(Color((6, 4)))
-    l1.set_font_color(Color((6, 2)))
-
-    worksheet.conditional_format(
-        cell_range,
-        {
-            "type": "cell",
-            "criteria": "between",
-            "minimum": 0.30,
-            "maximum": 0.70,
-            "format": h1,
-        },
-    )
-
-    worksheet.conditional_format(
-        cell_range,
-        {
-            "type": "cell",
-            "criteria": "between",
-            "minimum": 0.70,
-            "maximum": 100,
-            "format": h2,
-        },
-    )
-
-    worksheet.conditional_format(
-        cell_range,
-        {
-            "type": "cell",
-            "criteria": "not between",
-            "minimum": -0.70,
-            "maximum": -0.30,
-            "format": l1,
-        },
-    )
-
-
-    worksheet.conditional_format(
-        cell_range,
-        {
-            "type": "cell",
-            "criteria": "not between",
-            "minimum": -100,
-            "maximum": -0.70,
-            "format": l2,
-        },
-    )
-    #
-    #
-    # cell_format.set_align('center')
-    # cell_format.set_align('vcenter')
-    #
-    # worksheet.set_row(0, 70)
-    #
-    # worksheet.write(0, 0, 'Some Text', cell_format)
-
+    format_worksheet(writer, 'summary_uplift_mean', summary_uplift_mean)
+    format_worksheet(writer, 'summary_uplift_error', summary_uplift_error)
+    format_worksheet(writer, 'summary_uplift_t_stats', summary_uplift_t_stats,'#,##0')
+    format_worksheet(writer, 'summary_mean', summary_mean, None)
+    format_worksheet(writer, 'raw_data', df, None)
     writer.close()
 
-    # workbook = xlsxwriter.Workbook('results/test1.xlsx')
-    # worksheet = workbook.add_worksheet('summary_mean')
-
-    # df.to_csv('results/details.csv')
-    # summary_mean.transpose().to_csv('results/summary_mean.csv')
-    # summary_uplift_mean.transpose().to_csv('results/summary_uplift_mean.csv')
-    # summary_uplift_error.transpose().to_csv('results/summary_uplift_error.csv')
-    # summary_uplift_t_stats.transpose().to_csv('results/summary_uplift_t_stats.csv')
-
-    h = 0
 
 if __name__ == "__main__":
 
