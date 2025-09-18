@@ -5,7 +5,7 @@ with alias_cols as (
         bwr_native_render_impressions prebid_native_render_impressions,
         prebid_revenue - bwr_native_render_revenue prebid_non_native_render_revenue,
         prebid_impressions - bwr_native_render_impressions prebid_non_native_render_impressions,
-    from streamamp-qa-239417.DAS_increment.BI_AB_test_page_hits_results_transparent_floors_2
+    from `{tablename}`
     where test_name_str != 'null' and sessions >= 10000
     qualify (count(*) over (partition by date, domain, test_name_str) = 2)
         and (safe_divide(sum(sessions_gam_data) over (partition by domain, date), sum(sessions) over (partition by domain, date)) > 0.5)

@@ -8,7 +8,6 @@ import datetime as dt
 import pickle
 import numpy as np
 import xlsxwriter
-from matplotlib.pyplot import inferno
 from xlsxwriter.color import Color
 
 pd.set_option('display.max_columns', None)
@@ -50,9 +49,11 @@ def get_bq_data(query, replacement_dict={}):
     return df
 
 
-def get_domains_from_collection_ids(collection_ids, start_date=dt.date.today()-dt.timedelta(days=21), end_date=dt.date.today()):
+def get_domains_from_collection_ids(collection_ids, datelist):
     min_page_hits = 10000
 
+    start_date = datelist[0]
+    end_date = datelist[-1] + dt.timedelta(days=1)
     print(f'searching for domains for collection_ids: {", ".join(collection_ids)} from {start_date} to {end_date}, min_page_hits: {min_page_hits}')
 
     repl_dict = {'start_date': start_date.strftime("%Y-%m-%d"),
@@ -92,24 +93,33 @@ def main(force_recreate_table=True):
     #TIMEOUTS
     # name = 'timeouts'
     # datelist = pd.date_range(start=dt.date(2025,8,26), end=dt.date(2025,9,15))
-    # test_domains = get_domains_from_collection_ids(['9c42ef7c-2115-4da9-8a22-bd9c36cdb8b4', '5b60cd25-34e3-4f29-b217-aba2452e89a5'])
+    # test_domains = get_domains_from_collection_ids(['9c42ef7c-2115-4da9-8a22-bd9c36cdb8b4', '5b60cd25-34e3-4f29-b217-aba2452e89a5'], datelist)
 
-    #TRANSPARENT FLOORS
-    name = 'transparent_floors'
-    datelist = pd.date_range(end=dt.datetime.today().date(), periods=30)
-    #datelist = pd.date_range(start=dt.date(2025, 8, 6), end=dt.date(2025, 9, 1))
-    test_domains = [
-        'pro-football-reference.com',
-        'baseball-reference.com',
-        'deepai.org',
-        'signupgenius.com',
-        'perchance.org',
-        'worldofsolitaire.com',
-        'fantasypros.com',
-        'deckshop.pro',
-        'tunein.com',
-        'adsbexchange.com'
-    ]
+    # #TRANSPARENT FLOORS
+    # name = 'transparent_floors'
+    # datelist = pd.date_range(end=dt.datetime.today().date(), periods=30)
+    # #datelist = pd.date_range(start=dt.date(2025, 8, 6), end=dt.date(2025, 9, 1))
+    # test_domains = [
+    #     'pro-football-reference.com',
+    #     'baseball-reference.com',
+    #     'deepai.org',
+    #     'signupgenius.com',
+    #     'worldofsolitaire.com',
+    #     'deckshop.pro',
+    #     'adsbexchange.com'
+    # ]
+    # # enforce = {'dont_enfore': ['adsbexchange.com', 'baseball-reference.com', 'deepai.org'],
+    # #            'enforce': ['deckshop.pro', 'pro-football-reference.com', 'signupgenius.com', 'worldofsolitaire.com']}
+
+    # # #TRANSPARENT FLOORS larger test enforced
+    # name = 'transparent_floors_sept_16_enforced'
+    # datelist = pd.date_range(start=dt.date(2025,9,16), end=dt.datetime.today().date() - dt.timedelta(days=1))
+    # test_domains = get_domains_from_collection_ids(['38622a20-b851-40d0-8c4a-ab2ab881fb0a'], datelist) # enforced
+
+    #TRANSPARENT FLOORS larger test not enforced
+    name = 'transparent_floors_sept_16_not_enforced'
+    datelist = pd.date_range(start=dt.date(2025,9,16), end=dt.datetime.today().date() - dt.timedelta(days=1))
+    test_domains = get_domains_from_collection_ids(['b2df7b52-27dc-409d-9876-0d945bad6f6e'], datelist) # not enforced
 
     #END OF SETUP
     tablename = f"{project_id}.{dataset_name}.{query_filename.replace('query_', '')}_results_{name}"
@@ -133,7 +143,7 @@ def main(force_recreate_table=True):
                      'name': name}
         get_bq_data(query, repl_dict)
 
-
+    main_process_csv(tablename, name)
 def main_data_explore():
     query_filename = 'query_BI_AB_test_page_hits_data_explore'
 
@@ -217,10 +227,11 @@ def format_worksheet(writer, sheetname, df, cell_format_number_str='0%', max_col
     worksheet.autofit()
 
 
-def main_process_csv():
+def main_process_csv(tablename_results, filename_out_xlsx):
     query_filename = 'query_get_AB_test_results_for_csv'
+    repl_dict = {'tablename': tablename_results}
     query = open(os.path.join(sys.path[0], f"queries/{query_filename}.sql"), "r").read()
-    df_raw = get_bq_data(query)
+    df_raw = get_bq_data(query, repl_dict)
 
     index_cols = ['domain', 'date', 'test_name']
     val_cols = [c for c in df_raw.columns if c not in index_cols + ['test_group']]
@@ -235,7 +246,7 @@ def main_process_csv():
     summary_mean = create_table_summary(df, val_cols)
     summary_uplift_mean, summary_uplift_error, summary_uplift_t_stats = create_table_summary(df_uplift, val_cols, True)
 
-    writer = pd.ExcelWriter('results/test.xlsx', engine='xlsxwriter')
+    writer = pd.ExcelWriter(f'results/{filename_out_xlsx}_AB_test_results.xlsx', engine='xlsxwriter')
     format_worksheet(writer, 'Summary of daily average change', summary_uplift_mean)
     # format_worksheet(writer, 'summary_uplift_error', summary_uplift_error)
     # format_worksheet(writer, 'summary_uplift_t_stats', summary_uplift_t_stats,'#,##0')
@@ -246,8 +257,8 @@ def main_process_csv():
 
 if __name__ == "__main__":
 
-    #main()
+    main()
 
-    main_process_csv()
+    # main_process_csv()
 
     #main_data_explore()
