@@ -1,4 +1,4 @@
-#Ignore generated files
+# Ignore generated files
 __pycache__/
 **/__pycache__/
 *.py[cod]
@@ -10,3 +10,11 @@ __pycache__/
 .vscode/
 **/.DS_Store
 .DS_Store
+
+# IntelliJ IDEA Specific files (added based on your image)
+*.iml
+*.iws
+.idea/
+.idea/*
+.idea/inspectionProfiles/
+.idea/inspectionProfiles/*
