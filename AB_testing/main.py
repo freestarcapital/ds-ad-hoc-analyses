@@ -236,11 +236,11 @@ def main_process_csv():
     summary_uplift_mean, summary_uplift_error, summary_uplift_t_stats = create_table_summary(df_uplift, val_cols, True)
 
     writer = pd.ExcelWriter('results/test.xlsx', engine='xlsxwriter')
-    format_worksheet(writer, 'summary_uplift_mean', summary_uplift_mean)
-    format_worksheet(writer, 'summary_uplift_error', summary_uplift_error)
-    format_worksheet(writer, 'summary_uplift_t_stats', summary_uplift_t_stats,'#,##0')
-    format_worksheet(writer, 'summary_mean', summary_mean, None)
-    format_worksheet(writer, 'raw_data', df, None)
+    format_worksheet(writer, 'Summary of daily average values of uplift', summary_uplift_mean)
+    # format_worksheet(writer, 'summary_uplift_error', summary_uplift_error)
+    # format_worksheet(writer, 'summary_uplift_t_stats', summary_uplift_t_stats,'#,##0')
+    format_worksheet(writer, 'Summary of daily average values', summary_mean, None)
+    format_worksheet(writer, 'Raw data', df, None)
     writer.close()
 
 
