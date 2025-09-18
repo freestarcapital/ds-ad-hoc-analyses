@@ -198,13 +198,13 @@ def format_worksheet(writer, sheetname, df, cell_format_number_str='0%', max_col
 
     cell_range = f'B5:{chr(66 + len(df.columns) - 1)}{len(df) + 1}'
 
-    V = 5
-    v = np.append(np.arange(-V, 0), np.arange(1, V+1))
+    V = 4
+    v = np.append(np.arange(-V, 1), np.arange(0, V+1))
     boundaries = np.arange(len(v)+1) / len(v) * (max_color_highest_value - max_color_lowest_value) + max_color_lowest_value
     boundaries[0] = -1e6
     boundaries[-1] = 1e6
     for i, vi in enumerate(v):
-        #print(f'{int(abs(vi))}, {boundaries[i]} : {boundaries[i+1]}')
+        print(f'{int(abs(vi))}, {boundaries[i]} : {boundaries[i+1]}')
         cell_format = workbook.add_format()
         cell_format.set_bg_color(Color.theme(5 if vi < 0 else 6, int(abs(vi))))
         cell_format.set_locked(False)
