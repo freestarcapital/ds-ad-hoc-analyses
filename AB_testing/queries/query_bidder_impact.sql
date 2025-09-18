@@ -1,4 +1,4 @@
-create or replace table `streamamp-qa-239417.DAS_increment.bidder_impact_raw_{name}_{ddate}` as
+create or replace table `streamamp-qa-239417.{dataset_name}.bidder_impact_raw_{name}_{ddate}` as
 
 WITH device_class_cte AS (
    SELECT
@@ -80,13 +80,13 @@ select * from auc_end_w_bwr
 where date = '{ddate}';
 
 
-create or replace table `streamamp-qa-239417.DAS_increment.bidder_impact_raw_expanded_{name}_{ddate}` as
+create or replace table `streamamp-qa-239417.{dataset_name}.bidder_impact_raw_expanded_{name}_{ddate}` as
 
 with expanded AS (
        SELECT offset+1 bidder_position, * except (arr, offset)
        FROM (
                 SELECT SPLIT(fs_clientservermask, '') as arr, *
-                FROM `streamamp-qa-239417.DAS_increment.bidder_impact_raw_{name}_{ddate}`
+                FROM `streamamp-qa-239417.{dataset_name}.bidder_impact_raw_{name}_{ddate}`
             ) AS mask, mask.arr AS mask_value WITH OFFSET AS offset
 ),
 
@@ -107,7 +107,7 @@ bidder_raw_data as (
         session_id, fs_auction_id, placement_id,
         test_name_str, test_group,
         winning_bidder, 'ttd' bidder, impression, unfilled, revenue
-    FROM `streamamp-qa-239417.DAS_increment.bidder_impact_raw_{name}_{ddate}`
+    FROM `streamamp-qa-239417.{dataset_name}.bidder_impact_raw_{name}_{ddate}`
 ),
 
 brr as (
@@ -127,7 +127,7 @@ where date = '{ddate}';
 
 with test_requests as (
     select date, domain, test_name_str, approx_count_distinct(session_id) sessions_day_domain_test
-    from `streamamp-qa-239417.DAS_increment.bidder_impact_raw_{name}_{ddate}`
+    from `streamamp-qa-239417.{dataset_name}.bidder_impact_raw_{name}_{ddate}`
     group by 1, 2, 3
 ),
 
@@ -146,7 +146,7 @@ domain_test_group as (
         approx_count_distinct(distinct fs_auction_id || placement_id) auctions_domain_test_group,
         count(*) auctions_domain_test_group_2,
         countif(winning_bidder is not null) / count(*) prebid_win_rate_domain_test_group
-    from `streamamp-qa-239417.DAS_increment.bidder_impact_raw_{name}_{ddate}`
+    from `streamamp-qa-239417.{dataset_name}.bidder_impact_raw_{name}_{ddate}`
     join domain_primary_test using (date, domain, test_name_str)
     group by 1, 2, 3, 4
 ),
@@ -157,7 +157,7 @@ t1 as (
         max(if(winning_bidder is not null, 1, 0)) over(partition by fs_auction_id, placement_id) prebid_wins,
         countif(bidder_responded) over (partition by fs_auction_id, placement_id) >= 1 bidder_response_known,
         count(distinct if(bidder_responded, bidder, null)) over (partition by fs_auction_id, placement_id) count_of_bidder_responses
-    from `streamamp-qa-239417.DAS_increment.bidder_impact_raw_expanded_{name}_{ddate}`
+    from `streamamp-qa-239417.{dataset_name}.bidder_impact_raw_expanded_{name}_{ddate}`
     join domain_test_group using (date, domain, test_name_str, test_group)
 )
 
@@ -187,5 +187,5 @@ from t1
 group by 1, 2, 3, 4, 5;
 
 
-drop table `streamamp-qa-239417.DAS_increment.bidder_impact_raw_{name}_{ddate}`;
-drop table `streamamp-qa-239417.DAS_increment.bidder_impact_raw_expanded_{name}_{ddate}`;
+drop table `streamamp-qa-239417.{dataset_name}.bidder_impact_raw_{name}_{ddate}`;
+drop table `streamamp-qa-239417.{dataset_name}.bidder_impact_raw_expanded_{name}_{ddate}`;

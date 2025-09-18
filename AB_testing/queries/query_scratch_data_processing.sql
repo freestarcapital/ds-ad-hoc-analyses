@@ -2,12 +2,12 @@
 with
 tg0 as (
 select *
-from streamamp-qa-239417.DAS_increment.BI_AB_test_page_hits_results_transparent_floors
+from streamamp-qa-239417.{dataset_name}.BI_AB_test_page_hits_results_transparent_floors
 where test_group = 0
 ),
 tg1 as (
 select *
-from streamamp-qa-239417.DAS_increment.BI_AB_test_page_hits_results_transparent_floors
+from streamamp-qa-239417.{dataset_name}.BI_AB_test_page_hits_results_transparent_floors
 where test_group = 1
 ),
 
