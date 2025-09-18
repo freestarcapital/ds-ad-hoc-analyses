@@ -6,9 +6,9 @@ from google.cloud import bigquery_storage
 import os, sys
 import datetime as dt
 import pickle
-import plotly.express as px
-import kaleido
 import numpy as np
+import xlsxwriter
+from xlsxwriter.color import Color
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 1000)
@@ -155,7 +155,7 @@ def create_table_summary(df, val_cols, calculate_errors_and_t_stats=False):
     df_summary_mean_with_dates = add_date_cols(df_summary_mean, df, val_cols)
 
     if not calculate_errors_and_t_stats:
-        return df_summary_mean_with_dates
+        return df_summary_mean_with_dates.transpose()
 
     df_summary_std = df[['domain'] + val_cols].groupby(['domain']).agg('std')
 
@@ -168,7 +168,7 @@ def create_table_summary(df, val_cols, calculate_errors_and_t_stats=False):
     df_summary_t_stats = df_summary_mean / df_summary_mean_error
     df_summary_t_stats_with_dates = add_date_cols(df_summary_t_stats, df, val_cols)
 
-    return df_summary_mean_with_dates, df_summary_mean_error_with_dates, df_summary_t_stats_with_dates
+    return df_summary_mean_with_dates.transpose(), df_summary_mean_error_with_dates.transpose(), df_summary_t_stats_with_dates.transpose()
 
 def main_process_csv():
     query_filename = 'query_get_AB_test_results_for_csv'
@@ -189,11 +189,97 @@ def main_process_csv():
     summary_mean = create_table_summary(df, val_cols)
     summary_uplift_mean, summary_uplift_error, summary_uplift_t_stats = create_table_summary(df_uplift, val_cols, True)
 
-    df.to_csv('results/details.csv')
-    summary_mean.transpose().to_csv('results/summary_mean.csv')
-    summary_uplift_mean.transpose().to_csv('results/summary_uplift_mean.csv')
-    summary_uplift_error.transpose().to_csv('results/summary_uplift_error.csv')
-    summary_uplift_t_stats.transpose().to_csv('results/summary_uplift_t_stats.csv')
+    writer = pd.ExcelWriter('results/test.xlsx', engine='xlsxwriter')
+    summary_uplift_mean.to_excel(writer, sheet_name='summary_uplift_mean')
+    # summary_uplift_error.to_excel(writer, sheet_name='summary_uplift_error')
+    # summary_uplift_t_stats.to_excel(writer, sheet_name='summary_uplift_t_stats')
+    # summary_mean.to_excel(writer, sheet_name='summary_mean')
+    # df.to_excel(writer, sheet_name='raw_data')
+
+    workbook = writer.book
+    worksheet = writer.sheets['summary_uplift_mean']
+    worksheet.autofit()
+
+    cell_format_percent = workbook.add_format()
+    cell_format_percent.set_num_format('0%')
+
+    cell_range = f'B5:{chr(66 + len(summary_uplift_mean.columns) - 1)}{len(summary_uplift_mean) + 1}'
+
+    worksheet.conditional_format(cell_range, {'type': 'no_errors', 'format': cell_format_percent})
+
+    h1 = workbook.add_format()
+    h2 = workbook.add_format()
+    l1 = workbook.add_format()
+    l2 = workbook.add_format()
+
+    h2.set_font_color(Color((5, 4)))
+    h1.set_font_color(Color((5, 2)))
+    l2.set_font_color(Color((6, 4)))
+    l1.set_font_color(Color((6, 2)))
+
+    worksheet.conditional_format(
+        cell_range,
+        {
+            "type": "cell",
+            "criteria": "between",
+            "minimum": 0.30,
+            "maximum": 0.70,
+            "format": h1,
+        },
+    )
+
+    worksheet.conditional_format(
+        cell_range,
+        {
+            "type": "cell",
+            "criteria": "between",
+            "minimum": 0.70,
+            "maximum": 100,
+            "format": h2,
+        },
+    )
+
+    worksheet.conditional_format(
+        cell_range,
+        {
+            "type": "cell",
+            "criteria": "not between",
+            "minimum": -0.70,
+            "maximum": -0.30,
+            "format": l1,
+        },
+    )
+
+
+    worksheet.conditional_format(
+        cell_range,
+        {
+            "type": "cell",
+            "criteria": "not between",
+            "minimum": -100,
+            "maximum": -0.70,
+            "format": l2,
+        },
+    )
+    #
+    #
+    # cell_format.set_align('center')
+    # cell_format.set_align('vcenter')
+    #
+    # worksheet.set_row(0, 70)
+    #
+    # worksheet.write(0, 0, 'Some Text', cell_format)
+
+    writer.close()
+
+    # workbook = xlsxwriter.Workbook('results/test1.xlsx')
+    # worksheet = workbook.add_worksheet('summary_mean')
+
+    # df.to_csv('results/details.csv')
+    # summary_mean.transpose().to_csv('results/summary_mean.csv')
+    # summary_uplift_mean.transpose().to_csv('results/summary_uplift_mean.csv')
+    # summary_uplift_error.transpose().to_csv('results/summary_uplift_error.csv')
+    # summary_uplift_t_stats.transpose().to_csv('results/summary_uplift_t_stats.csv')
 
     h = 0
 
