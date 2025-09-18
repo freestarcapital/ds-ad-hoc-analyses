@@ -1,4 +1,4 @@
-create or replace table `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_all_sites_2025-08-20_explore` as
+create or replace table `streamamp-qa-239417.{dataset_name}.BI_AB_raw_page_hits_all_sites_2025-08-20_explore` as
 
 with
 
@@ -81,8 +81,8 @@ bwr_tests as (
     group by 1
 ),
 
-prebid__cte as (
-    select *
+bwr_test__cte as (
+    select * --, 'prebid' as inventory_platform
     from page_hits_cte
     left join auction_start_raw__test using (session_id)
     left join auction_end_raw__test using (session_id)
@@ -185,7 +185,7 @@ us_gam_dtf as (
         on l.Id = m.LineItemId and l.date = m.EventDateMST
     where m.EventDateMST = '2025-08-20'
         and fs_session_id is not null
-        and NOT (REGEXP_CONTAINS(l.Name, 'A9 ') or (LineItemID = 0) or (lineitemtype='HOUSE'))
+        and REGEXP_CONTAINS(l.Name, '{HB}') AND NOT REGEXP_CONTAINS(l.Name, 'blockthrough')
     group by 1
 
     union all
@@ -233,21 +233,10 @@ us_gam_dtf_cte as (
 ),
 
 full_session_data as (
-
-    select *,
-        case
-            when bwr_impressions is not null then 'bwr_avail'
-            when gam_NBF_impressions is not null then 'GAM_avail'
-            when aer_requests is not null then 'aer_avail'
-            when asr_requests is not null then 'asr_avail'
-            when (asr_requests is NULL) AND (aer_requests is NULL) AND (bwr_impressions is NULL) AND (gam_NBF_impressions is NULL) then 'nothing_avail'
-            else 'unknown'
-            end as data_status
-    from
-    prebid__cte
+    select * from
+    bwr_test__cte
     full outer join
-    us_gam_dtf_cte
-    using (session_id)
+    us_gam_dtf_cte using (session_id)
 )
 
 select
@@ -255,10 +244,7 @@ select
     aer_requests is not null as aer_data,
     bwr_impressions is not null as bwr_data,
     gam_NBF_impressions is not null as gam_data,
-    data_status,
-
-    count(*) sessions,
-
+    count(*) as sessions,
     sum(asr_requests) as asr_requests,
     sum(aer_requests) as aer_requests,
     sum(aer_unfilled) as aer_unfilled,
@@ -286,58 +272,10 @@ select
     sum(gam_NBF_revenue) as gam_NBF_revenue,
     sum(gam_prebid_impressions) as gam_prebid_impressions,
     sum(gam_prebid_unfilled) as gam_prebid_unfilled,
-    sum(gam_prebid_revenue) as gam_prebid_revenue,
-
-    CASE data_status
-        WHEN 'bwr_avail' THEN sum(coalesce(bwr_revenue, 0) + coalesce(gam_A9_revenue, 0) + coalesce(gam_NBF_revenue, 0))
-        WHEN 'GAM_avail' THEN sum(coalesce(gam_prebid_revenue, 0) + coalesce(gam_A9_revenue, 0) + coalesce(gam_NBF_revenue, 0))
-        ELSE 0
-        END as revenue,
-
-    CASE data_status
-        WHEN 'bwr_avail' THEN sum(coalesce(bwr_revenue, 0))
-        WHEN 'GAM_avail' THEN sum(coalesce(gam_prebid_revenue, 0))
-        ELSE 0
-        END as prebid_revenue,
-
-    CASE data_status
-        WHEN 'bwr_avail' THEN sum(coalesce(bwr_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0) - coalesce(gam_house_impressions, 0))
-        WHEN 'GAM_avail' THEN sum(coalesce(gam_prebid_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0) - coalesce(gam_house_impressions, 0))
-        WHEN 'aer_avail' THEN sum(coalesce(aer_requests, 0) - coalesce(aer_unfilled, 0))
-        ELSE 0
-        END as impressions,
-
-    CASE data_status
-        WHEN 'bwr_avail' THEN sum(coalesce(bwr_impressions, 0))
-        WHEN 'GAM_avail' THEN sum(coalesce(gam_prebid_impressions, 0))
-        WHEN 'aer_avail' THEN sum(coalesce(aer_requests, 0) - coalesce(aer_unfilled, 0))
-        ELSE 0
-        END as prebid_impressions,
-
-    CASE data_status
-        WHEN 'bwr_avail' THEN sum(coalesce(aer_unfilled, 0) + coalesce(gam_house_impressions, 0))
-        WHEN 'GAM_avail' THEN sum(coalesce(gam_LIID0_unfilled, 0) + coalesce(gam_house_impressions, 0))
-        WHEN 'aer_avail' THEN sum(coalesce(aer_unfilled, 0))
-        WHEN 'asr_avail' THEN sum(coalesce(asr_requests, 0))
-        ELSE 0
-        END as unfilled,
-
-    CASE data_status
-        WHEN 'bwr_avail' THEN sum(coalesce(bwr_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0) + coalesce(aer_unfilled, 0))
-        WHEN 'GAM_avail' THEN sum(coalesce(gam_prebid_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0) + coalesce(gam_LIID0_unfilled, 0))
-        WHEN 'aer_avail' THEN sum(coalesce(aer_requests, 0))
-        WHEN 'asr_avail' THEN sum(coalesce(asr_requests, 0))
-        ELSE 0
-        END as requests,
-
-    CASE data_status
-        WHEN 'unknown' THEN count(*)
-        ELSE 0
-        END as unknown_data_status_count
-
+    sum(gam_prebid_revenue) as gam_prebid_revenue
 from full_session_data
-group by 1, 2, 3, 4, 5;
+group by 1, 2, 3, 4;
 
 
-select * from `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_all_sites_2025-08-20_explore`
+select * from  `streamamp-qa-239417.{dataset_name}.BI_AB_raw_page_hits_all_sites_2025-08-20_explore`
 order by 1, 2, 3, 4

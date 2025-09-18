@@ -1,4 +1,4 @@
-create or replace table `streamamp-qa-239417.DAS_increment.BI_AB_raw_{name}_{ddate}` as
+create or replace table `streamamp-qa-239417.{dataset_name}.BI_AB_raw_{name}_{ddate}` as
 
 with
 
@@ -215,7 +215,7 @@ group by 1, 2, 3, 4;
 with domain_test_sessions as
 (
     select date, domain, test_name_str, sum(sessions) sessions 
-    from `streamamp-qa-239417.DAS_increment.BI_AB_raw_{name}_{ddate}`
+    from `streamamp-qa-239417.{dataset_name}.BI_AB_raw_{name}_{ddate}`
     group by 1, 2, 3
 ),
 
@@ -227,7 +227,7 @@ domain_primary_test as
 )
 
 select *
-from `streamamp-qa-239417.DAS_increment.BI_AB_raw_{name}_{ddate}`
+from `streamamp-qa-239417.{dataset_name}.BI_AB_raw_{name}_{ddate}`
 join domain_primary_test using (date, domain, test_name_str);
 
-drop table `streamamp-qa-239417.DAS_increment.BI_AB_raw_{name}_{ddate}`;
+drop table `streamamp-qa-239417.{dataset_name}.BI_AB_raw_{name}_{ddate}`;
