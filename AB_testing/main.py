@@ -93,8 +93,8 @@ def main_data_explore():
 
 def main():
     # QUERIES
-    #query_filename = 'query_BI_AB_test_page_hits'
-    query_filename = 'query_bidder_impact'
+    query_filename = 'query_BI_AB_test_page_hits'
+    #query_filename = 'query_bidder_impact'
 
     yesterday = dt.datetime.today().date() - dt.timedelta(days=1)
 
