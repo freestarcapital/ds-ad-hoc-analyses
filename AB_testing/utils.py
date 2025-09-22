@@ -11,7 +11,7 @@ import pickle
 
 bqstorageclient = bigquery_storage.BigQueryReadClient()
 
-# def get_data(query_filename, data_cache_filename=None, force_requery=False, repl_dict={}):
+# def get_data(query_filename, client, data_cache_filename=None, force_requery=False, repl_dict={}):
 #
 #     if data_cache_filename is None:
 #         data_cache_filename = query_filename
@@ -24,7 +24,7 @@ bqstorageclient = bigquery_storage.BigQueryReadClient()
 #         return df
 #
 #     query = open(os.path.join(sys.path[0], f"queries/{query_filename}.sql"), "r").read()
-#     df = get_bq_data(query, repl_dict)
+#     df = get_bq_data(query, client, repl_dict)
 #
 #     with open(data_cache_filename_full, 'wb') as f:
 #         pickle.dump(df, f)
@@ -116,11 +116,11 @@ def format_worksheet(writer, sheetname, df, cell_format_number_str='0.0%', max_c
     worksheet.autofit()
 
 
-def main_process_csv(tablename_results, filename_out_xlsx):
+def main_process_csv(tablename_results, filename_out_xlsx, client):
     query_filename = 'query_get_AB_test_results_for_csv'
     repl_dict = {'tablename': tablename_results}
     query = open(os.path.join(sys.path[0], f"queries/{query_filename}.sql"), "r").read()
-    df_raw = get_bq_data(query, repl_dict)
+    df_raw = get_bq_data(query, client, repl_dict)
 
     index_cols = ['domain', 'date', 'test_name']
     val_cols = [c for c in df_raw.columns if c not in index_cols + ['test_group']]

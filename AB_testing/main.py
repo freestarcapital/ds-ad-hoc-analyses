@@ -80,21 +80,47 @@ def main_process_data(query_filename, name, datelist, test_domains, force_recrea
         get_bq_data(query, client, repl_dict)
 
     if query_filename == 'query_BI_AB_test_page_hits':
-        main_process_csv(tablename, name)
+        main_process_csv(tablename, name, client)
 
 def main_data_explore():
+    date ='2025-08-20'
     query_filename = 'query_BI_AB_test_page_hits_data_explore'
-
     query = open(os.path.join(sys.path[0], f"queries/{query_filename}.sql"), "r").read()
+    get_bq_data(query, client, replacement_dict={'ddate': date})
+
+    query = f'select * from `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_all_sites_{date}_explore order by 1, 2, 3, 4;'
     df = get_bq_data(query, client)
     df.transpose().to_csv('AB_data_6.csv')
+
+def main_data_explore_date_range():
+    query_filename = 'query_BI_AB_test_page_hits_data_explore'
+    query = open(os.path.join(sys.path[0], f"queries/{query_filename}.sql"), "r").read()
+
+    tablename_out = 'streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_all_sites_explore'
+
+    datelist = pd.date_range(start=dt.date(2025, 8, 16), end=dt.date(2025, 8, 20))
+    first_row = True
+    for date in datelist.tolist():
+        date_str = date.strftime("%Y-%m-%d")
+        print(f'date: {date}, query_filename: {query_filename}')
+        get_bq_data(query, client, replacement_dict={'ddate': date_str})
+
+        tablename_in = f'streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_all_sites_{date_str}_explore'
+        create_or_insert_query = (f"delete from `{tablename_out}` where date='{date_str}'; "
+                                  f"insert into `{tablename_out}` ")
+        if first_row:
+            create_or_insert_query = f"CREATE OR REPLACE TABLE `{tablename_out}` as "
+        create_or_insert_query += f"select '{date_str}' date, * from `{tablename_in}`"
+        first_row = False
+        print(f'date: {date}, {create_or_insert_query}')
+        get_bq_data(create_or_insert_query, client)
 
 
 
 def main():
     # QUERIES
-    query_filename = 'query_BI_AB_test_page_hits'
-    #query_filename = 'query_bidder_impact'
+    #query_filename = 'query_BI_AB_test_page_hits'
+    query_filename = 'query_bidder_impact'
 
     yesterday = dt.datetime.today().date() - dt.timedelta(days=1)
 
@@ -146,6 +172,6 @@ if __name__ == "__main__":
 
     main()
 
-    #main_process_csv('streamamp-qa-239417.DAS_increment.BI_AB_test_page_hits_results_transparent_floors_sept_16_not_enforced', 'transparent_floors_sept_16_not_enforced')
+    #main_process_csv('streamamp-qa-239417.DAS_increment.BI_AB_test_page_hits_results_transparent_floors_sept_16_not_enforced', 'transparent_floors_sept_16_not_enforced', client)
 
-    #main_data_explore()
+    #main_data_explore_date_range()
