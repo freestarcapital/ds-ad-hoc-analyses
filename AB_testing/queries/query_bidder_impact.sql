@@ -159,33 +159,37 @@ t1 as (
         count(distinct if(bidder_responded, bidder, null)) over (partition by fs_auction_id, placement_id) count_of_bidder_responses
     from `streamamp-qa-239417.DAS_increment.bidder_impact_raw_expanded_{name}_{ddate}`
     join domain_test_group using (date, domain, test_name_str, test_group)
+),
+
+results as (
+    select domain, date, bidder, test_name_str, test_group,
+        safe_divide(countif(bidder_responded and bidder_response_known), countif(bidder_response_known)) bidder_participation_rate,
+        safe_divide(countif((winning_bidder is not null) and (winning_bidder = bidder)), count(*)) bidder_win_rate,
+        safe_divide(countif((winning_bidder is not null) and (winning_bidder = bidder)), countif(winning_bidder is not null)) bidder_prebid_win_rate,
+        avg(if(bidder_response_known, count_of_bidder_responses, null)) count_of_bidder_responses,
+        avg(if(bidder_response_known and bidder_responded, bid_cpm, null)) bidder_cpm_when_bids,
+        avg(if(bidder_response_known and bidder_responded and (winning_bidder = bidder), bid_cpm, null)) bidder_cpm_when_wins,
+        avg(if((winning_bidder is not null) and bidder_response_known, bid_pressure, null)) bidder_price_pressure_include_non_bids,
+        avg(if((winning_bidder is not null) and bidder_responded and bidder_response_known, bid_pressure, null)) bidder_price_pressure_bids,
+        avg(if((winning_bidder is not null) and bidder_responded and bidder_response_known and bidder = winning_bidder, bid_pressure, null)) bidder_price_pressure_wins,
+        avg(if(winning_bidder is not null and bidder_response_known, if(bid_pressure >= 0.8, 1, 0), null)) bidder_within_20perc_include_non_bids,
+        avg(if((winning_bidder is not null) and bidder_responded and bidder_response_known, if(bid_pressure >= 0.8, 1, 0), null)) bidder_within_20perc_bids,
+        avg(if(winning_bidder is not null and bidder_response_known, if(bid_pressure >= 0.5, 1, 0), null)) bidder_within_50perc_include_non_bids,
+        avg(if((winning_bidder is not null) and bidder_responded and bidder_response_known, if(bid_pressure >= 0.5, 1, 0), null)) bidder_within_50perc_bids,
+        avg(sessions_day_domain_test_group) sessions_day_domain_test_group,
+        avg(revenue_domain_test_group) revenue_domain_test_group,
+        avg(rps_domain_test_group) rps_domain_test_group,
+        avg(prebid_win_rate_domain_test_group) prebid_win_rate_domain_test_group,
+        avg(cpma_domain_test_group) cpma_domain_test_group,
+        avg(auctions_domain_test_group_2) auctions_domain_test_group_2,
+        avg(prebid_wins) prebid_wins,
+        avg(auctions_domain_test_group) auctions_domain_test_group
+    from t1
+    group by 1, 2, 3, 4, 5
 )
 
-select domain, date, bidder, test_name_str, test_group,
-    safe_divide(countif(bidder_responded and bidder_response_known), countif(bidder_response_known)) bidder_participation_rate,
-    safe_divide(countif((winning_bidder is not null) and (winning_bidder = bidder)), count(*)) bidder_win_rate,
-    safe_divide(countif((winning_bidder is not null) and (winning_bidder = bidder)), countif(winning_bidder is not null)) bidder_prebid_win_rate,
-    avg(if(bidder_response_known, count_of_bidder_responses, null)) count_of_bidder_responses,
-    avg(if(bidder_response_known and bidder_responded, bid_cpm, null)) bidder_cpm_when_bids,
-    avg(if(bidder_response_known and bidder_responded and (winning_bidder = bidder), bid_cpm, null)) bidder_cpm_when_wins,
-    avg(if((winning_bidder is not null) and bidder_response_known, bid_pressure, null)) bidder_price_pressure_include_non_bids,
-    avg(if((winning_bidder is not null) and bidder_responded and bidder_response_known, bid_pressure, null)) bidder_price_pressure_bids,
-    avg(if((winning_bidder is not null) and bidder_responded and bidder_response_known and bidder = winning_bidder, bid_pressure, null)) bidder_price_pressure_wins,
-    avg(if(winning_bidder is not null and bidder_response_known, if(bid_pressure >= 0.8, 1, 0), null)) bidder_within_20perc_include_non_bids,
-    avg(if((winning_bidder is not null) and bidder_responded and bidder_response_known, if(bid_pressure >= 0.8, 1, 0), null)) bidder_within_20perc_bids,
-    avg(if(winning_bidder is not null and bidder_response_known, if(bid_pressure >= 0.5, 1, 0), null)) bidder_within_50perc_include_non_bids,
-    avg(if((winning_bidder is not null) and bidder_responded and bidder_response_known, if(bid_pressure >= 0.5, 1, 0), null)) bidder_within_50perc_bids,
-    avg(sessions_day_domain_test_group) sessions_day_domain_test_group,
-    avg(revenue_domain_test_group) revenue_domain_test_group,
-    avg(rps_domain_test_group) rps_domain_test_group,
-    avg(prebid_win_rate_domain_test_group) prebid_win_rate_domain_test_group,
-    avg(cpma_domain_test_group) cpma_domain_test_group,
-    avg(auctions_domain_test_group_2) auctions_domain_test_group_2,
-    avg(prebid_wins) prebid_wins,
-    avg(auctions_domain_test_group) auctions_domain_test_group
-from t1
-group by 1, 2, 3, 4, 5;
-
+select '{name}' ab_test_name, *
+from results;
 
 drop table `streamamp-qa-239417.DAS_increment.bidder_impact_raw_{name}_{ddate}`;
 drop table `streamamp-qa-239417.DAS_increment.bidder_impact_raw_expanded_{name}_{ddate}`;

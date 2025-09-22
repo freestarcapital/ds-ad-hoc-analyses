@@ -394,7 +394,7 @@ domain_primary_test as
        and (safe_divide(sum(sessions_gam_data) over (partition by domain, date), sum(sessions) over (partition by domain, date)) > 0.5)
 )
 
-select *
+select '{name}' ab_test_name, *
 from `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}`
 join domain_primary_test using (date, domain, test_name_str);
 
