@@ -1,4 +1,4 @@
-create or replace table `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}` as
+create or replace table `streamamp-qa-239417.DAS_increment.FI_AB_test_performance_raw_data_{name}_{ddate}` as
 
 with
 
@@ -228,6 +228,8 @@ us_gam_dtf as (
 
     union all
 
+    --if we want to break NBF data into AdSense, AdX and Open Bidding then we need to use the product field
+    --CASE WHEN Product = 'AdSense' THEN 'Google AdSense' WHEN Product = 'Ad Exchange' THEN 'Google Ad Exchange' WHEN Product = 'Exchange Bidding' THEN 'Open Bidding' ELSE product END advertiser,
     select
         AdUnitId as adunit_id,
         fs_session_id as session_id,
@@ -382,7 +384,7 @@ group by 1, 2, 3, 4;
 with domain_test_sessions as
 (
     select date, domain, test_name_str, sum(sessions) sessions, sum(sessions_gam_data) sessions_gam_data
-    from `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}`
+    from `streamamp-qa-239417.DAS_increment.FI_AB_test_performance_raw_data_{name}_{ddate}`
     group by 1, 2, 3
 ),
 
@@ -390,12 +392,24 @@ domain_primary_test as
 (
     select date, domain, test_name_str
     from domain_test_sessions
-    qualify (sessions = max(sessions) over(partition by domain, date))
-       and (safe_divide(sum(sessions_gam_data) over (partition by domain, date), sum(sessions) over (partition by domain, date)) > 0.5)
+    qualify sessions = max(sessions) over(partition by domain, date)
+),
+
+results as (
+    select '{name}' ab_test_name, *,
+        asr_requests requests_auction_start,
+        bwr_native_render_revenue prebid_native_render_revenue,
+        bwr_native_render_impressions prebid_native_render_impressions,
+        prebid_revenue - bwr_native_render_revenue prebid_non_native_render_revenue,
+        prebid_impressions - bwr_native_render_impressions prebid_non_native_render_impressions,
+        safe_divide(sum(sessions_gam_data) over (partition by domain, date), sum(sessions) over (partition by domain, date)) > 0.5 has_GAM_data,
+        (countif(sessions >= {minimum_sessions}) over (partition by date, domain, test_name_str) = 2) and (test_name_str != 'null') test_running
+    from `streamamp-qa-239417.DAS_increment.FI_AB_test_performance_raw_data_{name}_{ddate}`
+    join domain_primary_test using (date, domain, test_name_str)
 )
 
-select '{name}' ab_test_name, *
-from `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}`
-join domain_primary_test using (date, domain, test_name_str);
+select *
+from results;
 
-drop table `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_{name}_{ddate}`;
+
+drop table `streamamp-qa-239417.DAS_increment.FI_AB_test_performance_raw_data_{name}_{ddate}`;

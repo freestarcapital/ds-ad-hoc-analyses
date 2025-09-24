@@ -1,4 +1,4 @@
-create or replace table `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_all_sites_{ddate}_explore` as
+create or replace table `streamamp-qa-239417.DAS_increment.FI_AB_test_performance_raw_data_all_sites_{ddate}_explore` as
 
 with
 

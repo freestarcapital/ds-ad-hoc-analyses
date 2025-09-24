@@ -188,7 +188,8 @@ results as (
     group by 1, 2, 3, 4, 5
 )
 
-select '{name}' ab_test_name, *
+select '{name}' ab_test_name, *,
+    (countif(sessions >= {minimum_sessions}) over (partition by date, domain, test_name_str) = 2) and (test_name_str != 'null') test_running
 from results;
 
 drop table `streamamp-qa-239417.DAS_increment.bidder_impact_raw_{name}_{ddate}`;

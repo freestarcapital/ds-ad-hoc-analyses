@@ -18,7 +18,7 @@ client = bigquery.Client(project=project_id)
 
 
 def get_domains_from_collection_ids(collection_ids, datelist):
-    min_page_hits = 10000
+    min_page_hits = 5000
 
     start_date = datelist[0]
     end_date = datelist[-1] + dt.timedelta(days=1)
@@ -54,11 +54,9 @@ def does_table_exist(tablename):
 
 
 
-def main_process_data(query_filename, name, datelist, test_domains, force_recreate_table=False):
-    #tablename = f"{project_id}.{dataset_name}.{query_filename.replace('query_', '')}_results_{name}"
+def main_process_data(query_filename, name, datelist, test_domains, minimum_sessions=2000, force_recreate_table=False):
 
     tablename = f"{project_id}.{dataset_name}.{query_filename.replace('query_', '')}_results"
-
     first_row = force_recreate_table or (not does_table_exist(tablename))
 
     domain_list = f"('{"', '".join(test_domains)}')"
@@ -76,27 +74,25 @@ def main_process_data(query_filename, name, datelist, test_domains, force_recrea
         repl_dict = {'ddate': date.strftime("%Y-%m-%d"),
                      'create_or_insert_statement': create_or_insert_statement,
                      'domain_list': domain_list,
-                     'name': name}
+                     'name': name,
+                     'minimum_sessions': minimum_sessions}
         get_bq_data(query, client, repl_dict)
-
-    if query_filename == 'query_BI_AB_test_page_hits':
-        main_process_csv(tablename, name, client)
 
 def main_data_explore():
     date ='2025-08-20'
-    query_filename = 'query_BI_AB_test_page_hits_data_explore'
+    query_filename = 'query_FI_AB_test_performance_data_explore'
     query = open(os.path.join(sys.path[0], f"queries/{query_filename}.sql"), "r").read()
     get_bq_data(query, client, replacement_dict={'ddate': date})
 
-    query = f'select * from `streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_all_sites_{date}_explore order by 1, 2, 3, 4;'
+    query = f'select * from `streamamp-qa-239417.DAS_increment.FI_AB_test_performance_raw_data_all_sites_{date}_explore order by 1, 2, 3, 4;'
     df = get_bq_data(query, client)
     df.transpose().to_csv('AB_data_6.csv')
 
 def main_data_explore_date_range():
-    query_filename = 'query_BI_AB_test_page_hits_data_explore'
+    query_filename = 'query_FI_AB_test_performance_data_explore'
     query = open(os.path.join(sys.path[0], f"queries/{query_filename}.sql"), "r").read()
 
-    tablename_out = 'streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_all_sites_explore'
+    tablename_out = 'streamamp-qa-239417.DAS_increment.FI_AB_test_performance_raw_data_all_sites_explore'
 
     datelist = pd.date_range(start=dt.date(2025, 8, 16), end=dt.date(2025, 8, 20))
     first_row = True
@@ -105,7 +101,7 @@ def main_data_explore_date_range():
         print(f'date: {date}, query_filename: {query_filename}')
         get_bq_data(query, client, replacement_dict={'ddate': date_str})
 
-        tablename_in = f'streamamp-qa-239417.DAS_increment.BI_AB_raw_page_hits_all_sites_{date_str}_explore'
+        tablename_in = f'streamamp-qa-239417.DAS_increment.FI_AB_test_performance_raw_data_all_sites_{date_str}_explore'
         create_or_insert_query = (f"delete from `{tablename_out}` where date='{date_str}'; "
                                   f"insert into `{tablename_out}` ")
         if first_row:
@@ -119,30 +115,14 @@ def main_data_explore_date_range():
 
 def main():
     # QUERIES
-    #query_filename = 'query_BI_AB_test_page_hits'
-    query_filename = 'query_bidder_impact'
+    query_filename = 'query_FI_AB_test_performance'
+    #query_filename = 'query_bidder_impact'
+
+    tablename = f"{project_id}.{dataset_name}.{query_filename.replace('query_', '')}_results"
+    main_process_csv(tablename, query_filename, client)
+    return
 
     yesterday = dt.datetime.today().date() - dt.timedelta(days=1)
-
-    #TRANSPARENT FLOORS original sites
-    name = 'transparent_floors_first_test_not_enforced'
-    datelist = pd.date_range(start=dt.date(2025, 8, 16), end=yesterday)
-    test_domains = [
-        'baseball-reference.com',
-        'deepai.org',
-        'adsbexchange.com'
-    ]
-    main_process_data(query_filename, name, datelist, test_domains)
-
-    name = 'transparent_floors_first_test_enforced'
-    datelist = pd.date_range(start=dt.date(2025, 8, 16), end=yesterday)
-    test_domains = [
-        'pro-football-reference.com',
-        'signupgenius.com',
-        'worldofsolitaire.com',
-        'deckshop.pro'
-    ]
-    main_process_data(query_filename, name, datelist, test_domains)
 
     # TRANSPARENT FLOORS larger test enforced
     name = 'transparent_floors_sept_16_enforced'
@@ -156,22 +136,43 @@ def main():
     test_domains = get_domains_from_collection_ids(['b2df7b52-27dc-409d-9876-0d945bad6f6e'], datelist)  # not enforced
     main_process_data(query_filename, name, datelist, test_domains)
 
-    # TIMEOUTS
-    name = 'timeouts'
-    datelist = pd.date_range(start=dt.date(2025,8,26), end=dt.date(2025,9,15))
-    test_domains = get_domains_from_collection_ids(['9c42ef7c-2115-4da9-8a22-bd9c36cdb8b4', '5b60cd25-34e3-4f29-b217-aba2452e89a5'], datelist)
-    main_process_data(query_filename, name, datelist, test_domains)
+    # #TRANSPARENT FLOORS original sites
+    # name = 'transparent_floors_first_test_not_enforced'
+    # datelist = pd.date_range(start=dt.date(2025, 8, 16), end=yesterday)
+    # test_domains = [
+    #     'baseball-reference.com',
+    #     'deepai.org',
+    #     'adsbexchange.com'
+    # ]
+    # main_process_data(query_filename, name, datelist, test_domains)
+    #
+    # name = 'transparent_floors_first_test_enforced'
+    # datelist = pd.date_range(start=dt.date(2025, 8, 16), end=yesterday)
+    # test_domains = [
+    #     'pro-football-reference.com',
+    #     'signupgenius.com',
+    #     'worldofsolitaire.com',
+    #     'deckshop.pro'
+    # ]
+    # main_process_data(query_filename, name, datelist, test_domains)
 
-    name = 'timeouts_sept11'
-    datelist = pd.date_range(start=dt.date(2025, 9, 11), end=yesterday)
-    test_domains = get_domains_from_collection_ids(['5b60cd25-34e3-4f29-b217-aba2452e89a5'], datelist)
-    main_process_data(query_filename, name, datelist, test_domains)
+    # # TIMEOUTS
+    # name = 'timeouts'
+    # datelist = pd.date_range(start=dt.date(2025,8,26), end=dt.date(2025,9,15))
+    # test_domains = get_domains_from_collection_ids(['9c42ef7c-2115-4da9-8a22-bd9c36cdb8b4', '5b60cd25-34e3-4f29-b217-aba2452e89a5'], datelist)
+    # main_process_data(query_filename, name, datelist, test_domains)
+    #
+    # name = 'timeouts_sept11'
+    # datelist = pd.date_range(start=dt.date(2025, 9, 11), end=yesterday)
+    # test_domains = get_domains_from_collection_ids(['5b60cd25-34e3-4f29-b217-aba2452e89a5'], datelist)
+    # main_process_data(query_filename, name, datelist, test_domains)
+
+    tablename = f"{project_id}.{dataset_name}.{query_filename.replace('query_', '')}_results"
+    main_process_csv(tablename, query_filename, client)
 
 
 if __name__ == "__main__":
 
     main()
-
-    #main_process_csv('streamamp-qa-239417.DAS_increment.BI_AB_test_page_hits_results_transparent_floors_sept_16_not_enforced', 'transparent_floors_sept_16_not_enforced', client)
 
     #main_data_explore_date_range()

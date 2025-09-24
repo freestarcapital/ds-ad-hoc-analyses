@@ -1,17 +1,5 @@
-with alias_cols as (
-    select *,
-        asr_requests requests_auction_start,
-        bwr_native_render_revenue prebid_native_render_revenue,
-        bwr_native_render_impressions prebid_native_render_impressions,
-        prebid_revenue - bwr_native_render_revenue prebid_non_native_render_revenue,
-        prebid_impressions - bwr_native_render_impressions prebid_non_native_render_impressions,
-    from `{tablename}`
-    where test_name_str != 'null' and sessions >= 10000
-    qualify (count(*) over (partition by date, domain, test_name_str) = 2)
-        and (safe_divide(sum(sessions_gam_data) over (partition by domain, date), sum(sessions) over (partition by domain, date)) > 0.5)
-)
 select
-    date, domain, test_name_str test_name, test_group,
+    ab_test_name, date, domain, test_group,
     sessions,
     safe_divide(sessions_asr_data, sessions) session_prop_asr_data,
     safe_divide(sessions_aer_data, sessions) session_prop_aer_data,
@@ -43,6 +31,6 @@ select
     safe_divide(impressions - prebid_native_render_impressions, requests) fill_rate_excluding_prebid_native_render,
     safe_divide(revenue, requests) * 1000 CPMA,
     safe_divide(revenue, requests_auction_start) * 1000 CPMA_auction_start
-from alias_cols
-
-order by domain, date, test_name, test_group
+from `{tablename}`
+where test_running and has_GAM_data
+order by ab_test_name, domain, date, test_group
