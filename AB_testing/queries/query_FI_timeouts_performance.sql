@@ -1,45 +1,68 @@
-create or replace table `streamamp-qa-239417.DAS_increment.FI_AB_test_performance_raw_data_{name}_{ddate}` as
+create or replace table `streamamp-qa-239417.DAS_increment.FI_timeouts_performance_raw_data_{ddate}` as
 
 with
 
 auction_end_raw as
 (
-    select * except (test_name), coalesce(test_name, 'null') test_name_str
-    from `freestar-157323.prod_eventstream.auction_end_raw`
+    select *,
+        (SELECT REGEXP_EXTRACT(kvps, "fs_testgroup=(.*)") FROM UNNEST(t1.kvps) kvps WHERE kvps LIKE "%fs_testgroup=%" LIMIT 1) AS fs_testgroup
+    from `freestar-157323.prod_eventstream.auction_end_raw` t1
     where _PARTITIONDATE >= date_sub('{ddate}', interval 1 day)
         and _PARTITIONDATE <= date_add('{ddate}', interval 1 day)
         and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) = '{ddate}'
-        and NET.REG_DOMAIN(page_url) in {domain_list}
+        AND (
+            SELECT COUNT(1)
+            FROM UNNEST(t1.kvps) kvpss
+            WHERE
+--                kvpss like "fs_testgroup=%"
+                kvpss in ("fs_testgroup=optimised", "fs_testgroup=optimised-static-timeout-1502", "fs_testgroup=optimised-static-timeout-3002")
+                --OR kvpss LIKE "fs_clientservermask=%"
+        ) = 1
 ),
 
 auction_start_raw as
 (
-    select * except (test_name), coalesce(test_name, 'null') test_name_str
-    from `freestar-157323.prod_eventstream.auction_start_raw`
+    select *,
+        (SELECT REGEXP_EXTRACT(kvps, "fs_testgroup=(.*)") FROM UNNEST(t1.kvps) kvps WHERE kvps LIKE "%fs_testgroup=%" LIMIT 1) AS fs_testgroup
+    from `freestar-157323.prod_eventstream.auction_start_raw` t1
     where _PARTITIONDATE >= date_sub('{ddate}', interval 1 day)
         and _PARTITIONDATE <= date_add('{ddate}', interval 1 day)
         and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) = '{ddate}'
-        and NET.REG_DOMAIN(page_url) in {domain_list}
+        AND (
+            SELECT COUNT(1)
+            FROM UNNEST(t1.kvps) kvpss
+            WHERE
+--                kvpss like "fs_testgroup=%"
+                kvpss in ("fs_testgroup=optimised", "fs_testgroup=optimised-static-timeout-1502", "fs_testgroup=optimised-static-timeout-3002")
+                --OR kvpss LIKE "fs_clientservermask=%"
+        ) = 1
 ),
 
 pagehits_raw as
 (
-    select * except (test_name), coalesce(test_name, 'null') test_name_str
-    from `freestar-157323.prod_eventstream.pagehits_raw`
+    select *
+    from `freestar-157323.prod_eventstream.pagehits_raw` t1
     where _PARTITIONDATE >= date_sub('{ddate}', interval 1 day)
         and _PARTITIONDATE <= date_add('{ddate}', interval 1 day)
         and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) = '{ddate}'
-        and NET.REG_DOMAIN(page_url) in {domain_list}
 ),
 
 bidswon_raw as
 (
-    select * except (test_name), coalesce(test_name, 'null') test_name_str
-    from `freestar-157323.prod_eventstream.bidswon_raw`
+    select *,
+        (SELECT REGEXP_EXTRACT(kvps, "fs_testgroup=(.*)") FROM UNNEST(t1.kvps) kvps WHERE kvps LIKE "%fs_testgroup=%" LIMIT 1) AS fs_testgroup
+    from `freestar-157323.prod_eventstream.bidswon_raw` t1
     where _PARTITIONDATE >= date_sub('{ddate}', interval 1 day)
         and _PARTITIONDATE <= date_add('{ddate}', interval 1 day)
         and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) = '{ddate}'
-        and NET.REG_DOMAIN(page_url) in {domain_list}
+        AND (
+            SELECT COUNT(1)
+            FROM UNNEST(t1.kvps) kvpss
+            WHERE
+--                kvpss like "fs_testgroup=%"
+                kvpss in ("fs_testgroup=optimised", "fs_testgroup=optimised-static-timeout-1502", "fs_testgroup=optimised-static-timeout-3002")
+                --OR kvpss LIKE "fs_clientservermask=%"
+        ) = 1
 ),
 
 site_id_to_domain_mapping as
@@ -58,20 +81,16 @@ site_id_to_domain_mapping as
 
 page_hits_cte as
 (
-    select distinct 
+    select distinct
         NET.REG_DOMAIN(page_url) AS domain,
-        test_name_str,
-        test_group,
         session_id
     from pagehits_raw
-    qualify count(distinct test_group) over(partition by test_name_str, session_id) = 1
 ),
 
 auction_end_raw__test as (
     select
         NET.REG_DOMAIN(page_url) AS domain,
-        test_name_str,
-        test_group,
+        fs_testgroup,
         session_id,
         count(*) as aer_requests,
         countif(unfilled) aer_unfilled,
@@ -82,28 +101,26 @@ auction_end_raw__test as (
         countif(is_native_render) aer_native_render_requests,
         countif(is_gam_bypass) aer_gam_bypass_requests
     from auction_end_raw
-    group by 1, 2, 3, 4
-    qualify count(distinct test_group) over(partition by test_name_str, session_id) = 1
+    group by 1, 2, 3
+    qualify count(distinct fs_testgroup) over(partition by session_id) = 1
 ),
 
 auction_start_raw__test as (
     select
         NET.REG_DOMAIN(page_url) AS domain,
-        test_name_str,
-        test_group,
+        fs_testgroup,
         session_id,
         count(*) as asr_requests
     from auction_start_raw
-    group by 1, 2, 3, 4
-    qualify count(distinct test_group) over(partition by test_name_str, session_id) = 1
+    group by 1, 2, 3
+    qualify count(distinct fs_testgroup) over(partition by session_id) = 1
 ),
 
 -- prebid only tests
 bwr_tests as (
     select
         NET.REG_DOMAIN(page_url) AS domain,
-        test_name_str,
-        test_group,
+        fs_testgroup,
         session_id,
         sum(cpm / 1e7) as bwr_revenue,
         sum(if(is_native_render, cpm / 1e7, 0)) as bwr_native_render_revenue,
@@ -112,21 +129,22 @@ bwr_tests as (
         countif(is_native_render) bwr_native_render_impressions,
         countif(is_gam_bypass) bwr_gam_bypass_impressions
     from bidswon_raw
-    group by 1, 2, 3, 4
+    group by 1, 2, 3
 ),
 
 prebid__cte as (
     select *
     from page_hits_cte
-    left join auction_start_raw__test using (domain, test_name_str, test_group, session_id)
-    left join auction_end_raw__test using (domain, test_name_str, test_group, session_id)
-    left join bwr_tests using (domain, test_name_str, test_group, session_id)
+    left join auction_start_raw__test using (domain, session_id)
+    left join auction_end_raw__test using (domain, fs_testgroup, session_id)
+    left join bwr_tests using (domain, fs_testgroup, session_id)
 ),
 
 -- US GAM tests only (for A9/amazon, AdX, EBDA requests only) using dtf
 us_gam_dtf as (
 
     select
+        fs_testgroup,
         AdUnitId as adunit_id,
         fs_session_id as session_id,
         sum(impression) as gam_house_impressions, -- reported as impression, but really unfilled because house -- maybe even separate 'house_impression'
@@ -148,11 +166,13 @@ us_gam_dtf as (
     where m.EventDateMST = '{ddate}'
         and fs_session_id is not null
         and lineitemtype = 'HOUSE'
-    group by 1, 2
+        and fs_testgroup in ("optimised", "optimised-static-timeout-1502", "optimised-static-timeout-3002")
+    group by 1, 2, 3
 
     union all
 
     select
+        fs_testgroup,
         AdUnitId as adunit_id,
         fs_session_id as session_id,
         0 as gam_house_impressions,
@@ -172,11 +192,13 @@ us_gam_dtf as (
     where m.EventDateMST = '{ddate}'
         and fs_session_id is not null
         and (LineItemID = 0)
-    group by 1, 2
+        and fs_testgroup in ("optimised", "optimised-static-timeout-1502", "optimised-static-timeout-3002")
+    group by 1, 2, 3
 
     union all
 
     select
+        fs_testgroup,
         AdUnitId as adunit_id,
         fs_session_id as session_id,
         0 as gam_house_impressions,
@@ -198,11 +220,13 @@ us_gam_dtf as (
     where m.EventDateMST = '{ddate}'
         and fs_session_id is not null
         and REGEXP_CONTAINS(l.Name, 'A9 ')
-    group by 1, 2
+        and fs_testgroup in ("optimised", "optimised-static-timeout-1502", "optimised-static-timeout-3002")
+    group by 1, 2, 3
 
     union all
 
     select
+        fs_testgroup,
         AdUnitId as adunit_id,
         fs_session_id as session_id,
         0 as gam_house_impressions,
@@ -224,13 +248,15 @@ us_gam_dtf as (
     where m.EventDateMST = '{ddate}'
         and fs_session_id is not null
         and NOT (REGEXP_CONTAINS(l.Name, 'A9 ') or (LineItemID = 0) or (lineitemtype='HOUSE'))
-    group by 1, 2
+        and fs_testgroup in ("optimised", "optimised-static-timeout-1502", "optimised-static-timeout-3002")
+    group by 1, 2, 3
 
     union all
 
     --if we want to break NBF data into AdSense, AdX and Open Bidding then we need to use the product field
     --CASE WHEN Product = 'AdSense' THEN 'Google AdSense' WHEN Product = 'Ad Exchange' THEN 'Google Ad Exchange' WHEN Product = 'Exchange Bidding' THEN 'Open Bidding' ELSE product END advertiser,
     select
+        fs_testgroup,
         AdUnitId as adunit_id,
         fs_session_id as session_id,
         0 as gam_house_impressions,
@@ -248,16 +274,16 @@ us_gam_dtf as (
         0 as gam_prebid_revenue
     from `freestar-prod.data_transfer.NetworkBackfillImpressions`
     where EventDateMST = '{ddate}'
-    group by 1, 2
+        and fs_testgroup in ("optimised", "optimised-static-timeout-1502", "optimised-static-timeout-3002")
+    group by 1, 2, 3
 ),
 
 -- getting site_id from uk and us gam mapping table - null site_id are AMP/APP
 -- note: same session can be seen across many different ad units
 us_gam_dtf_cte as (
     select
+        fs_testgroup,
         dm.domain,
-        aer.test_name_str,
-        aer.test_group,
         m.session_id,
         sum(gam_house_impressions) as gam_house_impressions,
         sum(gam_LIID0_impressions) as gam_LIID0_impressions,
@@ -277,11 +303,9 @@ us_gam_dtf_cte as (
         on a.Id = m.adunit_id and a.date = '{ddate}'
     left join `freestar-prod.NDR_resources.gam_ad_units_map` am
         on am.ad_unit_name = (case when a.Name like '%jcpenney%' then 'jcpenney' else a.Name end)
-    join auction_end_raw__test aer
-        on aer.session_id = m.session_id
     join site_id_to_domain_mapping dm
         on am.site_id = dm.site_id
-    group by 1, 2, 3, 4
+    group by 1, 2, 3
 ),
 
 joined_session_data as (
@@ -298,7 +322,7 @@ joined_session_data as (
     prebid__cte
     full outer join
     us_gam_dtf_cte
-    using (domain, test_name_str, test_group, session_id)
+    using (domain, fs_testgroup, session_id)
 ),
 
 full_session_data as (
@@ -317,8 +341,8 @@ full_session_data as (
         END as prebid_revenue,
 
     CASE data_status
-        WHEN 'bwr_avail' THEN coalesce(bwr_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0)
-        WHEN 'GAM_avail' THEN coalesce(gam_prebid_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0)
+        WHEN 'bwr_avail' THEN coalesce(bwr_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0) - coalesce(gam_house_impressions, 0)
+        WHEN 'GAM_avail' THEN coalesce(gam_prebid_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0) - coalesce(gam_house_impressions, 0)
         WHEN 'aer_avail' THEN coalesce(aer_requests, 0) - coalesce(aer_unfilled, 0)
         ELSE 0
         END as impressions,
@@ -339,8 +363,8 @@ full_session_data as (
         END as unfilled,
 
     CASE data_status
-        WHEN 'bwr_avail' THEN coalesce(bwr_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0) + coalesce(aer_unfilled, 0) + coalesce(gam_house_impressions, 0)
-        WHEN 'GAM_avail' THEN coalesce(gam_prebid_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0) + coalesce(gam_LIID0_unfilled, 0) + coalesce(gam_house_impressions, 0)
+        WHEN 'bwr_avail' THEN coalesce(bwr_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0) + coalesce(aer_unfilled, 0)
+        WHEN 'GAM_avail' THEN coalesce(gam_prebid_impressions, 0) + coalesce(gam_A9_impressions, 0) + coalesce(gam_NBF_impressions, 0) + coalesce(gam_LIID0_unfilled, 0)
         WHEN 'aer_avail' THEN coalesce(aer_requests, 0)
         WHEN 'asr_avail' THEN coalesce(asr_requests, 0)
         ELSE 0
@@ -354,9 +378,7 @@ full_session_data as (
     from joined_session_data
 )
 
---select * from full_session_data;
-
-select '{ddate}' date, domain, test_name_str, test_group,
+select '{ddate}' date, domain, fs_testgroup,
     count(*) sessions,
     count(asr_requests) sessions_asr_data,
     count(aer_requests) sessions_aer_data,
@@ -379,39 +401,24 @@ select '{ddate}' date, domain, test_name_str, test_group,
     sum(coalesce(gam_house_impressions, 0)) gam_house_impressions
 
 from full_session_data
-group by 1, 2, 3, 4;
+group by 1, 2, 3;
 
 {create_or_insert_statement}
-
-with domain_test_sessions as
-(
-    select date, domain, test_name_str, sum(sessions) sessions, sum(sessions_gam_data) sessions_gam_data
-    from `streamamp-qa-239417.DAS_increment.FI_AB_test_performance_raw_data_{name}_{ddate}`
-    group by 1, 2, 3
-),
-
-domain_primary_test as
-(
-    select date, domain, test_name_str
-    from domain_test_sessions
-    qualify sessions = max(sessions) over(partition by domain, date)
-),
-
-results as (
-    select '{name}' ab_test_name, *,
-        asr_requests requests_auction_start,
-        bwr_native_render_revenue prebid_native_render_revenue,
-        bwr_native_render_impressions prebid_native_render_impressions,
-        prebid_revenue - bwr_native_render_revenue prebid_non_native_render_revenue,
-        prebid_impressions - bwr_native_render_impressions prebid_non_native_render_impressions,
-        safe_divide(sum(sessions_gam_data) over (partition by domain, date), sum(sessions) over (partition by domain, date)) > 0.5 has_GAM_data,
-        (countif(sessions >= {minimum_sessions}) over (partition by date, domain, test_name_str) = 2) and (test_name_str != 'null') test_running
-    from `streamamp-qa-239417.DAS_increment.FI_AB_test_performance_raw_data_{name}_{ddate}`
-    join domain_primary_test using (date, domain, test_name_str)
-)
-
 select *
-from results;
+from `streamamp-qa-239417.DAS_increment.FI_timeouts_performance_raw_data_{ddate}`
+where fs_testgroup is not null;
 
+-- from t1
+-- qualify countif(sessions > 10000) over (partition by domain) = 3
 
-drop table `streamamp-qa-239417.DAS_increment.FI_AB_test_performance_raw_data_{name}_{ddate}`;
+-- with t1 as (
+--   select domain, fs_testgroup, sum(revenue) revenue, sum(sessions) sessions, sum(revenue)/ sum(sessions) * 1000 rps
+--   from `streamamp-qa-239417.DAS_increment.FI_timeouts_performance_raw_data_{ddate}`;
+--   where fs_testgroup is not null
+--   group by 1, 2
+-- )
+-- select *
+-- from t1
+-- qualify countif(sessions > 10000) over (partition by domain) = 3
+
+--drop table `streamamp-qa-239417.DAS_increment.FI_timeouts_performance_raw_data_{ddate}`;
