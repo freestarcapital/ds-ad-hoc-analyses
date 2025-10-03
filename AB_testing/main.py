@@ -113,66 +113,67 @@ def main_data_explore_date_range():
 
 
 
-def main():
+def main(clean_db_and_backfill_data_from_the_beginning=False):
     # QUERIES
-    for query_filename in ['query_FI_AB_test_performance']:#, 'query_bidder_impact']:
+    for query_filename in ['query_FI_AB_test_performance', 'query_bidder_impact']:
 
         yesterday = dt.datetime.today().date() - dt.timedelta(days=1)
+        three_days_ago = dt.datetime.today().date() - dt.timedelta(days=3)
+        datelist = pd.date_range(start=three_days_ago, end=yesterday)
 
-        datelist = None#pd.date_range(start=dt.date(2025, 9, 23), end=yesterday)
+        if clean_db_and_backfill_data_from_the_beginning:
+            datelist = None
 
-        # datelist = pd.date_range(start=dt.date(2025, 9, 25), end=dt.date(2025, 9, 25))
-        # main_process_data(query_filename, 'test', datelist, ['10fastfingers.com'])
-
+        #datelist = None
 
         # TRANSPARENT FLOORS larger test enforced
         name = 'transparent_floors_sept_16_enforced'
         if datelist is None:
             datelist = pd.date_range(start=dt.date(2025, 9, 16), end=yesterday)
         test_domains = get_domains_from_collection_ids(['38622a20-b851-40d0-8c4a-ab2ab881fb0a'], datelist)  # enforced
-        main_process_data(query_filename, name, datelist, test_domains)
+        main_process_data(query_filename, name, datelist, test_domains, force_recreate_table=clean_db_and_backfill_data_from_the_beginning)
 
-        # #TRANSPARENT FLOORS larger test not enforced
+        # TRANSPARENT FLOORS larger test not enforced
         name = 'transparent_floors_sept_16_not_enforced'
         if datelist is None:
             datelist = pd.date_range(start=dt.date(2025, 9, 16), end=yesterday)
         test_domains = get_domains_from_collection_ids(['b2df7b52-27dc-409d-9876-0d945bad6f6e'], datelist)  # not enforced
-        main_process_data(query_filename, name, datelist, test_domains)
+        main_process_data(query_filename, name, datelist, test_domains, force_recreate_table=clean_db_and_backfill_data_from_the_beginning)
 
-        # #TRANSPARENT FLOORS original sites
-        # name = 'transparent_floors_first_test_not_enforced'
-        # if datelist is not None:
-        #     datelist = pd.date_range(start=dt.date(2025, 8, 16), end=yesterday)
-        # test_domains = [
-        #     'baseball-reference.com',
-        #     'deepai.org',
-        #     'adsbexchange.com'
-        # ]
-        # main_process_data(query_filename, name, datelist, test_domains)
-        #
-        # name = 'transparent_floors_first_test_enforced'
-        # if datelist is not None:
-        #     datelist = pd.date_range(start=dt.date(2025, 8, 16), end=yesterday)
-        # test_domains = [
-        #     'pro-football-reference.com',
-        #     'signupgenius.com',
-        #     'worldofsolitaire.com',
-        #     'deckshop.pro'
-        # ]
-        # main_process_data(query_filename, name, datelist, test_domains)
-        #
-        # # TIMEOUTS
-        # name = 'timeouts'
-        # if datelist is not None:
-        #     datelist = pd.date_range(start=dt.date(2025,8,26), end=dt.date(2025,9,15))
-        # test_domains = get_domains_from_collection_ids(['9c42ef7c-2115-4da9-8a22-bd9c36cdb8b4', '5b60cd25-34e3-4f29-b217-aba2452e89a5'], datelist)
-        # main_process_data(query_filename, name, datelist, test_domains)
-        #
-        # name = 'timeouts_sept11'
-        # if datelist is not None:
-        #     datelist = pd.date_range(start=dt.date(2025, 9, 11), end=yesterday)
-        # test_domains = get_domains_from_collection_ids(['5b60cd25-34e3-4f29-b217-aba2452e89a5'], datelist)
-        # main_process_data(query_filename, name, datelist, test_domains)
+        #TRANSPARENT FLOORS original sites
+        name = 'transparent_floors_first_test_not_enforced'
+        if datelist is None:
+            datelist = pd.date_range(start=dt.date(2025, 8, 16), end=yesterday)
+        test_domains = [
+            'baseball-reference.com',
+            'deepai.org',
+            'adsbexchange.com'
+        ]
+        main_process_data(query_filename, name, datelist, test_domains, force_recreate_table=clean_db_and_backfill_data_from_the_beginning)
+
+        name = 'transparent_floors_first_test_enforced'
+        if datelist is None:
+            datelist = pd.date_range(start=dt.date(2025, 8, 16), end=yesterday)
+        test_domains = [
+            'pro-football-reference.com',
+            'signupgenius.com',
+            'worldofsolitaire.com',
+            'deckshop.pro'
+        ]
+        main_process_data(query_filename, name, datelist, test_domains, force_recreate_table=clean_db_and_backfill_data_from_the_beginning)
+
+        # TIMEOUTS
+        name = 'timeouts'
+        if datelist is None:
+            datelist = pd.date_range(start=dt.date(2025,8,26), end=dt.date(2025,9,15))
+        test_domains = get_domains_from_collection_ids(['9c42ef7c-2115-4da9-8a22-bd9c36cdb8b4', '5b60cd25-34e3-4f29-b217-aba2452e89a5'], datelist)
+        main_process_data(query_filename, name, datelist, test_domains, force_recreate_table=clean_db_and_backfill_data_from_the_beginning)
+
+        name = 'timeouts_sept11'
+        if datelist is None:
+            datelist = pd.date_range(start=dt.date(2025, 9, 11), end=yesterday)
+        test_domains = get_domains_from_collection_ids(['5b60cd25-34e3-4f29-b217-aba2452e89a5'], datelist)
+        main_process_data(query_filename, name, datelist, test_domains, force_recreate_table=clean_db_and_backfill_data_from_the_beginning)
 
         tablename = f"{project_id}.{dataset_name}.{query_filename.replace('query_', '')}_results"
         main_process_csv(tablename, query_filename, client)
