@@ -6,3 +6,4 @@ where _PARTITIONDATE >= date_sub('{start_date}', interval 1 day)
     and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) <= '{end_date}'
     and test_name in {test_names_list}
 group by 1, 2
+having page_hits > {min_page_hits}
