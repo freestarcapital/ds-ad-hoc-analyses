@@ -14,10 +14,15 @@ auction_end_raw as
             SELECT COUNT(1)
             FROM UNNEST(t1.kvps) kvpss
             WHERE
---                kvpss like "fs_testgroup=%"
                 kvpss in ("fs_testgroup=optimised", "fs_testgroup=optimised-static-timeout-1502", "fs_testgroup=optimised-static-timeout-3002")
                 --OR kvpss LIKE "fs_clientservermask=%"
         ) = 1
+--         AND (
+--             SELECT COUNT(1)
+--             FROM UNNEST(t1.kvps) kvpss
+--             WHERE
+--                 kvpss = "fsrefresh=0"
+--         ) = 1
 ),
 
 auction_start_raw as
@@ -36,6 +41,12 @@ auction_start_raw as
                 kvpss in ("fs_testgroup=optimised", "fs_testgroup=optimised-static-timeout-1502", "fs_testgroup=optimised-static-timeout-3002")
                 --OR kvpss LIKE "fs_clientservermask=%"
         ) = 1
+--         AND (
+--             SELECT COUNT(1)
+--             FROM UNNEST(t1.kvps) kvpss
+--             WHERE
+--                 kvpss = "fsrefresh=0"
+--         ) = 1
 ),
 
 pagehits_raw as
@@ -63,6 +74,12 @@ bidswon_raw as
                 kvpss in ("fs_testgroup=optimised", "fs_testgroup=optimised-static-timeout-1502", "fs_testgroup=optimised-static-timeout-3002")
                 --OR kvpss LIKE "fs_clientservermask=%"
         ) = 1
+--         AND (
+--             SELECT COUNT(1)
+--             FROM UNNEST(t1.kvps) kvpss
+--             WHERE
+--                 kvpss = "fsrefresh=0"
+--         ) = 1
 ),
 
 site_id_to_domain_mapping as
@@ -167,6 +184,7 @@ us_gam_dtf as (
         and fs_session_id is not null
         and lineitemtype = 'HOUSE'
         and fs_testgroup in ("optimised", "optimised-static-timeout-1502", "optimised-static-timeout-3002")
+        --and fsrefresh = '0'
     group by 1, 2, 3
 
     union all
@@ -193,6 +211,7 @@ us_gam_dtf as (
         and fs_session_id is not null
         and (LineItemID = 0)
         and fs_testgroup in ("optimised", "optimised-static-timeout-1502", "optimised-static-timeout-3002")
+        --and fsrefresh = '0'
     group by 1, 2, 3
 
     union all
@@ -221,6 +240,7 @@ us_gam_dtf as (
         and fs_session_id is not null
         and REGEXP_CONTAINS(l.Name, 'A9 ')
         and fs_testgroup in ("optimised", "optimised-static-timeout-1502", "optimised-static-timeout-3002")
+        --and fsrefresh = '0'
     group by 1, 2, 3
 
     union all
@@ -249,6 +269,7 @@ us_gam_dtf as (
         and fs_session_id is not null
         and NOT (REGEXP_CONTAINS(l.Name, 'A9 ') or (LineItemID = 0) or (lineitemtype='HOUSE'))
         and fs_testgroup in ("optimised", "optimised-static-timeout-1502", "optimised-static-timeout-3002")
+        --and fsrefresh = '0'
     group by 1, 2, 3
 
     union all
@@ -275,6 +296,7 @@ us_gam_dtf as (
     from `freestar-prod.data_transfer.NetworkBackfillImpressions`
     where EventDateMST = '{ddate}'
         and fs_testgroup in ("optimised", "optimised-static-timeout-1502", "optimised-static-timeout-3002")
+        --and fsrefresh = '0'
     group by 1, 2, 3
 ),
 

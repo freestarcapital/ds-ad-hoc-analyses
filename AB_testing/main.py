@@ -130,12 +130,12 @@ def main(clean_db_and_backfill_data_from_the_beginning=False):
 
         datelist = None
 
-        # Gamera Test
-        name = 'gamera'
-        if datelist is None:
-            datelist = pd.date_range(start=dt.date(2025, 9, 23), end=yesterday)
-        test_domains = get_domains_from_test_names(['ef66fdaa-469a-407c-909b-d451e8815dbd'], datelist)  # enforced
-        main_process_data(query_filename, name, datelist, test_domains, force_recreate_table=clean_db_and_backfill_data_from_the_beginning)
+        # # Gamera Test
+        # name = 'gamera'
+        # if datelist is None:
+        #     datelist = pd.date_range(start=dt.date(2025, 9, 23), end=yesterday)
+        # test_domains = get_domains_from_test_names(['ef66fdaa-469a-407c-909b-d451e8815dbd'], datelist)  # enforced
+        # main_process_data(query_filename, name, datelist, test_domains, force_recreate_table=clean_db_and_backfill_data_from_the_beginning)
 
         # # TRANSPARENT FLOORS larger test enforced
         # name = 'transparent_floors_sept_16_enforced'
@@ -172,32 +172,41 @@ def main(clean_db_and_backfill_data_from_the_beginning=False):
         #     'deckshop.pro'
         # ]
         # main_process_data(query_filename, name, datelist, test_domains, force_recreate_table=clean_db_and_backfill_data_from_the_beginning)
-        #
+
         # # TIMEOUTS
-        # name = 'timeouts'
-        # if datelist is None:
-        #     datelist = pd.date_range(start=dt.date(2025,8,26), end=dt.date(2025,9,15))
-        # test_domains = get_domains_from_collection_ids(['9c42ef7c-2115-4da9-8a22-bd9c36cdb8b4', '5b60cd25-34e3-4f29-b217-aba2452e89a5'], datelist)
-        # main_process_data(query_filename, name, datelist, test_domains, force_recreate_table=clean_db_and_backfill_data_from_the_beginning)
-        #
-        # name = 'timeouts_sept11'
-        # if datelist is None:
-        #     datelist = pd.date_range(start=dt.date(2025, 9, 11), end=yesterday)
-        # test_domains = get_domains_from_collection_ids(['5b60cd25-34e3-4f29-b217-aba2452e89a5'], datelist)
-        # main_process_data(query_filename, name, datelist, test_domains, force_recreate_table=clean_db_and_backfill_data_from_the_beginning)
+        name = 'timeouts_sept11'
+        if datelist is None:
+            datelist = pd.date_range(start=dt.date(2025, 9, 11), end=dt.date(2025,9,18))
+        test_domains = get_domains_from_collection_ids(['5b60cd25-34e3-4f29-b217-aba2452e89a5'], datelist)
+        main_process_data(query_filename, name, datelist, test_domains, force_recreate_table=clean_db_and_backfill_data_from_the_beginning)
+
+        name = 'timeouts_original'
+        if datelist is None:
+            datelist = pd.date_range(start=dt.date(2025,8,26), end=dt.date(2025,9,15))
+        test_domains = get_domains_from_collection_ids(['9c42ef7c-2115-4da9-8a22-bd9c36cdb8b4', '5b60cd25-34e3-4f29-b217-aba2452e89a5'], datelist)
+        main_process_data(query_filename, name, datelist, test_domains, force_recreate_table=clean_db_and_backfill_data_from_the_beginning)
 
         tablename = f"{project_id}.{dataset_name}.{query_filename.replace('query_', '')}_results"
         main_process_csv(tablename, query_filename, client)
 
 
-def main_timeouts():
+def main_timeouts(force_recreate_table=False):
     query_filename = 'query_FI_timeouts_performance'
-    query = open(os.path.join(sys.path[0], f"queries/{query_filename}.sql"), "r").read()
-
     tablename = 'streamamp-qa-239417.DAS_increment.FI_timeouts_performance_results'
 
-    datelist = pd.date_range(start=dt.date(2025, 8, 1), end=dt.date(2025, 10, 4))
-    first_row = True
+    # query_filename = 'query_FI_timeouts_detailed'
+    # tablename = 'streamamp-qa-239417.DAS_increment.FI_timeouts_performance_results_detailed'
+
+    # query_filename = 'query_FI_timeouts_performance_2'
+    # tablename = 'streamamp-qa-239417.DAS_increment.FI_timeouts_performance_results_2'
+
+    query = open(os.path.join(sys.path[0], f"queries/{query_filename}.sql"), "r").read()
+
+    #datelist = pd.date_range(start=dt.date(2025, 10, 1), end=dt.date(2025, 10, 8))
+    #datelist = pd.date_range(start=dt.date(2025, 9, 12), end=dt.date(2025, 9, 18))
+    datelist = pd.date_range(start=dt.date(2025, 8, 1), end=dt.date(2025, 10, 8))
+
+    first_row = force_recreate_table or (not does_table_exist(tablename))
     for date in datelist.tolist():
         create_or_insert_statement = f"delete from `{tablename}` where date='{date.strftime("%Y-%m-%d")}'; insert into `{tablename}`"
         if first_row:
@@ -211,8 +220,8 @@ def main_timeouts():
 
 if __name__ == "__main__":
 
-    main()
+#    main()
 
     #main_data_explore_date_range()
 
-#    main_timeouts()
+    main_timeouts()
