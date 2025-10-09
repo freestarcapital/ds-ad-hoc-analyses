@@ -1,7 +1,7 @@
 
 import numpy as np
 import xlsxwriter
-from xlsxwriter.color import Color
+# from xlsxwriter.color import Color
 import pandas as pd
 from google.cloud import bigquery
 from google.cloud import bigquery_storage
@@ -154,7 +154,7 @@ def main_process_csv(tablename_results, query_filename_in, client):
         summary_mean = create_table_summary(df, val_cols, index_cols)
         summary_uplift_mean, summary_uplift_error, summary_uplift_t_stats = create_table_summary(df_uplift, val_cols, index_cols, True)
 
-        writer = pd.ExcelWriter(f'results/{query_filename_in.replace('query_', '')}_{ab_test}_{dt.datetime.today().strftime('%Y%m%d')}.xlsx',
+        writer = pd.ExcelWriter(f'results/{query_filename_in.replace("query_","")}_{ab_test}_{dt.datetime.today().strftime("%Y%m%d")}.xlsx',
                                 engine='xlsxwriter')
         format_worksheet(writer, 'Summary of daily average change', summary_uplift_mean, first_row_format, max_color_lowest_value=-1, max_color_highest_value=1)
         # format_worksheet(writer, 'summary_uplift_error', summary_uplift_error, first_row_format)
