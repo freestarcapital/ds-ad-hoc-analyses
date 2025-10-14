@@ -444,3 +444,20 @@ where fs_testgroup is not null;
 -- qualify countif(sessions > 10000) over (partition by domain) = 3
 
 --drop table `streamamp-qa-239417.DAS_increment.FI_timeouts_performance_raw_data_{ddate}`;
+
+-- with t1 as (
+--   select date, sum(revenue) revenue_opt, sum(impressions) imp_opt, sum(sessions) sessions_opt, safe_divide(sum(revenue), sum(sessions)) * 1000 rps_opt
+--   from streamamp-qa-239417.DAS_increment.FI_timeouts_performance_results
+--   where fs_testgroup = 'optimised'
+--   group by 1
+-- ),
+-- t2 as (
+--   select date, sum(revenue) revenue_st3, sum(impressions) imp_st3, sum(sessions) sessions_st3, safe_divide(sum(revenue), sum(sessions)) * 1000 rps_st3
+--   from streamamp-qa-239417.DAS_increment.FI_timeouts_performance_results
+--   where fs_testgroup = 'optimised-static-timeout-3002'
+--   group by 1
+-- )
+-- select *, 100*(rps_opt/rps_st3-1)
+-- from t1 join t2 using (date)
+-- order by date
+--

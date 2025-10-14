@@ -16,7 +16,7 @@ with t2 as (
             SELECT COUNT(1)
             FROM UNNEST(t1.kvps) kvpss
             WHERE
-                kvpss = "fsrefresh=0"
+                (kvpss like 'fsrefresh=%') and not (kvpss = "fsrefresh=0")
         ) = 1
 ),
 
