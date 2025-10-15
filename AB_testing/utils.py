@@ -161,4 +161,5 @@ def main_process_csv(tablename_results, query_filename_in, client):
         # format_worksheet(writer, 'summary_uplift_t_stats', summary_uplift_t_stats, first_row_format, '#,##0')
         format_worksheet(writer, 'Summary of daily average values', summary_mean, first_row_format, None)
         format_worksheet(writer, 'Raw data', df, first_row_format, None)
+        format_worksheet(writer, 'Raw data Test Group Col', df_ab_test, first_row_format, None)
         writer.close()
