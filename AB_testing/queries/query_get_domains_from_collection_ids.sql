@@ -15,4 +15,4 @@ where NET.REG_DOMAIN(page_url) is not null
     and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) >= '{start_date}'
     and date_trunc(date(timestamp_millis(server_time), 'MST'), DAY) <= '{end_date}'
 group by 1
-having page_hits > {min_page_hits}
+having safe_divide(page_hits, date_diff(date('{end_date}'), date('{start_date}'), day)) > {min_page_hits}

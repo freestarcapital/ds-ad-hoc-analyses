@@ -135,7 +135,7 @@ def main(clean_db_and_backfill_data_from_the_beginning=False):
         # name = 'gamera'
         # if datelist is None:
         #     datelist = pd.date_range(start=dt.date(2025, 9, 20), end=yesterday)
-        # test_domains = get_domains_from_test_names(['ef66fdaa-469a-407c-909b-d451e8815dbd', 'c924ff7e-f26c-489e-bdb1-74d4536b897e', '840828c2-05dd-4521-b584-ec2200016973'], datelist)
+        test_domains = get_domains_from_test_names(['ef66fdaa-469a-407c-909b-d451e8815dbd', 'c924ff7e-f26c-489e-bdb1-74d4536b897e', '840828c2-05dd-4521-b584-ec2200016973'], datelist)
         # main_process_data(query_filename, name, datelist, test_domains, force_recreate_table=clean_db_and_backfill_data_from_the_beginning)
 
         # TRANSPARENT FLOORS larger test enforced
