@@ -129,28 +129,28 @@ def main(clean_db_and_backfill_data_from_the_beginning=False):
             datelist = None
 
         datelist = None
-        datelist = pd.date_range(start=dt.date(2025, 10, 7), end=yesterday)
+        #datelist = pd.date_range(start=dt.date(2025, 10, 13), end=yesterday)
 
         # Gamera Test
-        # name = 'gamera'
+        name = 'gamera'
+        if datelist is None:
+            datelist = pd.date_range(start=dt.date(2025, 9, 20), end=yesterday)
+        test_domains = get_domains_from_test_names(['78e690ca-fb19-4c37-8b6e-afd433446ac3', 'ef66fdaa-469a-407c-909b-d451e8815dbd', 'c924ff7e-f26c-489e-bdb1-74d4536b897e', '840828c2-05dd-4521-b584-ec2200016973'], datelist)
+        main_process_data(query_filename, name, datelist, test_domains, force_recreate_table=clean_db_and_backfill_data_from_the_beginning)
+
+        # # TRANSPARENT FLOORS larger test enforced
+        # name = 'transparent_floors_sept_16_enforced'
         # if datelist is None:
-        #     datelist = pd.date_range(start=dt.date(2025, 9, 20), end=yesterday)
-        test_domains = get_domains_from_test_names(['ef66fdaa-469a-407c-909b-d451e8815dbd', 'c924ff7e-f26c-489e-bdb1-74d4536b897e', '840828c2-05dd-4521-b584-ec2200016973'], datelist)
+        #     datelist = pd.date_range(start=dt.date(2025, 9, 16), end=yesterday)
+        # test_domains = get_domains_from_collection_ids(['38622a20-b851-40d0-8c4a-ab2ab881fb0a'], datelist)  # enforced
         # main_process_data(query_filename, name, datelist, test_domains, force_recreate_table=clean_db_and_backfill_data_from_the_beginning)
-
-        # TRANSPARENT FLOORS larger test enforced
-        name = 'transparent_floors_sept_16_enforced'
-        if datelist is None:
-            datelist = pd.date_range(start=dt.date(2025, 9, 16), end=yesterday)
-        test_domains = get_domains_from_collection_ids(['38622a20-b851-40d0-8c4a-ab2ab881fb0a'], datelist)  # enforced
-        main_process_data(query_filename, name, datelist, test_domains, force_recreate_table=clean_db_and_backfill_data_from_the_beginning)
-
-        # TRANSPARENT FLOORS larger test not enforced
-        name = 'transparent_floors_sept_16_not_enforced'
-        if datelist is None:
-            datelist = pd.date_range(start=dt.date(2025, 9, 16), end=yesterday)
-        test_domains = get_domains_from_collection_ids(['b2df7b52-27dc-409d-9876-0d945bad6f6e'], datelist)  # not enforced
-        main_process_data(query_filename, name, datelist, test_domains, force_recreate_table=clean_db_and_backfill_data_from_the_beginning)
+        #
+        # # TRANSPARENT FLOORS larger test not enforced
+        # name = 'transparent_floors_sept_16_not_enforced'
+        # if datelist is None:
+        #     datelist = pd.date_range(start=dt.date(2025, 9, 16), end=yesterday)
+        # test_domains = get_domains_from_collection_ids(['b2df7b52-27dc-409d-9876-0d945bad6f6e'], datelist)  # not enforced
+        # main_process_data(query_filename, name, datelist, test_domains, force_recreate_table=clean_db_and_backfill_data_from_the_beginning)
 
         # #TRANSPARENT FLOORS original sites
         # name = 'transparent_floors_first_test_not_enforced'
