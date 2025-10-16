@@ -34,6 +34,23 @@ def get_domains_from_collection_ids(collection_ids, datelist):
     return df['domain'].to_list()
 
 
+def get_domains_from_name_like(name_like, datelist):
+    min_page_hits = 5000
+
+    start_date = datelist[0]
+    end_date = datelist[-1] + dt.timedelta(days=1)
+    print(f'searching for domains for name like "{name_like}" from {start_date} to {end_date}, min_page_hits: {min_page_hits}')
+
+    repl_dict = {'start_date': start_date.strftime("%Y-%m-%d"),
+                 'end_date': end_date.strftime("%Y-%m-%d"),
+                 'name_like': name_like,
+                 'min_page_hits': min_page_hits}
+
+    query = open(os.path.join(sys.path[0], "queries/query_get_domains_from_name_like.sql"), "r").read()
+    df = get_bq_data(query, client, repl_dict)
+    return df['domain'].to_list()
+
+
 def get_domains_from_test_names(test_names, datelist):
     min_page_hits = 10000
 
@@ -132,11 +149,18 @@ def main(clean_db_and_backfill_data_from_the_beginning=False):
         #datelist = pd.date_range(start=dt.date(2025, 10, 13), end=yesterday)
 
         # Gamera Test
-        name = 'gamera'
+        name = 'concurrent_client_server'
         if datelist is None:
-            datelist = pd.date_range(start=dt.date(2025, 9, 20), end=yesterday)
-        test_domains = get_domains_from_test_names(['78e690ca-fb19-4c37-8b6e-afd433446ac3', 'ef66fdaa-469a-407c-909b-d451e8815dbd', 'c924ff7e-f26c-489e-bdb1-74d4536b897e', '840828c2-05dd-4521-b584-ec2200016973'], datelist)
+            datelist = pd.date_range(start=dt.date(2025, 10, 8), end=yesterday)
+        test_domains = get_domains_from_name_like('Concurrent Client%', datelist)
         main_process_data(query_filename, name, datelist, test_domains, force_recreate_table=clean_db_and_backfill_data_from_the_beginning)
+
+        # # Gamera Test
+        # name = 'gamera'
+        # if datelist is None:
+        #     datelist = pd.date_range(start=dt.date(2025, 9, 20), end=yesterday)
+        # test_domains = get_domains_from_test_names(['78e690ca-fb19-4c37-8b6e-afd433446ac3', 'ef66fdaa-469a-407c-909b-d451e8815dbd', 'c924ff7e-f26c-489e-bdb1-74d4536b897e', '840828c2-05dd-4521-b584-ec2200016973'], datelist)
+        # main_process_data(query_filename, name, datelist, test_domains, force_recreate_table=clean_db_and_backfill_data_from_the_beginning)
 
         # # TRANSPARENT FLOORS larger test enforced
         # name = 'transparent_floors_sept_16_enforced'
